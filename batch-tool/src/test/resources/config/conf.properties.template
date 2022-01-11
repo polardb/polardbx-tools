@@ -1,0 +1,13 @@
+# batch-tool jar文件路径
+app_path=
+# 导出数据存放路径
+export_dir_path=
+# 导入数据存放路径
+import_dir_path=
+# 超时时长 (秒)
+op_timeout=
+db.host=
+db.port=
+db.schema=
+db.user=
+db.password=
