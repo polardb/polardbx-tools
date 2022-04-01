@@ -21,8 +21,9 @@ import model.ProducerExecutionContext;
 
 public class DeleteCommand extends WriteDbCommand {
 
-    public DeleteCommand(ProducerExecutionContext producerExecutionContext,
+    public DeleteCommand(String dbName,
+                         ProducerExecutionContext producerExecutionContext,
                          ConsumerExecutionContext consumerExecutionContext) {
-        super(producerExecutionContext, consumerExecutionContext);
+        super(dbName, producerExecutionContext, consumerExecutionContext);
     }
 }

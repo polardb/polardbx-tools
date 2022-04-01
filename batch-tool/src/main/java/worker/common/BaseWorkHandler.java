@@ -33,7 +33,7 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
 
     protected void initLocalVars() {
         if (consumerContext.isUsingBlock()) {
-            this.sep = consumerContext.getSep();
+            this.sep = consumerContext.getSeparator();
             hasEscapedQuote = false;
         } else {
             this.sep = ConfigConstant.MAGIC_CSV_SEP;

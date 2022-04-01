@@ -16,6 +16,7 @@
 
 package util;
 
+import model.config.ConfigConstant;
 import model.db.FieldMetaInfo;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -126,17 +127,22 @@ public class FileUtil {
         return FileChannel.open(Paths.get(tmpFileName), StandardOpenOption.APPEND);
     }
 
-    public static byte[] getHeaderBytes(List<FieldMetaInfo> metaInfoList, byte[] separator) throws IOException {
+    public static byte[] getHeaderBytes(List<FieldMetaInfo> metaInfoList, byte[] separator) {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         int len = metaInfoList.size();
-        for (int i = 0; i < len - 1; i++) {
-            FileUtil.writeToByteArrayStream(os, metaInfoList.get(i).getName().getBytes());
-            // 附加分隔符
-            os.write(separator);
+        try {
+            for (int i = 0; i < len - 1; i++) {
+                FileUtil.writeToByteArrayStream(os, metaInfoList.get(i).getName().getBytes());
+                // 附加分隔符
+                os.write(separator);
+            }
+            FileUtil.writeToByteArrayStream(os, metaInfoList.get(len - 1).getName().getBytes());
+            // 附加换行符
+            os.write(SYS_NEW_LINE_BYTE);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        FileUtil.writeToByteArrayStream(os, metaInfoList.get(len - 1).getName().getBytes());
-        // 附加换行符
-        os.write(SYS_NEW_LINE_BYTE);
         return os.toByteArray();
     }
 
@@ -354,13 +360,17 @@ public class FileUtil {
         return result;
     }
 
+    /**
+     * 筛选出非ddl的数据文件
+     */
     public static List<String> getFileAbsPathInDir(String dirPathStr) {
         File dir = new File(dirPathStr);
         if (!dir.exists()|| !dir.isDirectory()) {
             throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
         }
         return FileUtils.listFiles(dir, null, false).stream()
-            .filter(file -> file.isFile() && file.canRead())
+            .filter(file -> file.isFile() && file.canRead() &&
+                !file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
             .map(File::getAbsolutePath).collect(Collectors.toList());
     }
 }

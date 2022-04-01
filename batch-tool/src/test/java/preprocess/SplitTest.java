@@ -58,7 +58,18 @@ public class SplitTest {
         matchVals(values2);
     }
 
+    @Test()
+    public void splitWithInvisibleSep() throws Exception {
+        final String INVISIBLE_SEP = "\u0003";
+        String s1 = StringUtils.join(ORIGIN_VALS, INVISIBLE_SEP);
 
+        String[] values1 = FileUtil.split(s1, INVISIBLE_SEP, false, ORIGIN_VALS.length, false);
+        matchVals(values1);
+
+        String s2 = s1 + INVISIBLE_SEP;
+        String[] values2 = FileUtil.split(s2, INVISIBLE_SEP, true, ORIGIN_VALS.length, false);
+        matchVals(values2);
+    }
 
     private void matchVals(String[] vals) throws Exception {
         assert vals.length == EXPECTED_VALS.length;

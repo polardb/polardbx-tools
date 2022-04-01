@@ -16,10 +16,14 @@
 
 package cmd;
 
+import javax.validation.constraints.NotNull;
+
 /**
  * 数据库操作相关配置
  */
 public class BaseOperateCommand {
+
+    private final String dbName;
 
     /**
      * 批量操作仅支持单表
@@ -31,11 +35,13 @@ public class BaseOperateCommand {
      */
     private boolean shardingEnabled;
 
-    public BaseOperateCommand(boolean shardingEnabled) {
+    public BaseOperateCommand(@NotNull String dbName, boolean shardingEnabled) {
+        this.dbName = dbName;
         this.shardingEnabled = shardingEnabled;
     }
 
-    public BaseOperateCommand(String tableName, boolean shardingEnabled) {
+    public BaseOperateCommand(@NotNull String dbName, String tableName, boolean shardingEnabled) {
+        this.dbName = dbName;
         this.tableName = tableName;
         this.shardingEnabled = shardingEnabled;
     }
@@ -54,5 +60,13 @@ public class BaseOperateCommand {
 
     public void setShardingEnabled(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
+    }
+
+    public String getDbName() {
+        return dbName;
+    }
+
+    public boolean isDbOperation() {
+        return this.tableName == null;
     }
 }

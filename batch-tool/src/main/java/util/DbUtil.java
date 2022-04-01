@@ -16,7 +16,6 @@
 
 package util;
 
-import com.alibaba.druid.pool.DruidPooledConnection;
 import com.alibaba.druid.util.JdbcUtils;
 import exception.DatabaseException;
 import model.db.FieldMetaInfo;
@@ -72,7 +71,7 @@ public class DbUtil {
     public static List<TableTopology> getTopology(Connection conn, String tableName) throws DatabaseException {
         Statement stmt = null;
         ResultSet resultSet = null;
-        String sql = "SHOW TOPOLOGY FROM " + tableName;
+        String sql = String.format("SHOW TOPOLOGY FROM `%s`", tableName);
         List<TableTopology> topologyList = new ArrayList<>();
         try {
             stmt = conn.createStatement();
@@ -85,8 +84,7 @@ public class DbUtil {
             }
             return topologyList;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get topology of table " + tableName);
+            throw new DatabaseException("Unable to get topology of table " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -117,8 +115,7 @@ public class DbUtil {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get primary key of table " + tableName);
+            throw new DatabaseException("Unable to get primary key of table " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -151,8 +148,7 @@ public class DbUtil {
             }
             return pkList;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get primary key of table " + tableName);
+            throw new DatabaseException("Unable to get primary key of table " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -203,8 +199,7 @@ public class DbUtil {
             tableFieldMetaInfo.setFieldMetaInfoList(fieldMetaInfoList);
             return tableFieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get meta info of columns in " + tableName);
+            throw new DatabaseException("Unable to get meta info of columns in " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -252,8 +247,7 @@ public class DbUtil {
             tableFieldMetaInfo.setFieldMetaInfoList(fieldMetaInfoList);
             return tableFieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get meta info of columns in " + tableName);
+            throw new DatabaseException("Unable to get meta info of columns in " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -289,8 +283,7 @@ public class DbUtil {
             tableFieldMetaInfo.setFieldMetaInfoList(fieldMetaInfoList);
             return tableFieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get meta info of columns in " + tableName);
+            throw new DatabaseException("Unable to get meta info of columns in " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -338,8 +331,7 @@ public class DbUtil {
             }
             return partitionKey;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get partition key of " + tableName);
+            throw new DatabaseException("Unable to get partition key of " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -359,7 +351,7 @@ public class DbUtil {
         }
     }
 
-    public static FieldMetaInfo getPkMetaInfo(DruidPooledConnection conn, String schemaName,
+    public static FieldMetaInfo getPkMetaInfo(Connection conn, String schemaName,
                                               String tableName) throws DatabaseException {
         Statement stmt = null;
         ResultSet resultSet = null;
@@ -379,8 +371,7 @@ public class DbUtil {
             }
             return fieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get pk info of " + tableName);
+            throw new DatabaseException("Unable to get pk info of " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -388,7 +379,7 @@ public class DbUtil {
         }
     }
 
-    public static FieldMetaInfo getFieldMetaInfo(DruidPooledConnection conn, String schemaName,
+    public static FieldMetaInfo getFieldMetaInfo(Connection conn, String schemaName,
                                                  String tableName, String fieldName) throws DatabaseException {
         Statement stmt = null;
         ResultSet resultSet = null;
@@ -408,8 +399,7 @@ public class DbUtil {
             }
             return fieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get field info of " + fieldName);
+            throw new DatabaseException("Unable to get field info of " + fieldName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -439,7 +429,7 @@ public class DbUtil {
             schemaName, tableName, StringUtils.join(columnConditionList, ","));
     }
 
-    public static List<FieldMetaInfo> getFieldMetaInfoListByColNames(DruidPooledConnection conn,
+    public static List<FieldMetaInfo> getFieldMetaInfoListByColNames(Connection conn,
                                                                      String schemaName,
                                                                      String tableName,
                                                                      List<String> orderByColumnNameList)
@@ -479,8 +469,7 @@ public class DbUtil {
             }
             return fieldMetaInfoList;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Wrong order by columns" + orderByColumnNameList);
+            throw new DatabaseException("Wrong order by columns" + orderByColumnNameList, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -501,12 +490,83 @@ public class DbUtil {
             }
             return resultSet.getLong(1);
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Cannot get row count of " + tableName);
+            throw new DatabaseException("Cannot get row count of " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
             JdbcUtils.close(conn);
         }
+    }
+
+    public static void useDb(Connection conn, String dbName) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("use " + dbName);
+        }
+    }
+
+    public static List<String> getAllTablesInDb(Connection conn, String dbName) throws DatabaseException {
+        List<String> allTables = new ArrayList<>();
+        try (Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery("show tables");
+            while (rs.next()) {
+                allTables.add(rs.getString(1));
+            }
+            return allTables;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to show tables in:" + dbName, e);
+        }
+    }
+
+    public static String getShowCreateDatabase(Connection conn, String dbName) throws DatabaseException {
+        try (Statement stmt = conn.createStatement()) {
+            // FIXME show create database does not contain charset, collation and mode
+            ResultSet rs = stmt.executeQuery("show create database " + dbName);
+
+            if (!rs.next()) {
+                throw new DatabaseException("Failed to show create database:" + dbName);
+            }
+            return rs.getString(2);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to show create database:" + dbName, e);
+        }
+    }
+
+    public static String getShowCreateTable(Connection conn, String tableName) throws DatabaseException {
+        try (Statement stmt = conn.createStatement()) {
+            // FIXME show create database does not contain GSI
+            ResultSet rs = stmt.executeQuery(String.format("show create table `%s`", tableName));
+
+            if (!rs.next()) {
+                throw new DatabaseException("Failed to show create table:" + tableName);
+            }
+            return rs.getString(2);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to show create table:" + tableName, e);
+        }
+    }
+
+    public static boolean checkTableExists(Connection conn, String tableName) throws DatabaseException {
+        try (Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery(String.format("show tables like `%s`", tableName));
+            return rs.next();
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to check table existence: " + tableName, e);
+        }
+    }
+
+    /**
+     * 不使用show databases like
+     */
+    public static boolean checkDatabaseExists(Connection conn, String dbName) throws DatabaseException {
+        try {
+            useDb(conn, dbName);
+        } catch (SQLException e) {
+            if (e.getMessage().contains("Unknown database")) {
+                return false;
+            } else {
+                throw new DatabaseException("Failed to check database existence: " + dbName, e);
+            }
+        }
+        return true;
     }
 }

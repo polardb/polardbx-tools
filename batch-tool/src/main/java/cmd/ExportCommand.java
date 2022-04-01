@@ -28,8 +28,8 @@ public class ExportCommand extends BaseOperateCommand {
 
     private final ExportConfig exportConfig;
 
-    public ExportCommand(String tableName, @NotNull ExportConfig exportConfig) {
-        super(tableName, ConfigConstant.DEFAULT_EXPORT_SHARDING_ENABLED);
+    public ExportCommand(String dbName, String tableName, @NotNull ExportConfig exportConfig) {
+        super(dbName, tableName, ConfigConstant.DEFAULT_EXPORT_SHARDING_ENABLED);
         this.exportConfig = exportConfig;
     }
 

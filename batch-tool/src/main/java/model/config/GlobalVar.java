@@ -21,7 +21,7 @@ public class GlobalVar {
     /**
      * 发送一批数据的元组数
      */
-    public static int EMIT_BATCH_SIZE = 500;
+    public static int EMIT_BATCH_SIZE = 10;
 
     /**
      * RingBuffer 缓冲区大小

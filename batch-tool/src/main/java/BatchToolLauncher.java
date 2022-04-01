@@ -55,7 +55,7 @@ public class BatchToolLauncher {
             dataSourceConfig = CommandUtil.getDataSourceConfigFromCmd(commandLine);
             BATCH_TOOL_INSTANCE.initDatasource(dataSourceConfig);
         } catch (SQLException e) {
-            logger.error("连接数据库失败: {}", e.getMessage());
+            logger.error("连接数据库失败");
             throw e;
         }
 

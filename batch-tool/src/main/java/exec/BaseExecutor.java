@@ -26,12 +26,18 @@ import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.WorkerPool;
 import datasource.DataSourceConfig;
+import exception.DatabaseException;
+import exec.export.OrderByExportExecutor;
+import exec.export.ShardingExportExecutor;
+import exec.export.SingleThreadExportExecutor;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
 import model.config.ConfigConstant;
+import model.config.ExportConfig;
 import model.config.GlobalVar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.DbUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
 import worker.common.BaseWorkHandler;
@@ -40,6 +46,9 @@ import worker.common.ReadFileProducer;
 import worker.common.ReadFileWithBlockProducer;
 import worker.common.ReadFileWithLineProducer;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,14 +60,29 @@ public abstract class BaseExecutor {
     private static final Logger logger = LoggerFactory.getLogger(BaseExecutor.class);
 
     private final DataSourceConfig dataSourceConfig;
-    protected final DruidDataSource druid;
+    protected final DataSource dataSource;
 
     public BaseExecutor(DataSourceConfig dataSourceConfig,
-                        DruidDataSource druid,
+                        DataSource dataSource,
                         BaseOperateCommand baseCommand) {
         this.dataSourceConfig = dataSourceConfig;
-        this.druid = druid;
+        this.dataSource = dataSource;
         setCommand(baseCommand);
+    }
+
+    public void preCheck() {
+
+    }
+
+    protected void checkTableExists(String tableName) {
+        try (Connection connection = dataSource.getConnection()) {
+            if (!DbUtil.checkTableExists(connection, tableName)) {
+                throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
+            }
+        } catch (SQLException | DatabaseException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     protected abstract void setCommand(BaseOperateCommand baseCommand);
@@ -68,7 +92,7 @@ public abstract class BaseExecutor {
     public static BaseExecutor getExecutor(BaseOperateCommand command, DataSourceConfig dataSourceConfig,
                                            DruidDataSource druid) {
         if (command instanceof ExportCommand) {
-            return new ExportExecutor(dataSourceConfig, druid, command);
+            return getExportExecutor(dataSourceConfig, druid, (ExportCommand) command);
         } else if (command instanceof ImportCommand) {
             return new ImportExecutor(dataSourceConfig, druid, command);
         } else if (command instanceof UpdateCommand) {
@@ -80,8 +104,17 @@ public abstract class BaseExecutor {
         }
     }
 
-    private void handleBaseDelete(DeleteCommand command) {
+    private static BaseExecutor getExportExecutor(DataSourceConfig dataSourceConfig, DruidDataSource druid,
+                                                  ExportCommand command) {
+        ExportConfig config = command.getExportConfig();
 
+        if (config.getOrderByColumnNameList() != null) {
+            return new OrderByExportExecutor(dataSourceConfig, druid, command);
+        }
+        if (command.isShardingEnabled()) {
+            return new ShardingExportExecutor(dataSourceConfig, druid, command);
+        }
+        return new SingleThreadExportExecutor(dataSourceConfig, druid, command);
     }
 
     protected void configureCommonContextAndRun(Class<? extends BaseWorkHandler> clazz,
@@ -122,7 +155,7 @@ public abstract class BaseExecutor {
             / (consumerNum * GlobalVar.EMIT_BATCH_SIZE));
 
         consumerExecutionContext.setParallelism(consumerNum);
-        consumerExecutionContext.setDataSource(druid);
+        consumerExecutionContext.setDataSource(dataSource);
         consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
         consumerExecutionContext.setEventCounter(eventCounter);
 
@@ -209,7 +242,7 @@ public abstract class BaseExecutor {
 
     }
 
-    protected void shutdown() {
+    public void close() {
 
     }
 

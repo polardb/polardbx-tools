@@ -20,12 +20,19 @@ import cmd.BaseOperateCommand;
 import cmd.ImportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
+import exception.DatabaseException;
+import model.config.DdlMode;
 import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.DbUtil;
+import worker.ddl.DdlImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
 import worker.insert.ShardedImportConsumer;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 
 public class ImportExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ImportExecutor.class);
@@ -44,8 +51,62 @@ public class ImportExecutor extends WriteDbExecutor {
     }
 
     @Override
+    public void preCheck() {
+        if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
+            if (command.isDbOperation()) {
+                checkDbNotExist(command.getDbName());
+            } else {
+                checkTableNotExist(command.getTableName());
+            }
+        } else {
+            if (command.isDbOperation()) {
+                throw new UnsupportedOperationException("Don't support import database now");
+            } else {
+                checkTableExists(command.getTableName());
+            }
+        }
+    }
+
+    private void checkDbNotExist(String dbName) {
+        try (Connection conn = dataSource.getConnection()) {
+            if (DbUtil.checkDatabaseExists(conn, dbName)) {
+               throw new RuntimeException(String.format("Database [%s] already exists, cannot import with ddl",
+                   dbName));
+            }
+        } catch (SQLException | DatabaseException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    private void checkTableNotExist(String tableName) {
+        try (Connection conn = dataSource.getConnection()) {
+            if (DbUtil.checkTableExists(conn, tableName)) {
+                throw new RuntimeException(String.format("Table [%s] already exists, cannot import with ddl",
+                    tableName));
+            }
+        } catch (SQLException | DatabaseException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    @Override
     public void execute() {
         configureFieldMetaInfo();
+        switch (producerExecutionContext.getDdlMode()) {
+        case WITH_DDL:
+            handleDDL();
+            break;
+        case DDL_ONLY:
+            handleDDL();
+            return;
+        case NO_DDL:
+            break;
+        default:
+            throw new UnsupportedOperationException("DDL mode is not supported: " +
+                producerExecutionContext.getDdlMode());
+        }
 
         // 决定是否要分片
         if (command.isShardingEnabled()) {
@@ -55,6 +116,22 @@ public class ImportExecutor extends WriteDbExecutor {
         }
 
         logger.info("导入数据到 {} 完成", tableName);
+    }
+
+    /**
+     * 同步导入建库建表语句
+     */
+    private void handleDDL() {
+        DdlImportWorker ddlImportWorker = new DdlImportWorker(
+            command.isDbOperation() ? command.getDbName() : command.getTableName(), dataSource);
+
+        Thread ddlThread = new Thread(ddlImportWorker);
+        ddlThread.start();
+        try {
+            ddlThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void doDefaultImport() {

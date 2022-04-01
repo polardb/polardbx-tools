@@ -16,8 +16,11 @@
 
 package model.config;
 
+import java.nio.charset.Charset;
+
 /**
  * 可自定义且有默认参数的配置项
+ * 导入导出通用配置
  */
 public class BaseConfig {
     /**
@@ -27,7 +30,7 @@ public class BaseConfig {
     /**
      * 指定字符集
      */
-    protected String charset = ConfigConstant.DEFAULT_CHARSET;
+    protected Charset charset = ConfigConstant.DEFAULT_CHARSET;
 
     /**
      * 第一行是否为字段名
@@ -35,6 +38,17 @@ public class BaseConfig {
     protected boolean isWithHeader = ConfigConstant.DEFAULT_WITH_HEADER;
 
     protected boolean shardingEnabled;
+
+    protected DdlMode ddlMode = DdlMode.NO_DDL;
+
+    protected CompressMode compressMode = CompressMode.NONE;
+
+    protected EncryptionConfig encryptionConfig = EncryptionConfig.NONE;
+
+    /**
+     * 引号模式
+     */
+    protected QuoteEncloseMode quoteEncloseMode;
 
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
@@ -54,11 +68,11 @@ public class BaseConfig {
         this.separator = separator;
     }
 
-    public String getCharset() {
+    public Charset getCharset() {
         return charset;
     }
 
-    public void setCharset(String charset) {
+    public void setCharset(Charset charset) {
         this.charset = charset;
     }
 
@@ -74,12 +88,57 @@ public class BaseConfig {
         return shardingEnabled;
     }
 
+    public DdlMode getDdlMode() {
+        return ddlMode;
+    }
+
+    public void setDdlMode(DdlMode ddlMode) {
+        this.ddlMode = ddlMode;
+    }
+
+    public CompressMode getCompressMode() {
+        return compressMode;
+    }
+
+    public void setCompressMode(CompressMode compressMode) {
+        if (this.encryptionConfig.getEncryptionMode() != EncryptionMode.NONE) {
+            throw new UnsupportedOperationException("Do not support compression with encryption");
+        }
+        this.compressMode = compressMode;
+    }
+
+    public EncryptionConfig getEncryptionConfig() {
+        return encryptionConfig;
+    }
+
+    public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
+        if (this.compressMode != CompressMode.NONE) {
+            throw new UnsupportedOperationException("Do not support encryption with compression");
+        }
+        this.encryptionConfig = encryptionConfig;
+    }
+
+    public QuoteEncloseMode getQuoteEncloseMode() {
+        return quoteEncloseMode;
+    }
+
+    public void setQuoteEncloseMode(QuoteEncloseMode quoteEncloseMode) {
+        this.quoteEncloseMode = quoteEncloseMode;
+    }
+
+    public void setQuoteEncloseMode(String Mode) {
+        this.quoteEncloseMode = QuoteEncloseMode.parseMode(Mode);
+    }
+
+
     @Override
     public String toString() {
         return "BaseConfig{" +
             "separator='" + separator + '\'' +
             ", charset='" + charset + '\'' +
             ", isWithHeader='" + isWithHeader + '\'' +
+            ", compressMode='" + compressMode + '\'' +
+            ", encryptionConfig='" + encryptionConfig + '\'' +
             '}';
     }
 }

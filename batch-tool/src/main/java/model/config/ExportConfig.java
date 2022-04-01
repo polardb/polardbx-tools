@@ -63,11 +63,6 @@ public class ExportConfig extends BaseConfig {
     private boolean isLocalMerge = false;
     private boolean isParallelMerge = false;
 
-    /**
-     * 引号模式
-     */
-    private QuoteEncloseMode quoteEncloseMode;
-
     public enum ExportWay {
         /**
          * 指定单个文件最大行数
@@ -196,18 +191,6 @@ public class ExportConfig extends BaseConfig {
         isParallelMerge = parallelMerge;
     }
 
-    public QuoteEncloseMode getQuoteEncloseMode() {
-        return quoteEncloseMode;
-    }
-
-    public void setQuoteEncloseMode(QuoteEncloseMode quoteEncloseMode) {
-        this.quoteEncloseMode = quoteEncloseMode;
-    }
-
-    public void setQuoteEncloseMode(String Mode) {
-        this.quoteEncloseMode = QuoteEncloseMode.parseMode(Mode);
-    }
-
     public int getParallelism() {
         return parallelism;
     }
@@ -237,7 +220,6 @@ public class ExportConfig extends BaseConfig {
             ", isAscending=" + isAscending +
             ", isLocalMerge=" + isLocalMerge +
             ", isParallelMerge=" + isParallelMerge +
-            ", quoteEncloseMode=" + quoteEncloseMode.name() +
             ", parallelism=" + getParallelismConfig() +
             "} " + super.toString();
     }

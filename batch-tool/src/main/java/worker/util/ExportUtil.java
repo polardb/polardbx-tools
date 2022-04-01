@@ -31,30 +31,28 @@ import static model.config.ConfigConstant.ORDER_BY_TYPE_DESC;
 
 public class ExportUtil {
 
-    /**
-     * 带日期格式转化
-     */
-    public static String getSqlWithFormattedDate(TableTopology topology,
-                                                 List<FieldMetaInfo> fieldMetaInfoList) {
-
-        return String.format("/!TDDL:node='%s'*/ select %s from %s;",
-            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
-            topology.getTableName());
-    }
 
     /**
      * 带日期格式转化
      */
-    public static String getSqlWithFormattedDate(TableTopology topology,
-                                                 List<FieldMetaInfo> fieldMetaInfoList,
-                                                 String whereCondition) {
+    public static String getDirectSqlWithFormattedDate(TableTopology topology,
+                                                       List<FieldMetaInfo> fieldMetaInfoList,
+                                                       String whereCondition) {
         if (StringUtils.isEmpty(whereCondition)) {
-            return getSqlWithFormattedDate(topology, fieldMetaInfoList);
+            return getDirectSqlWithFormattedDate(topology, fieldMetaInfoList);
         }
 
         return String.format("/!TDDL:node='%s'*/ select %s from %s where %s;",
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), whereCondition);
+    }
+
+    private static String getDirectSqlWithFormattedDate(TableTopology topology,
+                                                        List<FieldMetaInfo> fieldMetaInfoList) {
+
+        return String.format("/!TDDL:node='%s'*/ select %s from %s;",
+            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+            topology.getTableName());
     }
 
     /**

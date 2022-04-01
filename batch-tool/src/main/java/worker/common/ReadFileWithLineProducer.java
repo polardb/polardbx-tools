@@ -33,6 +33,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * 按csv标准按行处理csv文本文件
+ * 解压场景先通过解压文件来进行兜底处理
+ * TODO 再套一层producer
  */
 public class ReadFileWithLineProducer extends ReadFileProducer {
 
@@ -41,7 +43,7 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
 
     public ReadFileWithLineProducer(ProducerExecutionContext context, RingBuffer<BatchLineEvent> ringBuffer) {
         super(context, ringBuffer);
-        String sep = context.getSep();
+        String sep = context.getSeparator();
         if (sep.length() != 1) {
             logger.error("In quote escape mode only allows single char separator");
             System.exit(1);

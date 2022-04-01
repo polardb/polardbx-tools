@@ -16,6 +16,8 @@
 
 package model;
 
+import model.config.BaseConfig;
+import model.config.ConfigConstant;
 import model.db.PartitionKey;
 import model.db.PrimaryKey;
 import model.db.TableFieldMetaInfo;
@@ -28,17 +30,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ConsumerExecutionContext {
+/**
+ * 连接数据库端的工作线程上下文
+ */
+public class ConsumerExecutionContext extends BaseConfig {
 
     private DataSource dataSource;
 
     private String tableName;
-    /**
-     * 分隔符
-     */
-    private String sep;
 
-    private String charset;
     /**
      * 对于已发送数据批的计数器
      */
@@ -133,20 +133,8 @@ public class ConsumerExecutionContext {
 
     private boolean isUsingBlock = true;
 
-    public String getSep() {
-        return sep;
-    }
-
-    public void setSep(String sep) {
-        this.sep = sep;
-    }
-
-    public String getCharset() {
-        return charset;
-    }
-
-    public void setCharset(String charset) {
-        this.charset = charset;
+    public ConsumerExecutionContext() {
+        super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
     }
 
     public List<ConcurrentHashMap<Long, AtomicInteger>> getEventCounter() {
@@ -277,8 +265,6 @@ public class ConsumerExecutionContext {
     public String toString() {
         return "ConsumerExecutionContext{" +
             "tableName='" + tableName + '\'' +
-            ", sep='" + sep + '\'' +
-            ", charset='" + charset + '\'' +
             ", pkList=" + pkList +
             ", pkIndexSet=" + pkIndexSet +
             ", tableFieldMetaInfo=" + tableFieldMetaInfo +
