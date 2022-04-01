@@ -16,15 +16,14 @@
 
 package model;
 
+import model.config.BaseConfig;
 import model.config.ConfigConstant;
-import model.config.QuoteEncloseMode;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,13 +31,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ProducerExecutionContext {
+/**
+ * 读取文件的工作线程上下文
+ */
+public class ProducerExecutionContext extends BaseConfig {
 
     private ThreadPoolExecutor producerExecutor;
 
     private List<String> filePathList;
-
-    private String sep;
 
     private int parallelism;
 
@@ -60,14 +60,9 @@ public class ProducerExecutionContext {
 
     private CountDownLatch countDownLatch;
 
-    private Charset charset;
-
-    /**
-     * 第一行是否为字段名
-     */
-    private boolean isWithHeader;
-
-    private QuoteEncloseMode quoteEncloseMode = QuoteEncloseMode.AUTO;
+    public ProducerExecutionContext() {
+        super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
+    }
 
     public ThreadPoolExecutor getProducerExecutor() {
         return producerExecutor;
@@ -157,6 +152,9 @@ public class ProducerExecutionContext {
         this.historyFile = historyFile;
     }
 
+    /**
+     * TODO to be refactored
+     */
     public void setHistoryFileAndParse(String historyFile) {
         setHistoryFile(historyFile);
         File file = new File(historyFile);
@@ -175,6 +173,9 @@ public class ProducerExecutionContext {
     }
 
     public void saveToHistoryFile(boolean isFinished) {
+        if (historyFile == null) {
+            return;
+        }
         try {
             File file = new File(historyFile);
             if (!file.exists()) {
@@ -208,53 +209,13 @@ public class ProducerExecutionContext {
         this.countDownLatch = countDownLatch;
     }
 
-    public Charset getCharset() {
-        return charset;
-    }
-
-    public void setCharset(Charset charset) {
-        this.charset = charset;
-    }
-
-    public void setCharset(String charset) {
-        if (StringUtils.isEmpty(charset)) {
-            this.charset = Charset.forName(ConfigConstant.DEFAULT_CHARSET);
-        } else {
-            this.charset = Charset.forName(charset);
-        }
-    }
-
     @Override
     public String toString() {
         return "ProducerExecutionContext{" +
             "filePathList=" + filePathList +
             ", parallelism=" + parallelism +
             ", readBlockSizeInMb=" + readBlockSizeInMb +
-            ", quoteEncloseMode=" + quoteEncloseMode.name() +
+            ", " + super.toString() +
             '}';
-    }
-
-    public boolean isWithHeader() {
-        return isWithHeader;
-    }
-
-    public void setWithHeader(boolean withHeader) {
-        isWithHeader = withHeader;
-    }
-
-    public String getSep() {
-        return sep;
-    }
-
-    public void setSep(String sep) {
-        this.sep = sep;
-    }
-
-    public void setQuoteEncloseMode(String Mode) {
-        this.quoteEncloseMode = QuoteEncloseMode.parseMode(Mode);
-    }
-
-    public QuoteEncloseMode getQuoteEncloseMode() {
-        return this.quoteEncloseMode;
     }
 }

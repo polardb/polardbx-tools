@@ -31,6 +31,7 @@
         <opencsv.version>4.6</opencsv.version>
         <guava.version>27.0.1-jre</guava.version>
         <javax-validation.version>2.0.0.Final</javax-validation.version>
+        <bouncycastle.version>1.60</bouncycastle.version>
     </properties>
 
     <repositories>
@@ -126,6 +127,12 @@
             <version>${javax-validation.version}</version>
         </dependency>
 
+        <!-- encryption -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

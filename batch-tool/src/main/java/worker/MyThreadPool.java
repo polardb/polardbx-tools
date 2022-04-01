@@ -26,6 +26,7 @@ public class MyThreadPool {
     private static final long ALIVE_TIME = 5 * 1000L;
     private static final int QUEUE_SIZE = 500;
 
+    @Deprecated
     public static ThreadPoolExecutor createExecutor(String name) {
         return new ThreadPoolExecutor(
             MAX_POOL_SIZE,

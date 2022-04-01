@@ -37,7 +37,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -67,7 +66,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     protected void configurePkList() {
         List<PrimaryKey> pkList = null;
         try {
-            pkList = DbUtil.getPkList(druid.getConnection(), getSchemaName(), tableName);
+            pkList = DbUtil.getPkList(dataSource.getConnection(), getSchemaName(), tableName);
         } catch (DatabaseException | SQLException e) {
             logger.error(e.getMessage());
             System.exit(1);
@@ -81,7 +80,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     protected void configureFieldMetaInfo() {
         TableFieldMetaInfo tableFieldMetaInfo = null;
         try {
-            tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(druid.getConnection(),
+            tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
                 getSchemaName(), tableName);
         } catch (DatabaseException | SQLException e) {
             logger.error(e.getMessage());
@@ -96,7 +95,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     protected void configureTopology() {
         List<TableTopology> topologyList = null;
         try {
-            topologyList = DbUtil.getTopology(druid.getConnection(), tableName);
+            topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
         } catch (DatabaseException | SQLException e) {
             logger.error(e.getMessage());
             System.exit(1);
@@ -107,7 +106,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     protected void configurePartitionKey() {
         PartitionKey partitionKey = null;
         try {
-            partitionKey = DbUtil.getPartitionKey(druid.getConnection(),
+            partitionKey = DbUtil.getPartitionKey(dataSource.getConnection(),
                 getSchemaName(), tableName);
             logger.info("使用划分键 {}", partitionKey);
 
@@ -124,53 +123,43 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     @Override
     protected void checkConsumeProgress(ReadFileWithBlockProducer producers, BaseWorkHandler[] consumers) {
         ScheduledThreadPoolExecutor checkConsumePartFinishScheduler = new ScheduledThreadPoolExecutor(1,
-            new ThreadFactory() {
-
-                @Override
-                public Thread newThread(Runnable r) {
-                    return new Thread(r, "[check-progress-thread]");
-                }
-            });
-        checkConsumePartFinishScheduler.scheduleAtFixedRate(new Runnable() {
-
-            @Override
-            public void run() {
-                AtomicBoolean[] produceProgress = producers.getFileDoneList();
-                long nextDoBlockIndex;
-                for (int i = producerExecutionContext.getNextFileIndex(); i < produceProgress.length; ++i) {
-                    nextDoBlockIndex = Long.MAX_VALUE;
-                    ConcurrentHashMap<Long, AtomicInteger> fileDone =
-                        producerExecutionContext.getEventCounter().get(i);
-                    for (ConcurrentHashMap.Entry<Long, AtomicInteger> entry : fileDone.entrySet()) {
-                        if (entry.getValue().get() > 0) {
-                            nextDoBlockIndex = nextDoBlockIndex > entry.getKey() ?
-                                entry.getKey() : nextDoBlockIndex;
-                        }
+            r -> new Thread(r, "[check-progress-thread]"));
+        checkConsumePartFinishScheduler.scheduleAtFixedRate(() -> {
+            AtomicBoolean[] produceProgress = producers.getFileDoneList();
+            long nextDoBlockIndex;
+            for (int i = producerExecutionContext.getNextFileIndex(); i < produceProgress.length; ++i) {
+                nextDoBlockIndex = Long.MAX_VALUE;
+                ConcurrentHashMap<Long, AtomicInteger> fileDone =
+                    producerExecutionContext.getEventCounter().get(i);
+                for (ConcurrentHashMap.Entry<Long, AtomicInteger> entry : fileDone.entrySet()) {
+                    if (entry.getValue().get() > 0) {
+                        nextDoBlockIndex = nextDoBlockIndex > entry.getKey() ?
+                            entry.getKey() : nextDoBlockIndex;
                     }
-                    if (nextDoBlockIndex == Long.MAX_VALUE) {
-                        // means now nextDoFileIndex consume over
-                        if (produceProgress[i].get()) {
-                            // means all file consume over
-                            if (i + 1 == produceProgress.length) {
-                                logger.info("deal with all files over");
-                            }
-                        } else {
-                            producerExecutionContext.setNextFileIndex(i);
-                            producerExecutionContext.setNextBlockIndex(0);
-                            break;
+                }
+                if (nextDoBlockIndex == Long.MAX_VALUE) {
+                    // means now nextDoFileIndex consume over
+                    if (produceProgress[i].get()) {
+                        // means all file consume over
+                        if (i + 1 == produceProgress.length) {
+                            logger.info("deal with all files over");
                         }
                     } else {
                         producerExecutionContext.setNextFileIndex(i);
-                        producerExecutionContext.setNextBlockIndex(nextDoBlockIndex);
+                        producerExecutionContext.setNextBlockIndex(0);
                         break;
                     }
+                } else {
+                    producerExecutionContext.setNextFileIndex(i);
+                    producerExecutionContext.setNextBlockIndex(nextDoBlockIndex);
+                    break;
                 }
-                producerExecutionContext.saveToHistoryFile(false);
-                logger.info("next file {}", producerExecutionContext.getNextFileIndex());
-                logger.info("next block {}", producerExecutionContext.getNextBlockIndex());
             }
-
+            producerExecutionContext.saveToHistoryFile(false);
+            logger.info("next file {}", producerExecutionContext.getNextFileIndex());
+            logger.info("next block {}", producerExecutionContext.getNextBlockIndex());
         }, 30, 60, TimeUnit.SECONDS);
+        checkConsumePartFinishScheduler.shutdown();
     }
 
     @Override

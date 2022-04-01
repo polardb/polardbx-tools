@@ -35,13 +35,11 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
@@ -102,7 +100,7 @@ public class ExportProducer extends BaseExportWorker {
 
     public void produceData() {
         List<FieldMetaInfo> metaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
-        String sql = ExportUtil.getSqlWithFormattedDate(topology, metaInfoList, whereCondition);
+        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology, metaInfoList, whereCondition);
 
         // 字段数
         int colNum;

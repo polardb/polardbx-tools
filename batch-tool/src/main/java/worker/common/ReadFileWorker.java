@@ -17,6 +17,7 @@
 package worker.common;
 
 import com.lmax.disruptor.RingBuffer;
+import model.config.CompressMode;
 import model.config.ConfigConstant;
 import model.config.GlobalVar;
 
@@ -29,10 +30,16 @@ public abstract class ReadFileWorker implements Runnable {
     protected String[] lineBuffer;
     protected volatile int localProcessingFileIndex;
     protected long localProcessingBlockIndex = -1;
+    protected final CompressMode compressMode;
 
     protected ReadFileWorker(RingBuffer<BatchLineEvent> ringBuffer) {
+        this(ringBuffer, CompressMode.NONE);
+    }
+
+    protected ReadFileWorker(RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) {
         this.ringBuffer = ringBuffer;
         this.lineBuffer = new String[EMIT_BATCH_SIZE];
+        this.compressMode = compressMode;
     }
 
     protected void appendToLineBuffer(String line) {

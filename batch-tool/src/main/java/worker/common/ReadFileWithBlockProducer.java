@@ -18,11 +18,19 @@ package worker.common;
 
 import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
+import model.config.CompressMode;
+import model.config.ConfigConstant;
+import model.config.EncryptionConfig;
+import model.encrypt.Cipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
@@ -30,6 +38,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.GZIPInputStream;
 
 public class ReadFileWithBlockProducer extends ReadFileProducer {
     private static final Logger logger = LoggerFactory.getLogger(ReadFileWithBlockProducer.class);
@@ -53,9 +62,14 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
      */
     private static long READ_PADDING = 1024L * 4;
 
+    private final CompressMode compressMode;
+    private final Cipher cipher;
+
     public ReadFileWithBlockProducer(ProducerExecutionContext context,
                                      RingBuffer<BatchLineEvent> ringBuffer) {
         super(context, ringBuffer);
+        this.compressMode = context.getCompressMode();
+        this.cipher = Cipher.getCipher(context.getEncryptionConfig(), false);
         this.readBlockSize = context.getReadBlockSizeInMb() * 1024L * 1024;
         this.currentFileIndex = new AtomicInteger(context.getNextFileIndex());
         List<String> filePathList = context.getFilePathList();
@@ -90,7 +104,7 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
         BlockerReader readFileWorker = null;
         try {
             for (int i = 0; i < parallelism; i++) {
-                readFileWorker = new BlockerReader(ringBuffer);
+                readFileWorker = new BlockerReader(ringBuffer, compressMode);
                 threadPool.submit(readFileWorker);
             }
         } catch (FileNotFoundException e) {
@@ -107,8 +121,8 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
 
         private RandomAccessFile curRandomAccessFile;
 
-        public BlockerReader(RingBuffer<BatchLineEvent> ringBuffer) throws FileNotFoundException {
-            super(ringBuffer);
+        public BlockerReader(RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) throws FileNotFoundException {
+            super(ringBuffer, compressMode);
 
             // set localProcessingFileIndex and startPosArr[localProcessingFileIndex]
             this.localProcessingFileIndex = currentFileIndex.get();
@@ -127,6 +141,7 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
         public void run() {
 
             byte[] buffer = new byte[(int) (readBlockSize + READ_PADDING)];
+            byte[] result;
             byte[] tmpByteBuffer;
 
             int curPos, curLen;
@@ -151,6 +166,25 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
                         }
                         continue;
                     }
+                    // TODO 待重构
+                    if (this.compressMode == CompressMode.GZIP) {
+                        // 将buffer的内容解压
+                        GZIPInputStream gzipInputStream = new GZIPInputStream(new ByteArrayInputStream(buffer),
+                            ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE);
+                        ByteArrayOutputStream gzipOutputBuffer = new ByteArrayOutputStream(buffer.length * 2);
+                        int num = 0;
+                        byte[] gzipBuffer = new byte[buffer.length];
+                        while ((num = gzipInputStream.read(gzipBuffer, 0, len)) != -1) {
+                            gzipOutputBuffer.write(gzipBuffer, 0, num);
+                        }
+                        buffer = gzipOutputBuffer.toByteArray();
+                        len = buffer.length;
+                        gzipInputStream.close();
+                    }
+                    if (cipher != null) {
+                        buffer = cipher.decrypt(buffer);
+                    }
+
                     curPos = 0;
                     curLen = 0;
                     label_reading:
@@ -219,9 +253,11 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
+                    logger.error(e.getMessage());
                     break;
                 } catch (Exception e) {
                     e.printStackTrace();
+                    logger.error(e.getMessage());
                     System.exit(1);
                 }
             }

@@ -32,9 +32,10 @@ public class WriteDbCommand extends BaseOperateCommand {
 
     private final ConsumerExecutionContext consumerExecutionContext;
 
-    public WriteDbCommand(@NotNull ProducerExecutionContext producerExecutionContext,
+    public WriteDbCommand(String dbName,
+                          @NotNull ProducerExecutionContext producerExecutionContext,
                           @NotNull ConsumerExecutionContext consumerExecutionContext) {
-        super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
+        super(dbName, ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
         this.producerExecutionContext = producerExecutionContext;
         this.consumerExecutionContext = consumerExecutionContext;
     }

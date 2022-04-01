@@ -21,7 +21,10 @@ import datasource.DatasourceConstant;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
 import model.config.BaseConfig;
+import model.config.CompressMode;
 import model.config.ConfigConstant;
+import model.config.DdlMode;
+import model.config.EncryptionConfig;
 import model.config.ExportConfig;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
@@ -38,11 +41,15 @@ import org.slf4j.LoggerFactory;
 import util.FileUtil;
 import util.Version;
 
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
 import static model.config.ConfigConstant.*;
 
+/**
+ * 从命令行输入解析配置
+ */
 public class CommandUtil {
     private static final Logger logger = LoggerFactory.getLogger(CommandUtil.class);
 
@@ -161,22 +168,35 @@ public class CommandUtil {
         return command;
     }
 
+    private static void validateOperateArgs(CommandLine result) {
+        requireArg(result, ARG_SHORT_OPERATION);
+        requireArg(result, ARG_SHORT_SEP);
+        requireArg(result, ARG_SHORT_DBNAME);
+    }
+
     private static BaseOperateCommand initCommand(CommandLine result) {
         // 获取命令类型
         String commandTypeStr = result.getOptionValue(ARG_SHORT_OPERATION);
         CommandType commandType = CommandUtil.lookup(commandTypeStr);
+        BaseOperateCommand command = null;
         switch (commandType) {
         case EXPORT:
-            return parseExportCommand(result);
+            command = parseExportCommand(result);
+            break;
         case IMPORT:
-            return parseImportCommand(result);
+            command = parseImportCommand(result);
+            break;
         case UPDATE:
-            return parseUpdateCommand(result);
+            command = parseUpdateCommand(result);
+            break;
         case DELETE:
-            return parseDeleteCommand(result);
+            command = parseDeleteCommand(result);
+            break;
         default:
             throw new IllegalArgumentException("Unsupported command: " + commandTypeStr);
         }
+        command.setTableName(getTableName(result));
+        return command;
     }
 
     private static void afterInitCommand(BaseOperateCommand command, CommandLine result) {
@@ -184,12 +204,6 @@ public class CommandUtil {
             boolean shardingEnabled = parseFlag(result.getOptionValue(ARG_SHORT_ENABLE_SHARDING));
             command.setShardingEnabled(shardingEnabled);
         }
-    }
-
-    private static void validateOperateArgs(CommandLine result) {
-        requireArg(result, ARG_SHORT_OPERATION);
-        requireArg(result, ARG_SHORT_SEP);
-        requireArg(result, ARG_SHORT_TABLE);
     }
 
     private static ExportCommand parseExportCommand(CommandLine result) {
@@ -200,12 +214,15 @@ public class CommandUtil {
         exportConfig.setSeparator(getSeparator(result));
         exportConfig.setFilenamePrefix(result.getOptionValue(ARG_SHORT_PREFIX));
         exportConfig.setWhereCondition(result.getOptionValue(ARG_SHORT_WHERE));
+        exportConfig.setDdlMode(getDdlMode(result));
+        exportConfig.setEncryptionConfig(getEncryptionConfig(result));
+        exportConfig.setCompressMode(getCompressMode(result));
         setFileNum(result, exportConfig);
         setFileLine(result, exportConfig);
         setOrderBy(result, exportConfig);
         setQuoteEncloseMode(result, exportConfig);
         setParallelism(result, exportConfig);
-        return new ExportCommand(tableName, exportConfig);
+        return new ExportCommand(getDbName(result), tableName, exportConfig);
     }
 
     private static BaseOperateCommand parseImportCommand(CommandLine result) {
@@ -215,14 +232,7 @@ public class CommandUtil {
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
         configureCommonContext(result, producerExecutionContext, consumerExecutionContext);
 
-        if (result.hasOption(ARG_SHORT_QUOTE_ENCLOSE_MODE)) {
-            producerExecutionContext.setQuoteEncloseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
-            if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
-                // 指定引号转义模式则采用安全的方式执行
-                producerExecutionContext.setParallelism(producerExecutionContext.getFilePathList().size());
-            }
-        }
-        return new ImportCommand(producerExecutionContext, consumerExecutionContext);
+        return new ImportCommand(getDbName(result), producerExecutionContext, consumerExecutionContext);
     }
 
     private static BaseOperateCommand parseDeleteCommand(CommandLine result) {
@@ -233,7 +243,7 @@ public class CommandUtil {
         configureCommonContext(result, producerExecutionContext, consumerExecutionContext);
 
         consumerExecutionContext.setWhereCondition(getWhereCondition(result));
-        return new DeleteCommand(producerExecutionContext, consumerExecutionContext);
+        return new DeleteCommand(getDbName(result), producerExecutionContext, consumerExecutionContext);
     }
 
     private static BaseOperateCommand parseUpdateCommand(CommandLine result) {
@@ -245,8 +255,9 @@ public class CommandUtil {
 
         consumerExecutionContext.setWhereCondition(getWhereCondition(result));
         consumerExecutionContext.setFuncSqlForUpdateEnabled(getFuncEnabled(result));
-        return new UpdateCommand(producerExecutionContext, consumerExecutionContext);
+        return new UpdateCommand(getDbName(result), producerExecutionContext, consumerExecutionContext);
     }
+
 // --- 批命令解析 end ---
 
 // --- 导出相关设置 start ---
@@ -294,7 +305,8 @@ public class CommandUtil {
 
     private static void setCharset(CommandLine result, BaseConfig config) {
         if (result.hasOption(ARG_SHORT_CHARSET)) {
-            config.setCharset(result.getOptionValue(ARG_SHORT_CHARSET));
+            String charset = result.getOptionValue(ARG_SHORT_CHARSET);
+            config.setCharset(Charset.forName(charset));
         }
     }
 
@@ -317,6 +329,7 @@ public class CommandUtil {
             config.setParallelism(Integer.parseInt(result.getOptionValue(ARG_SHORT_PRODUCER)));
         }
     }
+
 // --- 导出相关设置 end ---
 
 // --- 写入数据库操作的设置 start ---
@@ -348,12 +361,25 @@ public class CommandUtil {
                                                  ProducerExecutionContext producerExecutionContext) {
 
         producerExecutionContext.setFilePathList(getFilePathList(result));
-        producerExecutionContext.setHistoryFileAndParse(getHistoryFile(result));
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setCharset(getCharset(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
         producerExecutionContext.setWithHeader(getWithHeader(result));
-        producerExecutionContext.setSep(getSep(result));
+        producerExecutionContext.setSeparator(getSep(result));
+        producerExecutionContext.setDdlMode(getDdlMode(result));
+        producerExecutionContext.setCompressMode(getCompressMode(result));
+        producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
+
+        if (result.hasOption(ARG_SHORT_HISTORY_FILE)) {
+            producerExecutionContext.setHistoryFileAndParse(result.getOptionValue(ARG_SHORT_HISTORY_FILE));
+        }
+        if (result.hasOption(ARG_SHORT_QUOTE_ENCLOSE_MODE)) {
+            producerExecutionContext.setQuoteEncloseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
+            if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
+                // 指定引号转义模式则采用安全的方式执行
+                producerExecutionContext.setParallelism(producerExecutionContext.getFilePathList().size());
+            }
+        }
     }
 
     /**
@@ -362,7 +388,7 @@ public class CommandUtil {
     private static void configureConsumerContext(CommandLine result,
                                                  ConsumerExecutionContext consumerExecutionContext) {
         consumerExecutionContext.setCharset(getCharset(result));
-        consumerExecutionContext.setSep(getSep(result));
+        consumerExecutionContext.setSeparator(getSep(result));
         consumerExecutionContext.setInsertIgnoreAndResumeEnabled(getInsertIgnoreAndResumeEnabled(result));
         consumerExecutionContext.setParallelism(getConsumerParallelism(result));
         consumerExecutionContext.setForceParallelism(getForceParallelism(result));
@@ -397,6 +423,10 @@ public class CommandUtil {
 
     private static boolean getReadAndProcessFileOnly(CommandLine result) {
         return result.hasOption(ARG_SHORT_READ_FILE_ONLY);
+    }
+
+    private static String getDbName(CommandLine result) {
+        return result.getOptionValue(ARG_SHORT_DBNAME);
     }
 
     private static String getTableName(CommandLine result) {
@@ -447,14 +477,6 @@ public class CommandUtil {
         throw new IllegalStateException("cannot get file path list");
     }
 
-    private static String getHistoryFile(CommandLine result) {
-        if (result.hasOption(ARG_SHORT_HISTORY_FILE)) {
-            return result.getOptionValue(ARG_SHORT_HISTORY_FILE);
-        } else {
-            return ConfigConstant.DEFAULT_HISTORY_FILE;
-        }
-    }
-
     private static int getTpsLimit(CommandLine result) {
         if (result.hasOption(ARG_SHORT_TPS_LIMIT)) {
             int tpsLimit = Integer.parseInt(result.getOptionValue(ARG_SHORT_TPS_LIMIT));
@@ -475,11 +497,37 @@ public class CommandUtil {
         return result.getOptionValue(ARG_SHORT_SEP);
     }
 
-    private static String getCharset(CommandLine result) {
+    private static Charset getCharset(CommandLine result) {
         if (result.hasOption(ARG_SHORT_CHARSET)) {
-            return result.getOptionValue(ARG_SHORT_CHARSET);
+            String charset = result.getOptionValue(ARG_SHORT_CHARSET);
+            return Charset.forName(charset);
         } else {
             return ConfigConstant.DEFAULT_CHARSET;
+        }
+    }
+
+    private static DdlMode getDdlMode(CommandLine result) {
+        if (!result.hasOption(ARG_SHORT_WITH_DDL)) {
+            return DdlMode.NO_DDL;
+        }
+        return DdlMode.fromString(result.getOptionValue(ARG_SHORT_WITH_DDL));
+    }
+
+    private static CompressMode getCompressMode(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_COMPRESS)) {
+            return CompressMode.fromString(result.getOptionValue(ARG_SHORT_COMPRESS));
+        } else {
+            return ConfigConstant.DEFAULT_COMPRESS_MODE;
+        }
+    }
+
+    private static EncryptionConfig getEncryptionConfig(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_ENCRYPTION)) {
+            String encryptionMode = result.getOptionValue(ARG_SHORT_ENCRYPTION);
+            String key = result.getOptionValue(ARG_SHORT_KEY);
+            return EncryptionConfig.parse(encryptionMode, key);
+        } else {
+            return DEFAULT_ENCRYPTION_CONFIG;
         }
     }
 
@@ -673,6 +721,30 @@ public class CommandUtil {
             .argName("auto/force/none")
             .desc("The mode of how field values are enclosed by double-quotes when exporting table."
                 + " Default value is auto.")
+            .build());
+        // 添加导出/导入DDL建表语句模式
+        options.addOption(Option.builder(ARG_SHORT_WITH_DDL)
+            .longOpt("DDL")
+            .hasArg()
+            .desc("Export or import with table definition DDL mode: NONE / ONLY / WITH")
+            .build());
+        // 添加导出/导入使用的压缩模式
+        options.addOption(Option.builder(ARG_SHORT_COMPRESS)
+            .longOpt("compress")
+            .hasArg()
+            .desc("Export or import compressed file: NONE / GZIP")
+            .build());
+        // 加解密算法
+        options.addOption(Option.builder(ARG_SHORT_ENCRYPTION)
+            .longOpt("encrypt")
+            .hasArg()
+            .desc("Export or import with encrypted file: NONE / AES-CBC")
+            .build());
+        // 对称加解密密钥
+        options.addOption(Option.builder(ARG_SHORT_KEY)
+            .longOpt("key")
+            .hasArg()
+            .desc("Encryption key (string).")
             .build());
     }
 

@@ -17,21 +17,23 @@
 package worker.export;
 
 import com.alibaba.druid.util.JdbcUtils;
+import model.config.CompressMode;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
+import model.encrypt.Cipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
 import util.FileUtil;
+import worker.common.IFileWriter;
+import worker.common.NioFileWriter;
 import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -45,8 +47,15 @@ import java.util.concurrent.Semaphore;
  */
 public class DirectExportWorker extends BaseExportWorker {
     private static final Logger logger = LoggerFactory.getLogger(DirectExportWorker.class);
+    private static final int NO_FILE_SEQ = -1;
+
+    /**
+     * 原始指定文件名
+     */
     private final String filename;
-    private FileChannel appendChannel = null;
+    private final IFileWriter fileWriter;
+    private Cipher cipher = null;
+
     /**
      * 单个文件最大行数
      */
@@ -58,13 +67,16 @@ public class DirectExportWorker extends BaseExportWorker {
     /**
      * 当前文件序号
      */
-    private int curFileSeq = 0;
+    private int curFileSeq;
 
     private String whereCondition;
 
+    /**
+     * 首行是否为字段名header
+     * 注意与压缩模式的兼容性
+     */
     private final boolean isWithHeader;
     private CountDownLatch countDownLatch;
-
     private Semaphore permitted;
 
     public DirectExportWorker(DataSource druid,
@@ -73,39 +85,36 @@ public class DirectExportWorker extends BaseExportWorker {
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode) {
-        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode);
-        this.filename = filename;
-        this.maxLine = 0;
-        this.isWithHeader = isWithHeader;
-        try {
-            createNewFile(filename);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode) {
+        this(druid, topology,  tableFieldMetaInfo, 0,
+            filename, separator, isWithHeader, quoteEncloseMode, compressMode);
     }
 
+    /**
+     * @param maxLine 单个文件最大行数
+     */
     public DirectExportWorker(DataSource druid, TableTopology topology,
                               TableFieldMetaInfo tableFieldMetaInfo,
                               int maxLine,
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode) {
-        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode);
-        if (maxLine < GlobalVar.EMIT_BATCH_SIZE) {
-            throw new IllegalArgumentException("Max line should be greater than batch size: "
-                + GlobalVar.EMIT_BATCH_SIZE);
-        }
-        this.filename = filename;
+                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode) {
+        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode);
         this.maxLine = maxLine;
+        this.filename = filename;
         this.isWithHeader = isWithHeader;
-        String tmpFileName = filename + "-" + curFileSeq;
-        try {
-            createNewFile(tmpFileName);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (isLimitLine()) {
+            this.curFileSeq = 0;
+            if (maxLine < GlobalVar.EMIT_BATCH_SIZE) {
+                throw new IllegalArgumentException("Max line should be greater than batch size: "
+                    + GlobalVar.EMIT_BATCH_SIZE);
+            }
+        } else {
+            this.curFileSeq = NO_FILE_SEQ;
         }
+        this.fileWriter = new NioFileWriter(compressMode);
+        createNewFile();
     }
 
     /**
@@ -113,16 +122,35 @@ public class DirectExportWorker extends BaseExportWorker {
      * 会覆盖同名文件
      * 并根据开关 向文件写入字段名
      */
-    private void createNewFile(String tmpFileName) throws IOException {
-        this.appendChannel = FileUtil.createEmptyFileAndOpenChannel(tmpFileName);
+    private void createNewFile() {
+        String tmpFileName = getTmpFileName();
+        fileWriter.nextFile(tmpFileName);
         if (isWithHeader) {
             appendHeader();
         }
     }
 
-    private void appendHeader() throws IOException {
+    /**
+     * 获取写入当前文件名
+     */
+    private String getTmpFileName() {
+        if (this.curFileSeq == -1 && this.compressMode == CompressMode.NONE) {
+            return this.filename;
+        }
+        StringBuilder fileNameBuilder = new StringBuilder(this.filename.length() + 6);
+        fileNameBuilder.append(this.filename);
+        if (curFileSeq != -1) {
+            fileNameBuilder.append('-').append(curFileSeq);
+        }
+        if (this.compressMode == CompressMode.GZIP) {
+            fileNameBuilder.append(".gz");
+        }
+        return fileNameBuilder.toString();
+    }
+
+    private void appendHeader() {
         byte[] header = FileUtil.getHeaderBytes(tableFieldMetaInfo.getFieldMetaInfoList(), separator);
-        writeNio(header);
+        fileWriter.write(header);
     }
 
     @Override
@@ -135,13 +163,27 @@ public class DirectExportWorker extends BaseExportWorker {
         }
     }
 
+    private void beforeRun() {
+        if (permitted != null) {
+            permitted.acquireUninterruptibly();
+        }
+    }
+
+    private void afterRun() {
+        countDownLatch.countDown();
+        if (permitted != null) {
+            permitted.release();
+        }
+        fileWriter.close();
+    }
+
     private void produceData() {
         Statement stmt = null;
         ResultSet resultSet = null;
         Connection conn = null;
         try {
             logger.info("{} 开始导出", topology);
-            String sql = ExportUtil.getSqlWithFormattedDate(topology,
+            String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
                 tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
             // 字段数
             int colNum;
@@ -172,8 +214,7 @@ public class DirectExportWorker extends BaseExportWorker {
                         // 新建文件
                         createNewPartFile();
                     }
-                    writeNio(os.toByteArray());
-                    os.reset();
+                    writeToFile(os);
                     curLineNum += bufferedRowNum;
                     bufferedRowNum = 0;
                 }
@@ -185,8 +226,7 @@ public class DirectExportWorker extends BaseExportWorker {
                     // 新建文件
                     createNewPartFile();
                 }
-                writeNio(os.toByteArray());
-                os.reset();
+                writeToFile(os);
                 bufferedRowNum = 0;
             }
             logger.info("{} 导出完成", topology);
@@ -200,17 +240,19 @@ public class DirectExportWorker extends BaseExportWorker {
         }
     }
 
-    private void beforeRun() {
-        if (permitted != null) {
-            permitted.acquireUninterruptibly();
+    private void writeToFile(ByteArrayOutputStream os) {
+        byte[] data = os.toByteArray();
+        if (cipher != null) {
+            try {
+                data = cipher.encrypt(data);
+            } catch (Exception e) {
+                e.printStackTrace();
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
-    }
-
-    private void afterRun() {
-        countDownLatch.countDown();
-        if (permitted != null) {
-            permitted.release();
-        }
+        fileWriter.write(data);
+        os.reset();
     }
 
     private boolean isLimitLine() {
@@ -219,27 +261,8 @@ public class DirectExportWorker extends BaseExportWorker {
 
     private void createNewPartFile() {
         curFileSeq++;
-        String tmpFileName = filename + "-" + curFileSeq;
-        try {
-            appendChannel.close();
-            createNewFile(tmpFileName);
-            curLineNum = 0;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void writeNio(byte[] data) {
-        try {
-            ByteBuffer src = ByteBuffer.wrap(data);
-            int length = appendChannel.write(src);
-            while (length != 0) {
-                length = appendChannel.write(src);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        createNewFile();
+        curLineNum = 0;
     }
 
     public String getWhereCondition() {
@@ -260,5 +283,9 @@ public class DirectExportWorker extends BaseExportWorker {
 
     public void setPermitted(Semaphore permitted) {
         this.permitted = permitted;
+    }
+
+    public void setCipher(Cipher cipher) {
+        this.cipher = cipher;
     }
 }

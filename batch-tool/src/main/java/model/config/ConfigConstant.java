@@ -17,6 +17,8 @@
 package model.config;
 
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -69,6 +71,10 @@ public class ConfigConstant {
     public static final String ARG_SHORT_PARALLEL_MERGE = "para";
     public static final String ARG_SHORT_QUOTE_ENCLOSE_MODE = "quote";
     public static final String ARG_SHORT_TPS_LIMIT = "tps";
+    public static final String ARG_SHORT_WITH_DDL = "DDL";
+    public static final String ARG_SHORT_COMPRESS = "comp";
+    public static final String ARG_SHORT_ENCRYPTION = "enc";
+    public static final String ARG_SHORT_KEY = "key";
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**
@@ -106,6 +112,12 @@ public class ConfigConstant {
      * 默认存储历史数据的文档
      */
     public static final String DEFAULT_HISTORY_FILE = "history_file";
+
+    /**
+     * DDL语句的文件名后缀
+     */
+    public static final String DDL_FILE_SUFFIX = ".ddl";
+
     /**
      * 更新时的整数倍数
      */
@@ -116,12 +128,11 @@ public class ConfigConstant {
      */
     public static final float FLOAT_UPDATE_MULTIPLICAND = 2.0f;
 
-    /**
-     * 更新时的浮点数倍数(精确)
-     */
-    public static final BigDecimal DECIMAL_UPDATE_MULTIPLICAND = BigDecimal.valueOf(2);
+    public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
-    public static final String DEFAULT_CHARSET = "utf-8";
+    public static final CompressMode DEFAULT_COMPRESS_MODE = CompressMode.NONE;
+
+    public static final EncryptionConfig DEFAULT_ENCRYPTION_CONFIG = EncryptionConfig.NONE;
 
     public static final boolean DEFAULT_WITH_HEADER = false;
 
@@ -132,6 +143,11 @@ public class ConfigConstant {
     public static final String ORDER_BY_TYPE_DESC = "desc";
 
     public static final String END_OF_BATCH_LINES = "END_OF_BATCH_LINES";
+
+    /**
+     * 64KB
+     */
+    public static final int DEFAULT_COMPRESS_BUFFER_SIZE = 64 * 1024;
 
     /**
      * OpenCSV库不支持直接读取一行 需读取出字段再用该魔法值拼接
