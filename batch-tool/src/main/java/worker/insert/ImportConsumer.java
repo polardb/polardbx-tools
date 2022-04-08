@@ -33,7 +33,7 @@ public class ImportConsumer extends BaseDefaultConsumer {
     @Override
     protected void initLocalVars() {
         super.initLocalVars();
-        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo().getFieldMetaInfoList();
+        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
     }
 
     @Override
@@ -54,7 +54,7 @@ public class ImportConsumer extends BaseDefaultConsumer {
     protected String getSql(StringBuilder data) {
         // 去除最后一个逗号
         data.setLength(data.length() - 1);
-        return ImportUtil.getBatchInsertSql(consumerContext.getTableName(),
+        return ImportUtil.getBatchInsertSql(tableName,
             data.toString(), consumerContext.isInsertIgnoreAndResumeEnabled());
     }
 }

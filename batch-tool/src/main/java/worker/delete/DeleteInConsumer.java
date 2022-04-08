@@ -34,9 +34,9 @@ public class DeleteInConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
-        this.pkList = consumerContext.getPkList();
+        this.pkList = consumerContext.getTablePkList(tableName);
         this.pkValues = new String[pkList.size()];
-        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo().getFieldMetaInfoList();
+        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
     }
 
     @Override
@@ -53,7 +53,7 @@ public class DeleteInConsumer extends BaseDefaultConsumer {
     @Override
     protected String getSql(StringBuilder data) {
         data.setLength(data.length() - 1);
-        return DeleteUtil.getDeleteUsingIn(consumerContext.getTableName(), consumerContext.getPkNames(),
+        return DeleteUtil.getDeleteUsingIn(tableName, consumerContext.getTablePkName(tableName),
             data.toString());
     }
 }

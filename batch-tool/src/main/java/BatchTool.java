@@ -49,7 +49,7 @@ public class BatchTool {
 
 
     public void doBatchOp(BaseOperateCommand command, DataSourceConfig dataSourceConfig) {
-        logger.info("批量操作信息: {}", command);
+        logger.info("开始批量操作...");
         BaseExecutor commandExecutor = BaseExecutor.getExecutor(command, dataSourceConfig, druid);
         commandExecutor.preCheck();
         try {

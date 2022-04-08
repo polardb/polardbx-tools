@@ -7,8 +7,9 @@ import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import model.encrypt.Cipher;
 import util.DbUtil;
+import util.FileUtil;
 import worker.export.DirectExportWorker;
-import worker.export.order.DirectOrderByExportWorker;
+import worker.export.order.DirectOrderExportWorker;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
@@ -20,6 +21,7 @@ public class ExportWorkerFactory {
                                                                     TableFieldMetaInfo tableFieldMetaInfo,
                                                                     String filename,
                                                                     ExportConfig config) {
+
         DirectExportWorker directExportWorker;
         switch (config.getExportWay()) {
         case MAX_LINE_NUM_IN_SINGLE_FILE:
@@ -28,14 +30,14 @@ public class ExportWorkerFactory {
                 config.getLimitNum(),
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode());
+                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
             break;
         case DEFAULT:
             directExportWorker = new DirectExportWorker(druid,
                 topology, tableFieldMetaInfo,
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode());
+                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
             break;
         case FIXED_FILE_NUM:
         default:
@@ -46,10 +48,13 @@ public class ExportWorkerFactory {
         return directExportWorker;
     }
 
-    public static DirectOrderByExportWorker buildDirectExportWorker(DataSource druid,
-                                                                    TableFieldMetaInfo tableFieldMetaInfo,
-                                                                    ExportCommand command) {
+    public static DirectOrderExportWorker buildDirectOrderExportWorker(DataSource druid,
+                                                                       TableFieldMetaInfo tableFieldMetaInfo,
+                                                                       ExportCommand command,
+                                                                       String tableName) {
         ExportConfig config = command.getExportConfig();
+        String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
+            config.getFilenamePrefix(), tableName);
         int maxLine = 0;
         switch (config.getExportWay()) {
         case MAX_LINE_NUM_IN_SINGLE_FILE:
@@ -59,7 +64,7 @@ public class ExportWorkerFactory {
             // 固定文件数的情况 先拿到全部的行数
             double totalRowCount;
             try {
-                totalRowCount = DbUtil.getTableRowCount(druid.getConnection(), command.getTableName());
+                totalRowCount = DbUtil.getTableRowCount(druid.getConnection(), tableName);
             } catch (DatabaseException | SQLException e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
@@ -71,9 +76,9 @@ public class ExportWorkerFactory {
         default:
             break;
         }
-        return new DirectOrderByExportWorker(druid, command.getFilePathPrefix(),
+        return new DirectOrderExportWorker(druid, filePathPrefix,
                 tableFieldMetaInfo,
-                command.getTableName(), config.getOrderByColumnNameList(), maxLine,
+                tableName, config.getOrderByColumnNameList(), maxLine,
                 config.getSeparator().getBytes(),
                 config.isAscending());
     }

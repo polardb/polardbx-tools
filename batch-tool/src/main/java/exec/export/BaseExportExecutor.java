@@ -30,7 +30,7 @@ public abstract class BaseExportExecutor extends BaseExecutor {
     @Override
     public void preCheck() {
         if (!command.isDbOperation()) {
-            checkTableExists(command.getTableName());
+            checkTableExists(command.getTableNames());
         }
     }
 
@@ -63,7 +63,7 @@ public abstract class BaseExportExecutor extends BaseExecutor {
         if (command.isDbOperation()) {
             ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName());
         } else {
-            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), command.getTableName());
+            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), command.getTableNames());
         }
         Thread ddlThread = new Thread(ddlExportWorker);
         ddlThread.start();

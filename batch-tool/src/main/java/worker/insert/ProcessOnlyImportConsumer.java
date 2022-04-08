@@ -46,7 +46,7 @@ public class ProcessOnlyImportConsumer extends BaseWorkHandler {
         try {
             String[] lines = event.getBatchLines();
             StringBuilder stringBuilder = new StringBuilder();
-            List<FieldMetaInfo> fieldMetaInfoList = consumerContext.getTableFieldMetaInfo()
+            List<FieldMetaInfo> fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName)
                 .getFieldMetaInfoList();
             for (String line : lines) {
                 if (StringUtils.isEmpty(line)) {
@@ -70,15 +70,13 @@ public class ProcessOnlyImportConsumer extends BaseWorkHandler {
                 }
                 stringBuilder.append("),");
             }
-            //logger.info("Rows: {}", i);
             // 去除最后一个逗号 发送数据到数据库
             stringBuilder.setLength(stringBuilder.length() - 1);
             insertData(stringBuilder.toString());
         } catch (Exception e) {
             e.printStackTrace();
             logger.error(e.getMessage());
-            // 认为无法恢复
-            System.exit(1);
+            throw new RuntimeException(e);
         }
     }
 
@@ -88,7 +86,7 @@ public class ProcessOnlyImportConsumer extends BaseWorkHandler {
         try {
             conn = consumerContext.getDataSource().getConnection();
             stmt = conn.createStatement();
-            String sql = ImportUtil.getBatchInsertSql(consumerContext.getTableName(),
+            String sql = ImportUtil.getBatchInsertSql(tableName,
                 data, consumerContext.isInsertIgnoreAndResumeEnabled());
             // 不执行
         } catch (SQLException e) {

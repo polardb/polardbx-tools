@@ -18,6 +18,8 @@ package worker.export;
 
 import com.alibaba.druid.util.JdbcUtils;
 import model.config.CompressMode;
+import model.config.EncryptionMode;
+import model.config.FileFormat;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
 import model.db.TableFieldMetaInfo;
@@ -26,14 +28,17 @@ import model.encrypt.Cipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
+import util.DbUtil;
 import util.FileUtil;
 import worker.common.IFileWriter;
 import worker.common.NioFileWriter;
+import worker.common.XlsxFileWriter;
 import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -85,9 +90,12 @@ public class DirectExportWorker extends BaseExportWorker {
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode) {
+                              QuoteEncloseMode quoteEncloseMode,
+                              CompressMode compressMode,
+                              FileFormat fileFormat,
+                              Charset charset) {
         this(druid, topology,  tableFieldMetaInfo, 0,
-            filename, separator, isWithHeader, quoteEncloseMode, compressMode);
+            filename, separator, isWithHeader, quoteEncloseMode, compressMode, fileFormat, charset);
     }
 
     /**
@@ -99,8 +107,11 @@ public class DirectExportWorker extends BaseExportWorker {
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode) {
-        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode);
+                              QuoteEncloseMode quoteEncloseMode,
+                              CompressMode compressMode,
+                              FileFormat fileFormat,
+                              Charset charset) {
+        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;
@@ -113,7 +124,13 @@ public class DirectExportWorker extends BaseExportWorker {
         } else {
             this.curFileSeq = NO_FILE_SEQ;
         }
-        this.fileWriter = new NioFileWriter(compressMode);
+        switch (fileFormat) {
+        case XLSX:
+            this.fileWriter = new XlsxFileWriter();
+            break;
+        default:
+            this.fileWriter = new NioFileWriter(compressMode, charset);
+        }
         createNewFile();
     }
 
@@ -134,13 +151,17 @@ public class DirectExportWorker extends BaseExportWorker {
      * 获取写入当前文件名
      */
     private String getTmpFileName() {
-        if (this.curFileSeq == -1 && this.compressMode == CompressMode.NONE) {
+        if (this.curFileSeq == -1 && this.compressMode == CompressMode.NONE
+            && this.fileFormat == FileFormat.NONE) {
             return this.filename;
         }
         StringBuilder fileNameBuilder = new StringBuilder(this.filename.length() + 6);
         fileNameBuilder.append(this.filename);
         if (curFileSeq != -1) {
             fileNameBuilder.append('-').append(curFileSeq);
+        }
+        if (this.fileFormat != FileFormat.NONE) {
+            fileNameBuilder.append(fileFormat.getSuffix());
         }
         if (this.compressMode == CompressMode.GZIP) {
             fileNameBuilder.append(".gz");
@@ -157,10 +178,31 @@ public class DirectExportWorker extends BaseExportWorker {
     public void run() {
         beforeRun();
         try {
-            produceData();
+            if (produceByLine()) {
+                produceDataByLine();
+            } else {
+                produceData();
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage());
         } finally {
             afterRun();
         }
+    }
+
+    private boolean produceByLine() {
+        if (fileFormat == FileFormat.XLSX) {
+            return true;
+        }
+        if (this.cipher == null) {
+            return false;
+        }
+        EncryptionMode encryptionMode = this.cipher.getEncryptionConfig()
+            .getEncryptionMode();
+        if (encryptionMode != EncryptionMode.NONE && encryptionMode != EncryptionMode.CAESAR) {
+            return true;
+        }
+        return false;
     }
 
     private void beforeRun() {
@@ -253,6 +295,24 @@ public class DirectExportWorker extends BaseExportWorker {
         }
         fileWriter.write(data);
         os.reset();
+    }
+
+    /**
+     * 按行从数据库中读取并写入文件
+     */
+    private void produceDataByLine() {
+        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
+            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
+        try (Connection conn = druid.getConnection();
+            Statement stmt = DataSourceUtil.createStreamingStatement(conn);
+            ResultSet rs = stmt.executeQuery(sql)) {
+
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            logger.error(e.getMessage());
+        }
     }
 
     private boolean isLimitLine() {

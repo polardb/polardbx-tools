@@ -21,18 +21,21 @@ import cmd.ImportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
+import model.config.ConfigConstant;
 import model.config.DdlMode;
 import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import worker.ddl.DdlImportWorker;
+import worker.insert.DirectImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
 import worker.insert.ShardedImportConsumer;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 public class ImportExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ImportExecutor.class);
@@ -56,18 +59,26 @@ public class ImportExecutor extends WriteDbExecutor {
             if (command.isDbOperation()) {
                 checkDbNotExist(command.getDbName());
             } else {
-                checkTableNotExist(command.getTableName());
+                checkTableNotExist(command.getTableNames());
             }
         } else {
             if (command.isDbOperation()) {
-                throw new UnsupportedOperationException("Don't support import database now");
+                try (Connection conn = dataSource.getConnection()) {
+                    this.tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+                } catch (SQLException | DatabaseException e) {
+                    throw new RuntimeException(e);
+                }
             } else {
-                checkTableExists(command.getTableName());
+                checkTableExists(command.getTableNames());
+                this.tableNames = command.getTableNames();
             }
         }
     }
 
     private void checkDbNotExist(String dbName) {
+        if (ConfigConstant.DEFAULT_SCHEMA_NAME.equalsIgnoreCase(dbName)) {
+            return;
+        }
         try (Connection conn = dataSource.getConnection()) {
             if (DbUtil.checkDatabaseExists(conn, dbName)) {
                throw new RuntimeException(String.format("Database [%s] already exists, cannot import with ddl",
@@ -79,21 +90,22 @@ public class ImportExecutor extends WriteDbExecutor {
         }
     }
 
-    private void checkTableNotExist(String tableName) {
-        try (Connection conn = dataSource.getConnection()) {
-            if (DbUtil.checkTableExists(conn, tableName)) {
-                throw new RuntimeException(String.format("Table [%s] already exists, cannot import with ddl",
-                    tableName));
+    private void checkTableNotExist(List<String> tableNames) {
+        for (String tableName : tableNames) {
+            try (Connection conn = dataSource.getConnection()) {
+                if (DbUtil.checkTableExists(conn, tableName)) {
+                    throw new RuntimeException(String.format("Table [%s] already exists, cannot import with ddl",
+                        tableNames));
+                }
+            } catch (SQLException | DatabaseException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e.getMessage());
             }
-        } catch (SQLException | DatabaseException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
         }
     }
 
     @Override
     public void execute() {
-        configureFieldMetaInfo();
         switch (producerExecutionContext.getDdlMode()) {
         case WITH_DDL:
             handleDDL();
@@ -107,23 +119,38 @@ public class ImportExecutor extends WriteDbExecutor {
             throw new UnsupportedOperationException("DDL mode is not supported: " +
                 producerExecutionContext.getDdlMode());
         }
+        configureFieldMetaInfo();
+        for (String tableName : tableNames) {
+            if (producerExecutionContext.isSingleThread()
+                && consumerExecutionContext.isSingleThread())  {
+                // 使用按行读取insert模式
+                doSingleThreadImport(tableName);
+            } else {
+                if (command.isShardingEnabled()) {
+                    doShardingImport(tableName);
+                } else {
+                    doDefaultImport(tableName);
+                }
+            }
 
-        // 决定是否要分片
-        if (command.isShardingEnabled()) {
-            doShardingImport();
-        } else {
-            doDefaultImport();
+            logger.info("导入数据到 {} 完成", tableName);
         }
-
-        logger.info("导入数据到 {} 完成", tableName);
     }
 
     /**
      * 同步导入建库建表语句
      */
     private void handleDDL() {
-        DdlImportWorker ddlImportWorker = new DdlImportWorker(
-            command.isDbOperation() ? command.getDbName() : command.getTableName(), dataSource);
+        DdlImportWorker ddlImportWorker;
+        if (command.isDbOperation()) {
+            if (producerExecutionContext.getFileRecordList().size() != 1) {
+                throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
+            }
+            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFileRecordList()
+                .get(0).getFilePath(), dataSource);
+        } else {
+            ddlImportWorker = new DdlImportWorker(command.getTableNames(), dataSource);
+        }
 
         Thread ddlThread = new Thread(ddlImportWorker);
         ddlThread.start();
@@ -134,24 +161,39 @@ public class ImportExecutor extends WriteDbExecutor {
         }
     }
 
-    private void doDefaultImport() {
+    private void doSingleThreadImport(String tableName) {
+        DirectImportWorker directImportWorker = new DirectImportWorker(dataSource,
+            consumerExecutionContext.getSeparator(), producerExecutionContext.getCharset(),
+            producerExecutionContext.getFileRecordList(), tableName,
+            consumerExecutionContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList(),
+            producerExecutionContext.getMaxErrorCount());
+        Thread importThread = new Thread(directImportWorker);
+        importThread.start();
+        try {
+            importThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void doDefaultImport(String tableName) {
         if (consumerExecutionContext.isReadProcessFileOnly()) {
             // 测试读取文件的性能
             configureCommonContextAndRun(ProcessOnlyImportConsumer.class,
-                producerExecutionContext, consumerExecutionContext);
+                producerExecutionContext, consumerExecutionContext, tableName);
         } else {
             configureCommonContextAndRun(ImportConsumer.class,
-                producerExecutionContext, consumerExecutionContext,
+                producerExecutionContext, consumerExecutionContext, tableName,
                 producerExecutionContext.getQuoteEncloseMode() != QuoteEncloseMode.FORCE);
         }
     }
 
-    private void doShardingImport() {
+    private void doShardingImport(String tableName) {
         configurePartitionKey();
         configureTopology();
 
         configureCommonContextAndRun(ShardedImportConsumer.class,
-            producerExecutionContext, consumerExecutionContext,
+            producerExecutionContext, consumerExecutionContext, tableName,
             producerExecutionContext.getQuoteEncloseMode() != QuoteEncloseMode.FORCE);
     }
 }

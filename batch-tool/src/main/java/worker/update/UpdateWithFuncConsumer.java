@@ -35,7 +35,7 @@ public class UpdateWithFuncConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
-        this.pkList = consumerContext.getPkList();
+        this.pkList = consumerContext.getTablePkList(tableName);
         this.pkValues = new String[pkList.size()];
     }
 

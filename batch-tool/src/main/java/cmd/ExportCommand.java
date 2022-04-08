@@ -20,6 +20,7 @@ import model.config.ConfigConstant;
 import model.config.ExportConfig;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  * 导出数据表到文件命令
@@ -28,18 +29,13 @@ public class ExportCommand extends BaseOperateCommand {
 
     private final ExportConfig exportConfig;
 
-    public ExportCommand(String dbName, String tableName, @NotNull ExportConfig exportConfig) {
-        super(dbName, tableName, ConfigConstant.DEFAULT_EXPORT_SHARDING_ENABLED);
+    public ExportCommand(String dbName, List<String> tableNames, @NotNull ExportConfig exportConfig) {
+        super(dbName, tableNames, ConfigConstant.DEFAULT_EXPORT_SHARDING_ENABLED);
         this.exportConfig = exportConfig;
     }
 
     public ExportConfig getExportConfig() {
         return exportConfig;
-    }
-
-    public String getFilePathPrefix() {
-        return exportConfig.getPath() +
-            exportConfig.getFilenamePrefix() + this.getTableName() + "_";
     }
 
     @Override
