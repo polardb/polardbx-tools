@@ -193,6 +193,7 @@ public class FileUtil {
         StringBuilder stringBuilder = new StringBuilder(line.length() / expectedCount);
         char sepStart = sep.charAt(0);
         boolean enclosingByQuote = false;
+        boolean endsWithSep = false;
         for (int i = 0; i < len; i++) {
             if (i == len - 1 && chars[i] != '\"') {
                 // 最后一个字符
@@ -246,12 +247,18 @@ public class FileUtil {
                     stringBuilder.setLength(0);
                     enclosingByQuote = false;
                     i += sep.length() - 1;
+                    if (i == len -1) {
+                        endsWithSep = true;
+                    }
                 } else {
                     stringBuilder.append(chars[i]);
                 }
             } else {
                 stringBuilder.append(chars[i]);
             }
+        }
+        if (endsWithSep && !withLastSep) {
+            subStrings.add("");
         }
         return subStrings;
     }
@@ -336,6 +343,10 @@ public class FileUtil {
         return false;
     }
 
+    public static String getFilePathPrefix(String path, String filenamePrefix, String tableName) {
+        return String.format("%s%s%s_", path, filenamePrefix, tableName);
+    }
+
     public static Map<String, List<File>> getDataFile(String baseDirectory) {
         File dir = new File(baseDirectory);
         if (!dir.isDirectory()) {
@@ -363,7 +374,7 @@ public class FileUtil {
     /**
      * 筛选出非ddl的数据文件
      */
-    public static List<String> getFileAbsPathInDir(String dirPathStr) {
+    public static List<String> getFilesAbsPathInDir(String dirPathStr) {
         File dir = new File(dirPathStr);
         if (!dir.exists()|| !dir.isDirectory()) {
             throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
@@ -372,5 +383,13 @@ public class FileUtil {
             .filter(file -> file.isFile() && file.canRead() &&
                 !file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
             .map(File::getAbsolutePath).collect(Collectors.toList());
+    }
+
+    public static String getFileAbsPath(String filename) {
+        File file = new File(filename);
+        if (!file.exists() || !file.isFile() || !file.canRead()) {
+            throw new IllegalArgumentException("Failed to read from " + filename);
+        }
+        return file.getAbsolutePath();
     }
 }

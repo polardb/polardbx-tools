@@ -20,7 +20,6 @@ import model.db.FieldMetaInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import worker.common.BaseDefaultConsumer;
-import worker.insert.ImportConsumer;
 import worker.util.UpdateUtil;
 
 import java.util.List;
@@ -32,13 +31,13 @@ public class ReplaceConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
-        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo().getFieldMetaInfoList();
+        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
     }
 
     @Override
     protected void fillLocalBuffer(StringBuilder stringBuilder, String[] values) {
         stringBuilder.append("(");
-        stringBuilder.append(UpdateUtil.getUpdatedValuesByMetaInfo(consumerContext.getPkIndexSet(),
+        stringBuilder.append(UpdateUtil.getUpdatedValuesByMetaInfo(consumerContext.getTablePkIndexSet(tableName),
             values, fieldMetaInfoList));
         stringBuilder.append("),");
     }
@@ -46,7 +45,7 @@ public class ReplaceConsumer extends BaseDefaultConsumer {
     @Override
     protected String getSql(StringBuilder data) {
         data.setLength(data.length() - 1);
-        return UpdateUtil.getBatchReplaceSql(consumerContext.getTableName(),
+        return UpdateUtil.getBatchReplaceSql(tableName,
             consumerContext.getToUpdateColumns(), data.toString());
     }
 }

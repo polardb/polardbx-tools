@@ -17,6 +17,7 @@
 package worker.export;
 
 import model.config.CompressMode;
+import model.config.FileFormat;
 import model.config.QuoteEncloseMode;
 import model.db.FieldMetaInfo;
 import model.db.TableFieldMetaInfo;
@@ -39,19 +40,20 @@ public abstract class BaseExportWorker implements Runnable {
     protected final List<byte[]> specialCharList;
     protected final QuoteEncloseMode quoteEncloseMode;
     protected CompressMode compressMode;
+    protected FileFormat fileFormat;
 
     protected final List<Boolean> isStringTypeList;
 
     protected BaseExportWorker(DataSource druid, TableTopology topology,
                                TableFieldMetaInfo tableFieldMetaInfo,
                                String separator, QuoteEncloseMode quoteEncloseMode) {
-        this(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, CompressMode.NONE);
+        this(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, CompressMode.NONE, FileFormat.NONE);
     }
 
     protected BaseExportWorker(DataSource druid, TableTopology topology,
                                TableFieldMetaInfo tableFieldMetaInfo,
                                String separator, QuoteEncloseMode quoteEncloseMode,
-                               CompressMode compressMode) {
+                               CompressMode compressMode, FileFormat fileFormat) {
 
         this.druid = druid;
         this.topology = topology;
@@ -77,6 +79,7 @@ public abstract class BaseExportWorker implements Runnable {
         default:
             throw new IllegalArgumentException("Unsupported compression mode: " + compressMode.name());
         }
+        this.fileFormat = fileFormat;
     }
 
     /**

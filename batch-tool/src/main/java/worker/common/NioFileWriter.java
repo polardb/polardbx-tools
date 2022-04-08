@@ -8,6 +8,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPOutputStream;
 
 @NotThreadSafe
@@ -18,17 +20,28 @@ public class NioFileWriter implements IFileWriter {
     private GZIPOutputStream gzipOutputStream = null;
     private final CompressMode compressMode;
     private boolean closed = false;
+    private final Charset charset;
 
     public NioFileWriter(String fileName) {
         this(fileName, CompressMode.NONE);
     }
 
     public NioFileWriter(CompressMode compressMode) {
+        this(compressMode, StandardCharsets.UTF_8);
+    }
+
+    public NioFileWriter(CompressMode compressMode, Charset charset) {
+        this.charset = charset;
         this.compressMode = compressMode;
     }
 
     public NioFileWriter(String fileName, CompressMode compressMode) {
+        this(fileName, compressMode, StandardCharsets.UTF_8);
+    }
+
+    public NioFileWriter(String fileName, CompressMode compressMode, Charset charset) {
         this.compressMode = compressMode;
+        this.charset = charset;
         openFileChannel(fileName);
     }
 
@@ -65,6 +78,9 @@ public class NioFileWriter implements IFileWriter {
     }
 
     public void writeNio(byte[] data) {
+        if (charset != StandardCharsets.UTF_8) {
+            data = new String(data, StandardCharsets.UTF_8).getBytes(charset);
+        }
         try {
             switch (compressMode) {
             case NONE:

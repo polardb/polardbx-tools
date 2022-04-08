@@ -44,4 +44,8 @@ public abstract class Cipher {
             throw new UnsupportedOperationException("Unsupported cipher: " + config.getEncryptionMode());
         }
     }
+
+    public EncryptionConfig getEncryptionConfig() {
+        return encryptionConfig;
+    }
 }

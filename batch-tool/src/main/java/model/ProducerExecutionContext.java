@@ -18,6 +18,7 @@ package model;
 
 import model.config.BaseConfig;
 import model.config.ConfigConstant;
+import model.config.FileRecord;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.BufferedWriter;
@@ -38,7 +39,7 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private ThreadPoolExecutor producerExecutor;
 
-    private List<String> filePathList;
+    private List<FileRecord> fileRecordList;
 
     private int parallelism;
 
@@ -56,6 +57,8 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private String historyFile;
 
+    private int maxErrorCount;
+
     private AtomicInteger emittedDataCounter;
 
     private CountDownLatch countDownLatch;
@@ -72,12 +75,12 @@ public class ProducerExecutionContext extends BaseConfig {
         this.producerExecutor = producerExecutor;
     }
 
-    public List<String> getFilePathList() {
-        return filePathList;
+    public List<FileRecord> getFileRecordList() {
+        return fileRecordList;
     }
 
-    public void setFilePathList(List<String> filePathList) {
-        this.filePathList = filePathList;
+    public void setFileRecordList(List<FileRecord> fileRecordList) {
+        this.fileRecordList = fileRecordList;
     }
 
     public int getParallelism() {
@@ -184,7 +187,7 @@ public class ProducerExecutionContext extends BaseConfig {
             FileWriter fileWriter = new FileWriter(historyFile, false);
             BufferedWriter out = new BufferedWriter(fileWriter);
             if (isFinished) {
-                nextFileIndex = filePathList.size();
+                nextFileIndex = fileRecordList.size();
                 nextBlockIndex = 0;
             }
             out.write(contextString);
@@ -209,10 +212,22 @@ public class ProducerExecutionContext extends BaseConfig {
         this.countDownLatch = countDownLatch;
     }
 
+    public boolean isSingleThread() {
+        return this.parallelism == 1;
+    }
+
+    public int getMaxErrorCount() {
+        return maxErrorCount;
+    }
+
+    public void setMaxErrorCount(int maxErrorCount) {
+        this.maxErrorCount = maxErrorCount;
+    }
+
     @Override
     public String toString() {
         return "ProducerExecutionContext{" +
-            "filePathList=" + filePathList +
+            "filePathList=" + fileRecordList +
             ", parallelism=" + parallelism +
             ", readBlockSizeInMb=" + readBlockSizeInMb +
             ", " + super.toString() +

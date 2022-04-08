@@ -38,6 +38,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 public class ReadFileWithBlockProducer extends ReadFileProducer {
@@ -66,23 +67,17 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
     private final Cipher cipher;
 
     public ReadFileWithBlockProducer(ProducerExecutionContext context,
-                                     RingBuffer<BatchLineEvent> ringBuffer) {
-        super(context, ringBuffer);
+                                     RingBuffer<BatchLineEvent> ringBuffer,
+                                     String tableName) {
+        super(context, ringBuffer, tableName);
         this.compressMode = context.getCompressMode();
         this.cipher = Cipher.getCipher(context.getEncryptionConfig(), false);
         this.readBlockSize = context.getReadBlockSizeInMb() * 1024L * 1024;
         this.currentFileIndex = new AtomicInteger(context.getNextFileIndex());
-        List<String> filePathList = context.getFilePathList();
-        if (filePathList == null || filePathList.isEmpty()) {
-            throw new IllegalArgumentException("File path list cannot be empty");
-        }
-        if (currentFileIndex.get() >= filePathList.size()) {
-            logger.warn("breakpoint in history_file says all tasks are finished, should not run it again "
-                + "or you can delete/modify the history_file then retry");
-            System.exit(1);
-        }
-        this.fileDoneList = new AtomicBoolean[filePathList.size()];
-        this.startPosArr = new AtomicLong[filePathList.size()];
+
+
+        this.fileDoneList = new AtomicBoolean[fileList.size()];
+        this.startPosArr = new AtomicLong[fileList.size()];
         for (int i = 0; i < startPosArr.length; i++) {
             if (i < context.getNextFileIndex()) {
                 fileDoneList[i] = new AtomicBoolean(true);

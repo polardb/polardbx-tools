@@ -34,7 +34,9 @@ import worker.common.BaseWorkHandler;
 import worker.common.ReadFileWithBlockProducer;
 
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -49,7 +51,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
 
     protected ProducerExecutionContext producerExecutionContext;
     protected ConsumerExecutionContext consumerExecutionContext;
-    protected String tableName;
+    protected List<String> tableNames;
 
     public WriteDbExecutor(DataSourceConfig dataSourceConfig, DruidDataSource druid,
                            BaseOperateCommand baseCommand) {
@@ -57,34 +59,42 @@ public abstract class WriteDbExecutor extends BaseExecutor {
         WriteDbCommand writeDbCommand = (WriteDbCommand) baseCommand;
         this.producerExecutionContext = writeDbCommand.getProducerExecutionContext();
         this.consumerExecutionContext = writeDbCommand.getConsumerExecutionContext();
-        this.tableName = consumerExecutionContext.getTableName();
+        this.tableNames = consumerExecutionContext.getTableNames();
     }
 
     /**
      * 设置主键
      */
     protected void configurePkList() {
-        List<PrimaryKey> pkList = null;
-        try {
-            pkList = DbUtil.getPkList(dataSource.getConnection(), getSchemaName(), tableName);
-        } catch (DatabaseException | SQLException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        Map<String, List<PrimaryKey>> tablePkList = new HashMap<>();
+        for (String tableName : tableNames) {
+            List<PrimaryKey> pkList = null;
+            try {
+                pkList = DbUtil.getPkList(dataSource.getConnection(), getSchemaName(), tableName);
+                tablePkList.put(tableName, pkList);
+            } catch (DatabaseException | SQLException e) {
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
-        consumerExecutionContext.setPkList(pkList);
+        consumerExecutionContext.setTablePkList(tablePkList);
     }
 
     /**
      * 设置字段信息
      */
     protected void configureFieldMetaInfo() {
-        TableFieldMetaInfo tableFieldMetaInfo = null;
-        try {
-            tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
-                getSchemaName(), tableName);
-        } catch (DatabaseException | SQLException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        Map<String, TableFieldMetaInfo> tableFieldMetaInfo = new HashMap<>();
+        for (String tableName : tableNames) {
+            TableFieldMetaInfo metaInfo = null;
+            try {
+                metaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
+                    getSchemaName(), tableName);
+                tableFieldMetaInfo.put(tableName, metaInfo);
+            } catch (DatabaseException | SQLException e) {
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
         consumerExecutionContext.setTableFieldMetaInfo(tableFieldMetaInfo);
     }
@@ -93,28 +103,35 @@ public abstract class WriteDbExecutor extends BaseExecutor {
      * 设置拓扑信息
      */
     protected void configureTopology() {
-        List<TableTopology> topologyList = null;
-        try {
-            topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
-        } catch (DatabaseException | SQLException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        Map<String, List<TableTopology>> tableTopologyMap = new HashMap<>();
+        for (String tableName : tableNames) {
+            List<TableTopology> topologyList = null;
+            try {
+                topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
+                tableTopologyMap.put(tableName, topologyList);
+            } catch (DatabaseException | SQLException e) {
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
-        consumerExecutionContext.setTopologyList(topologyList);
+        consumerExecutionContext.setTopologyList(tableTopologyMap);
     }
 
     protected void configurePartitionKey() {
-        PartitionKey partitionKey = null;
-        try {
-            partitionKey = DbUtil.getPartitionKey(dataSource.getConnection(),
-                getSchemaName(), tableName);
-            logger.info("使用划分键 {}", partitionKey);
-
-        } catch (DatabaseException | SQLException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        Map<String, PartitionKey> tablePartitionKey = new HashMap<>();
+        for (String tableName : tableNames) {
+            PartitionKey partitionKey = null;
+            try {
+                partitionKey = DbUtil.getPartitionKey(dataSource.getConnection(),
+                    getSchemaName(), tableName);
+                logger.info("表 {} 使用分片键 {}", tableName, partitionKey);
+                tablePartitionKey.put(tableName, partitionKey);
+            } catch (DatabaseException | SQLException e) {
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
-        consumerExecutionContext.setPartitionKey(partitionKey);
+        consumerExecutionContext.setTablePartitionKey(tablePartitionKey);
     }
 
     /**

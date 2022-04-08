@@ -41,8 +41,10 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
     private static final Logger logger = LoggerFactory.getLogger(ReadFileWithLineProducer.class);
     private final char sepChar;
 
-    public ReadFileWithLineProducer(ProducerExecutionContext context, RingBuffer<BatchLineEvent> ringBuffer) {
-        super(context, ringBuffer);
+    public ReadFileWithLineProducer(ProducerExecutionContext context,
+                                    RingBuffer<BatchLineEvent> ringBuffer,
+                                    String tableName) {
+        super(context, ringBuffer, tableName);
         String sep = context.getSeparator();
         if (sep.length() != 1) {
             logger.error("In quote escape mode only allows single char separator");

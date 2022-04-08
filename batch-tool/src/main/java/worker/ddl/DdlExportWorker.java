@@ -11,8 +11,10 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
-import java.util.Collections;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static model.config.ConfigConstant.DDL_FILE_SUFFIX;
 
@@ -24,28 +26,33 @@ public class DdlExportWorker implements Runnable {
 
     private final DataSource druid;
     private final String dbName;
-    private final String tableName;
+    private final List<String> tableNames;
     /**
      * 是否导出整个数据库与其中的所有表
      */
     private final boolean isExportWholeDb;
 
+    private static final Pattern DB_MODE_PATTERN = Pattern.compile("/\\* MODE = '(.*)' \\*/$");
+
     public DdlExportWorker(DataSource druid, String dbName) {
         this.druid = druid;
         this.dbName = dbName;
-        this.tableName = null;
+        try (Connection conn = druid.getConnection()) {
+            this.tableNames = DbUtil.getAllTablesInDb(conn, dbName);;
+        } catch (SQLException | DatabaseException e) {
+            throw new RuntimeException(e);
+        }
         this.isExportWholeDb = true;
         this.filename = dbName + DDL_FILE_SUFFIX;
     }
 
-    public DdlExportWorker(DataSource druid, String dbName, String tableName) {
+    public DdlExportWorker(DataSource druid, String dbName, List<String> tableNames) {
         this.druid = druid;
         this.dbName = dbName;
-        this.tableName = tableName;
+        this.tableNames = tableNames;
         this.isExportWholeDb = false;
-        this.filename = tableName + DDL_FILE_SUFFIX;
+        this.filename = dbName + DDL_FILE_SUFFIX;
     }
-
 
     @Override
     public void run() {
@@ -61,15 +68,10 @@ public class DdlExportWorker implements Runnable {
     }
 
     private void exportDdl() throws Throwable {
-        List<String> tableNames;
         try (Connection conn = druid.getConnection()) {
             if (isExportWholeDb) {
-                logger.info("库：{} 开始导出库表结构", dbName);
-                tableNames = DbUtil.getAllTablesInDb(conn, dbName);
+                logger.info("库：{} 开始导出库结构", dbName);
                 exportDatabaseStructure(conn, dbName);
-            } else {
-                logger.info("表：{} 开始导出表结构", tableName);
-                tableNames = Collections.singletonList(tableName);
             }
             for (String tableName : tableNames) {
                 exportTableStructure(conn, tableName);
@@ -80,6 +82,11 @@ public class DdlExportWorker implements Runnable {
     private void exportDatabaseStructure(Connection conn, String dbName) throws IOException, DatabaseException {
         writeCommentForDatabase(dbName);
         String dbDdl = DbUtil.getShowCreateDatabase(conn, dbName);
+        Matcher matcher = DB_MODE_PATTERN.matcher(dbDdl);
+        if (matcher.find()) {
+            String mode = matcher.group(1);
+            dbDdl = String.format("%s mode = '%s'", dbDdl, mode);
+        }
         writeLine(dbDdl + ";");
         writeLine("");
         writeLine(String.format("use %s;", dbName));
@@ -87,6 +94,8 @@ public class DdlExportWorker implements Runnable {
     }
 
     private void exportTableStructure(Connection conn, String tableName) throws IOException, DatabaseException {
+        logger.info("表：{} 开始导出表结构", tableName);
+
         writeCommentForTable(tableName);
         String tableDdl = DbUtil.getShowCreateTable(conn, tableName);
         writeLine(tableDdl + ";");

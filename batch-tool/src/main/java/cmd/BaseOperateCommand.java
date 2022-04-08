@@ -17,6 +17,7 @@
 package cmd;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  * 数据库操作相关配置
@@ -26,9 +27,9 @@ public class BaseOperateCommand {
     private final String dbName;
 
     /**
-     * 批量操作仅支持单表
+     * 支持同一个库下的多张表
      */
-    private String tableName;
+    private List<String> tableNames;
 
     /**
      * 是否开启分库分表操作
@@ -40,18 +41,22 @@ public class BaseOperateCommand {
         this.shardingEnabled = shardingEnabled;
     }
 
-    public BaseOperateCommand(@NotNull String dbName, String tableName, boolean shardingEnabled) {
+    public BaseOperateCommand(@NotNull String dbName, List<String> tableName, boolean shardingEnabled) {
         this.dbName = dbName;
-        this.tableName = tableName;
+        this.tableNames = tableName;
         this.shardingEnabled = shardingEnabled;
     }
 
-    public String getTableName() {
-        return tableName;
+    public List<String> getTableNames() {
+        return tableNames;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
+    public void setTableNames(List<String> tableNames) {
+        this.tableNames = tableNames;
+    }
+
+    public boolean isSingleTable() {
+        return this.tableNames.size() == 1;
     }
 
     public boolean isShardingEnabled() {
@@ -67,6 +72,6 @@ public class BaseOperateCommand {
     }
 
     public boolean isDbOperation() {
-        return this.tableName == null;
+        return this.tableNames == null;
     }
 }

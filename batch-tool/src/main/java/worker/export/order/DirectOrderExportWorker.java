@@ -17,8 +17,6 @@
 package worker.export.order;
 
 import com.alibaba.druid.util.JdbcUtils;
-import model.config.ConfigConstant;
-import model.config.GlobalVar;
 import model.db.TableFieldMetaInfo;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -43,8 +41,8 @@ import java.util.List;
 
 import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
-public class DirectOrderByExportWorker implements Runnable {
-    private static final Logger logger = LoggerFactory.getLogger(DirectOrderByExportWorker.class);
+public class DirectOrderExportWorker implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(DirectOrderExportWorker.class);
     private final String filename;
     private FileChannel appendChannel = null;
     private String whereCondition;
@@ -76,9 +74,9 @@ public class DirectOrderByExportWorker implements Runnable {
      */
     private int bufferedRowNum = 0;
 
-    public DirectOrderByExportWorker(DataSource druid, String filename, TableFieldMetaInfo tableFieldMetaInfo,
-                                     String tableName, List<String> orderByColumnName,
-                                     int maxLine, byte[] separator, boolean isAscending) {
+    public DirectOrderExportWorker(DataSource druid, String filename, TableFieldMetaInfo tableFieldMetaInfo,
+                                   String tableName, List<String> orderByColumnName,
+                                   int maxLine, byte[] separator, boolean isAscending) {
         this.filename = filename;
         this.tableFieldMetaInfo = tableFieldMetaInfo;
         this.tableName = tableName;

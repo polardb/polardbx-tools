@@ -31,7 +31,7 @@ public class DeleteConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
-        this.pkList = consumerContext.getPkList();
+        this.pkList = consumerContext.getTablePkList(tableName);
     }
 
     @Override
@@ -40,7 +40,7 @@ public class DeleteConsumer extends BaseDefaultConsumer {
         for (int i = 0; i < pkList.size(); i++) {
             pkValues[i] = values[pkList.get(i).getOrdinalPosition() - 1];
         }
-        stringBuilder.append(DeleteUtil.getDeleteSql(consumerContext.getTableName(), pkList,
+        stringBuilder.append(DeleteUtil.getDeleteSql(tableName, pkList,
             pkValues, consumerContext.getWhereCondition()));
     }
 

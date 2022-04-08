@@ -74,14 +74,16 @@ public abstract class BaseExecutor {
 
     }
 
-    protected void checkTableExists(String tableName) {
-        try (Connection connection = dataSource.getConnection()) {
-            if (!DbUtil.checkTableExists(connection, tableName)) {
-                throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
+    protected void checkTableExists(List<String> tableNames) {
+        for (String tableName : tableNames) {
+            try (Connection connection = dataSource.getConnection()) {
+                if (!DbUtil.checkTableExists(connection, tableName)) {
+                    throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
+                }
+            } catch (SQLException | DatabaseException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e.getMessage());
             }
-        } catch (SQLException | DatabaseException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -119,8 +121,9 @@ public abstract class BaseExecutor {
 
     protected void configureCommonContextAndRun(Class<? extends BaseWorkHandler> clazz,
                                                 ProducerExecutionContext producerExecutionContext,
-                                                ConsumerExecutionContext consumerExecutionContext) {
-        configureCommonContextAndRun(clazz, producerExecutionContext, consumerExecutionContext, true);
+                                                ConsumerExecutionContext consumerExecutionContext,
+                                                String tableName) {
+        configureCommonContextAndRun(clazz, producerExecutionContext, consumerExecutionContext, tableName, true);
     }
 
     /**
@@ -130,6 +133,7 @@ public abstract class BaseExecutor {
     protected void configureCommonContextAndRun(Class<? extends BaseWorkHandler> clazz,
                                                 ProducerExecutionContext producerExecutionContext,
                                                 ConsumerExecutionContext consumerExecutionContext,
+                                                String tableName,
                                                 boolean usingBlockReader) {
         ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getName() + "-producer",
             producerExecutionContext.getParallelism());
@@ -137,7 +141,7 @@ public abstract class BaseExecutor {
         CountDownLatch countDownLatch = new CountDownLatch(producerExecutionContext.getParallelism());
         AtomicInteger emittedDataCounter = new AtomicInteger(0);
         List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter = new ArrayList<>();
-        for (int i = 0; i < producerExecutionContext.getFilePathList().size(); i++) {
+        for (int i = 0; i < producerExecutionContext.getFileRecordList().size(); i++) {
             eventCounter.add(new ConcurrentHashMap<Long, AtomicInteger>(16));
         }
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
@@ -175,11 +179,12 @@ public abstract class BaseExecutor {
                 consumers[i] = clazz.newInstance();
                 consumers[i].setConsumerContext(consumerExecutionContext);
                 consumers[i].createTpsLimiter(consumerExecutionContext.getBatchTpsLimitPerConsumer());
+                consumers[i].setTableName(tableName);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            logger.error(e.toString());
-            System.exit(1);
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
         }
         logger.info("producer config {}", producerExecutionContext);
         logger.info("consumer config {}", consumerExecutionContext);
@@ -189,9 +194,9 @@ public abstract class BaseExecutor {
 
         ReadFileProducer producer;
         if (usingBlockReader) {
-            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer);
+            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer, tableName);
         } else {
-            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer);
+            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer, tableName);
         }
 
         try {

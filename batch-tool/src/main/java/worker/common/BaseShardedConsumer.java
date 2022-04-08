@@ -47,13 +47,13 @@ public abstract class BaseShardedConsumer extends BaseWorkHandler {
     public void onProxyEvent(BatchLineEvent event) {
         initLocalVars();
         try {
-            List<TableTopology> topologyList = consumerContext.getTopologyList();
-            List<FieldMetaInfo> fieldMetaInfoList = consumerContext.getTableFieldMetaInfo()
+            List<TableTopology> topologyList = consumerContext.getTopologyList(tableName);
+            List<FieldMetaInfo> fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName)
                 .getFieldMetaInfoList();
             int shardCount = topologyList.size();
             // 分片序号
             int partitionIndex;
-            PartitionKey partitionKey = consumerContext.getPartitionKey();
+            PartitionKey partitionKey = consumerContext.getTablePartitionKey(tableName);
             StringBuilder[] dataBuffers = new StringBuilder[shardCount];
             for (int i = 0; i < shardCount; i++) {
                 dataBuffers[i] = new StringBuilder();

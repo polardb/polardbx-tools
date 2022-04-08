@@ -16,7 +16,6 @@
 
 package model.config;
 
-import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -75,6 +74,8 @@ public class ConfigConstant {
     public static final String ARG_SHORT_COMPRESS = "comp";
     public static final String ARG_SHORT_ENCRYPTION = "enc";
     public static final String ARG_SHORT_KEY = "key";
+    public static final String ARG_SHORT_FILE_FORMAT = "format";
+    public static final String ARG_SHORT_MAX_ERROR = "error";
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**
@@ -83,9 +84,14 @@ public class ConfigConstant {
     public static final String DEFAULT_SEPARATOR = ",";
 
     /**
-     * 文件名分隔符
+     * 文件名/表名分隔符
      */
-    public static final String CMD_FILENAME_SEPARATOR = ";";
+    public static final String CMD_SEPARATOR = ";";
+
+    /**
+     * 文件名起始行号分隔符
+     */
+    public static final String CMD_FILE_LINE_SEPARATOR = ":";
 
     public static final int DEFAULT_READ_BLOCK_SIZE_IN_MB = 2;
 
@@ -128,11 +134,20 @@ public class ConfigConstant {
      */
     public static final float FLOAT_UPDATE_MULTIPLICAND = 2.0f;
 
+    public static final String DEFAULT_SCHEMA_NAME = "polardbx";
+
     public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     public static final CompressMode DEFAULT_COMPRESS_MODE = CompressMode.NONE;
 
     public static final EncryptionConfig DEFAULT_ENCRYPTION_CONFIG = EncryptionConfig.NONE;
+
+    public static final FileFormat DEFAULT_FILE_FORMAT = FileFormat.NONE;
+
+    /**
+     * 遇到错误即退出
+     */
+    public static final int DEFAULT_MAX_ERROR_COUNT = 0;
 
     public static final boolean DEFAULT_WITH_HEADER = false;
 

@@ -31,7 +31,7 @@ public class ShardedReplaceConsumer extends BaseShardedConsumer {
     @Override
     protected void fillLocalBuffer(StringBuilder localBuffer, String[] values, List<FieldMetaInfo> fieldMetaInfoList) {
         localBuffer.append("(");
-        localBuffer.append(UpdateUtil.getUpdatedValuesByMetaInfo(consumerContext.getPkIndexSet(),
+        localBuffer.append(UpdateUtil.getUpdatedValuesByMetaInfo(consumerContext.getTablePkIndexSet(tableName),
             values, fieldMetaInfoList));
         localBuffer.append("),");
     }

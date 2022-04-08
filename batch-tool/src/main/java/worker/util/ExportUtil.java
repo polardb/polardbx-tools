@@ -42,7 +42,7 @@ public class ExportUtil {
             return getDirectSqlWithFormattedDate(topology, fieldMetaInfoList);
         }
 
-        return String.format("/!TDDL:node='%s'*/ select %s from %s where %s;",
+        return String.format("/*+TDDL:node='%s'*/ select %s from %s where %s;",
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), whereCondition);
     }
@@ -50,7 +50,7 @@ public class ExportUtil {
     private static String getDirectSqlWithFormattedDate(TableTopology topology,
                                                         List<FieldMetaInfo> fieldMetaInfoList) {
 
-        return String.format("/!TDDL:node='%s'*/ select %s from %s;",
+        return String.format("/*+TDDL:node='%s'*/ select %s from %s;",
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName());
     }

@@ -19,10 +19,12 @@ package worker.export;
 import com.lmax.disruptor.WorkHandler;
 import model.config.CompressMode;
 import model.db.TableFieldMetaInfo;
+import model.encrypt.Cipher;
 import util.FileUtil;
 import worker.common.IFileWriter;
 import worker.common.NioFileWriter;
 
+import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExportConsumer implements WorkHandler<ExportEvent> {
@@ -32,15 +34,17 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
     private final IFileWriter fileWriter;
     private final AtomicInteger emittedDataCounter;
 
+    private Cipher cipher = null;
+
     public ExportConsumer(String filename, AtomicInteger emittedDataCounter,
                           boolean isWithHeader, byte[] separator,
                           TableFieldMetaInfo tableFieldMetaInfo,
-                          CompressMode compressMode) {
+                          CompressMode compressMode, Charset charset) {
         this.isWithHeader = isWithHeader;
         this.emittedDataCounter = emittedDataCounter;
         this.separator = separator;
         this.tableFieldMetaInfo = tableFieldMetaInfo;
-        this.fileWriter = new NioFileWriter(filename, compressMode);
+        this.fileWriter = new NioFileWriter(filename, compressMode, charset);
         if (isWithHeader) {
             appendHeader();
         }
@@ -57,11 +61,23 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
     }
 
     public void writeEvent(byte[] data) {
+        if (cipher != null) {
+            try {
+                data = cipher.encrypt(data);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
         try {
             fileWriter.write(data);
         } finally {
             emittedDataCounter.getAndDecrement();
         }
+    }
+
+    public void setCipher(Cipher cipher) {
+        this.cipher = cipher;
     }
 
     public void close() {

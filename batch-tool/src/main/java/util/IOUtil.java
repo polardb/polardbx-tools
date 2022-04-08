@@ -61,4 +61,14 @@ public class IOUtil {
             }
         }
     }
+
+    public static void flush(OutputStream outputStream) {
+        if (outputStream != null) {
+            try {
+                outputStream.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
