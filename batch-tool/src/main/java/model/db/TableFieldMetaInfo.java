@@ -38,6 +38,14 @@ public class TableFieldMetaInfo {
         return primaryKey;
     }
 
+    @Override
+    public String toString() {
+        return "{" +
+            "fieldMetaInfoList=" + fieldMetaInfoList +
+            ", primaryKey=" + primaryKey +
+            '}';
+    }
+
     public void setPrimaryKey(PrimaryKey primaryKey) {
         this.primaryKey = primaryKey;
     }

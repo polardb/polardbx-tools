@@ -133,7 +133,9 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     private List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter;
 
-    private boolean isUsingBlock = true;
+    private boolean useBlock = true;
+
+    private boolean useMagicSeparator = false;
 
     public ConsumerExecutionContext() {
         super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
@@ -379,12 +381,20 @@ public class ConsumerExecutionContext extends BaseConfig {
         this.forceParallelism = forceParallelism;
     }
 
-    public boolean isUsingBlock() {
-        return isUsingBlock;
+    public boolean isUseBlock() {
+        return useBlock;
     }
 
-    public void setUsingBlock(boolean usingBlock) {
-        isUsingBlock = usingBlock;
+    public void setUseBlock(boolean useBlock) {
+        this.useBlock = useBlock;
+    }
+
+    public boolean isUseMagicSeparator() {
+        return useMagicSeparator;
+    }
+
+    public void setUseMagicSeparator(boolean useMagicSeparator) {
+        this.useMagicSeparator = useMagicSeparator;
     }
 
     public boolean isSingleThread() {

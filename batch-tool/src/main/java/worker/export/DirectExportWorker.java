@@ -16,23 +16,22 @@
 
 package worker.export;
 
-import com.alibaba.druid.util.JdbcUtils;
 import model.config.CompressMode;
-import model.config.EncryptionMode;
 import model.config.FileFormat;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
+import model.db.FieldMetaInfo;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
-import model.encrypt.Cipher;
+import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
-import util.DbUtil;
 import util.FileUtil;
-import worker.common.IFileWriter;
-import worker.common.NioFileWriter;
-import worker.common.XlsxFileWriter;
+import worker.common.writer.CipherLineFileWriter;
+import worker.common.writer.IFileWriter;
+import worker.common.writer.NioFileWriter;
+import worker.common.writer.XlsxFileWriter;
 import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
@@ -45,6 +44,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
+import java.util.stream.Collectors;
 
 /**
  * 直接拿到数据库数据并写入文件的工作线程
@@ -59,7 +59,7 @@ public class DirectExportWorker extends BaseExportWorker {
      */
     private final String filename;
     private final IFileWriter fileWriter;
-    private Cipher cipher = null;
+    private final BaseCipher cipher;
 
     /**
      * 单个文件最大行数
@@ -93,9 +93,11 @@ public class DirectExportWorker extends BaseExportWorker {
                               QuoteEncloseMode quoteEncloseMode,
                               CompressMode compressMode,
                               FileFormat fileFormat,
-                              Charset charset) {
+                              Charset charset,
+                              BaseCipher cipher) {
         this(druid, topology,  tableFieldMetaInfo, 0,
-            filename, separator, isWithHeader, quoteEncloseMode, compressMode, fileFormat, charset);
+            filename, separator, isWithHeader, quoteEncloseMode,
+            compressMode, fileFormat, charset, cipher);
     }
 
     /**
@@ -110,11 +112,19 @@ public class DirectExportWorker extends BaseExportWorker {
                               QuoteEncloseMode quoteEncloseMode,
                               CompressMode compressMode,
                               FileFormat fileFormat,
-                              Charset charset) {
+                              Charset charset,
+                              BaseCipher cipher) {
         super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;
+        this.cipher = cipher;
+        initFileSeq();
+        this.fileWriter = initFileWriter(charset);
+        createNewFile();
+    }
+
+    private void initFileSeq() {
         if (isLimitLine()) {
             this.curFileSeq = 0;
             if (maxLine < GlobalVar.EMIT_BATCH_SIZE) {
@@ -124,14 +134,19 @@ public class DirectExportWorker extends BaseExportWorker {
         } else {
             this.curFileSeq = NO_FILE_SEQ;
         }
+    }
+
+    private IFileWriter initFileWriter(Charset charset) {
         switch (fileFormat) {
         case XLSX:
-            this.fileWriter = new XlsxFileWriter();
-            break;
-        default:
-            this.fileWriter = new NioFileWriter(compressMode, charset);
+        case XLS:
+        case ET:
+            return new XlsxFileWriter();
         }
-        createNewFile();
+        if (cipher == null || cipher.supportBlock()) {
+            return new NioFileWriter(compressMode, charset);
+        }
+        return new CipherLineFileWriter(cipher, separator, quoteEncloseMode);
     }
 
     /**
@@ -140,7 +155,7 @@ public class DirectExportWorker extends BaseExportWorker {
      * 并根据开关 向文件写入字段名
      */
     private void createNewFile() {
-        String tmpFileName = getTmpFileName();
+        String tmpFileName = getTmpFilename();
         fileWriter.nextFile(tmpFileName);
         if (isWithHeader) {
             appendHeader();
@@ -150,59 +165,50 @@ public class DirectExportWorker extends BaseExportWorker {
     /**
      * 获取写入当前文件名
      */
-    private String getTmpFileName() {
+    private String getTmpFilename() {
         if (this.curFileSeq == -1 && this.compressMode == CompressMode.NONE
             && this.fileFormat == FileFormat.NONE) {
             return this.filename;
         }
-        StringBuilder fileNameBuilder = new StringBuilder(this.filename.length() + 6);
-        fileNameBuilder.append(this.filename);
+        StringBuilder filenameBuilder = new StringBuilder(this.filename.length() + 6);
+        filenameBuilder.append(this.filename);
         if (curFileSeq != -1) {
-            fileNameBuilder.append('-').append(curFileSeq);
+            filenameBuilder.append('-').append(curFileSeq);
         }
         if (this.fileFormat != FileFormat.NONE) {
-            fileNameBuilder.append(fileFormat.getSuffix());
+            filenameBuilder.append(fileFormat.getSuffix());
         }
         if (this.compressMode == CompressMode.GZIP) {
-            fileNameBuilder.append(".gz");
+            filenameBuilder.append(".gz");
         }
-        return fileNameBuilder.toString();
+        return filenameBuilder.toString();
     }
 
     private void appendHeader() {
-        byte[] header = FileUtil.getHeaderBytes(tableFieldMetaInfo.getFieldMetaInfoList(), separator);
-        fileWriter.write(header);
+        if (this.fileWriter.produceByBlock()) {
+            byte[] header = FileUtil.getHeaderBytes(tableFieldMetaInfo.getFieldMetaInfoList(), separator);
+            fileWriter.write(header);
+        } else {
+            String[] headerValues = tableFieldMetaInfo.getFieldMetaInfoList().stream()
+                    .map(FieldMetaInfo::getName).toArray(String[]::new);
+            fileWriter.writeLine(headerValues);
+        }
     }
 
     @Override
     public void run() {
         beforeRun();
         try {
-            if (produceByLine()) {
-                produceDataByLine();
-            } else {
+            if (this.fileWriter.produceByBlock()) {
                 produceData();
+            } else {
+                produceDataByLine();
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
         } finally {
             afterRun();
         }
-    }
-
-    private boolean produceByLine() {
-        if (fileFormat == FileFormat.XLSX) {
-            return true;
-        }
-        if (this.cipher == null) {
-            return false;
-        }
-        EncryptionMode encryptionMode = this.cipher.getEncryptionConfig()
-            .getEncryptionMode();
-        if (encryptionMode != EncryptionMode.NONE && encryptionMode != EncryptionMode.CAESAR) {
-            return true;
-        }
-        return false;
     }
 
     private void beforeRun() {
@@ -220,22 +226,20 @@ public class DirectExportWorker extends BaseExportWorker {
     }
 
     private void produceData() {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        Connection conn = null;
-        try {
+        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
+            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
+
+        try (Connection conn = druid.getConnection();
+            Statement stmt = DataSourceUtil.createStreamingStatement(conn);
+            ResultSet resultSet = stmt.executeQuery(sql)) {
+
             logger.info("{} 开始导出", topology);
-            String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
-                tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
             // 字段数
             int colNum;
             // 已经缓存的行数
             int bufferedRowNum = 0;
             byte[] value;
             ByteArrayOutputStream os = new ByteArrayOutputStream();
-            conn = druid.getConnection();
-            stmt = DataSourceUtil.createStreamingStatement(conn);
-            resultSet = stmt.executeQuery(sql);
             colNum = resultSet.getMetaData().getColumnCount();
             while (resultSet.next()) {
                 for (int i = 1; i < colNum; i++) {
@@ -274,11 +278,6 @@ public class DirectExportWorker extends BaseExportWorker {
             logger.info("{} 导出完成", topology);
         } catch (SQLException | IOException e) {
             e.printStackTrace();
-            logger.error(e.getMessage());
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -288,7 +287,6 @@ public class DirectExportWorker extends BaseExportWorker {
             try {
                 data = cipher.encrypt(data);
             } catch (Exception e) {
-                e.printStackTrace();
                 logger.error(e.getMessage());
                 throw new RuntimeException(e);
             }
@@ -306,12 +304,22 @@ public class DirectExportWorker extends BaseExportWorker {
         try (Connection conn = druid.getConnection();
             Statement stmt = DataSourceUtil.createStreamingStatement(conn);
             ResultSet rs = stmt.executeQuery(sql)) {
-
-
-
+            int colNum = rs.getMetaData().getColumnCount();
+            int line = 0;
+            while (rs.next()) {
+                line++;
+                String[] values = new String[colNum];
+                for (int i = 1; i < colNum + 1; i++) {
+                    String value = rs.getString(i);
+                    values[i - 1] = value != null ? value : FileUtil.NULL_ESC_STR;
+                }
+                fileWriter.writeLine(values);
+                if (line % 1000 == 0) {
+                    logger.info("{} current written lines: {} ", filename, line);
+                }
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-            logger.error(e.getMessage());
         }
     }
 
@@ -343,9 +351,5 @@ public class DirectExportWorker extends BaseExportWorker {
 
     public void setPermitted(Semaphore permitted) {
         this.permitted = permitted;
-    }
-
-    public void setCipher(Cipher cipher) {
-        this.cipher = cipher;
     }
 }

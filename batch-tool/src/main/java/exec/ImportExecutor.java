@@ -21,6 +21,7 @@ import cmd.ImportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
+import model.config.CompressMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
 import model.config.QuoteEncloseMode;
@@ -143,10 +144,10 @@ public class ImportExecutor extends WriteDbExecutor {
     private void handleDDL() {
         DdlImportWorker ddlImportWorker;
         if (command.isDbOperation()) {
-            if (producerExecutionContext.getFileRecordList().size() != 1) {
+            if (producerExecutionContext.getFileLineRecordList().size() != 1) {
                 throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
             }
-            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFileRecordList()
+            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFileLineRecordList()
                 .get(0).getFilePath(), dataSource);
         } else {
             ddlImportWorker = new DdlImportWorker(command.getTableNames(), dataSource);
@@ -164,7 +165,7 @@ public class ImportExecutor extends WriteDbExecutor {
     private void doSingleThreadImport(String tableName) {
         DirectImportWorker directImportWorker = new DirectImportWorker(dataSource,
             consumerExecutionContext.getSeparator(), producerExecutionContext.getCharset(),
-            producerExecutionContext.getFileRecordList(), tableName,
+            producerExecutionContext.getFileLineRecordList(), tableName,
             consumerExecutionContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList(),
             producerExecutionContext.getMaxErrorCount());
         Thread importThread = new Thread(directImportWorker);
@@ -184,7 +185,7 @@ public class ImportExecutor extends WriteDbExecutor {
         } else {
             configureCommonContextAndRun(ImportConsumer.class,
                 producerExecutionContext, consumerExecutionContext, tableName,
-                producerExecutionContext.getQuoteEncloseMode() != QuoteEncloseMode.FORCE);
+                useBlockReader());
         }
     }
 
@@ -194,6 +195,22 @@ public class ImportExecutor extends WriteDbExecutor {
 
         configureCommonContextAndRun(ShardedImportConsumer.class,
             producerExecutionContext, consumerExecutionContext, tableName,
-            producerExecutionContext.getQuoteEncloseMode() != QuoteEncloseMode.FORCE);
+            useBlockReader());
+    }
+
+    private boolean useBlockReader() {
+        if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
+            return false;
+        }
+        if (producerExecutionContext.getCompressMode() != CompressMode.NONE) {
+            return false;
+        }
+        if (!producerExecutionContext.getEncryptionConfig().getEncryptionMode().isSupportStreamingBit()) {
+            return false;
+        }
+        if (!producerExecutionContext.getFileFormat().isSupportBlock()) {
+            return false;
+        }
+        return true;
     }
 }

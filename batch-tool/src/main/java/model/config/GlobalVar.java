@@ -27,4 +27,10 @@ public class GlobalVar {
      * RingBuffer 缓冲区大小
      */
     public static int DEFAULT_RING_BUFFER_SIZE = 1024;
+
+    /**
+     * 每个worker线程可分配的堆外内存
+     * 4K
+     */
+    public static int DEFAULT_DIRECT_BUFFER_SIZE_PER_WORKER = 1024 * 4;
 }

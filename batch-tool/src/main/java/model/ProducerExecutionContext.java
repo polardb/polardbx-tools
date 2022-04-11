@@ -18,7 +18,7 @@ package model;
 
 import model.config.BaseConfig;
 import model.config.ConfigConstant;
-import model.config.FileRecord;
+import model.config.FileLineRecord;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.BufferedWriter;
@@ -39,7 +39,7 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private ThreadPoolExecutor producerExecutor;
 
-    private List<FileRecord> fileRecordList;
+    private List<FileLineRecord> fileRecordList;
 
     private int parallelism;
 
@@ -75,11 +75,11 @@ public class ProducerExecutionContext extends BaseConfig {
         this.producerExecutor = producerExecutor;
     }
 
-    public List<FileRecord> getFileRecordList() {
+    public List<FileLineRecord> getFileLineRecordList() {
         return fileRecordList;
     }
 
-    public void setFileRecordList(List<FileRecord> fileRecordList) {
+    public void setFileLineRecordList(List<FileLineRecord> fileRecordList) {
         this.fileRecordList = fileRecordList;
     }
 

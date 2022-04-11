@@ -96,7 +96,7 @@ public abstract class BaseShardedConsumer extends BaseWorkHandler {
             System.exit(1);
         } finally {
             consumerContext.getEmittedDataCounter().getAndDecrement();
-            if (consumerContext.isUsingBlock()) {
+            if (consumerContext.isUseBlock()) {
                 consumerContext.getEventCounter().get(event.getLocalProcessingFileIndex()).
                     get(event.getLocalProcessingBlockIndex()).getAndDecrement();
             }

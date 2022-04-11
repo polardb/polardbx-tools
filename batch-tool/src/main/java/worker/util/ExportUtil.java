@@ -61,19 +61,27 @@ public class ExportUtil {
      * 如果后期还有其他类型格式 再重构
      */
     public static String formatFieldWithDateType(List<FieldMetaInfo> fieldMetaInfoList) {
+        if (fieldMetaInfoList.isEmpty()) {
+            throw new IllegalArgumentException("Empty field meta info");
+        }
         int fieldLen = fieldMetaInfoList.size();
-        String[] toSelectFields = new String[fieldLen];
         FieldMetaInfo fieldMetaInfo;
-        for (int i = 0; i < fieldLen; i++) {
-            fieldMetaInfo = fieldMetaInfoList.get(i);
+        StringBuilder stringBuilder = new StringBuilder(fieldLen * 8);
+        for (FieldMetaInfo metaInfo : fieldMetaInfoList) {
+            fieldMetaInfo = metaInfo;
             if (fieldMetaInfo.getType() == FieldMetaInfo.Type.DATE) {
                 // 对日期进行格式化
-                toSelectFields[i] = String.format("DATE_FORMAT(%s, \"%%Y%%m%%d\")", fieldMetaInfo.getName());
+                stringBuilder.append("DATE_FORMAT(`").append(fieldMetaInfo.getName())
+                    .append("`, \"%%Y%%m%%d\")");
             } else {
-                toSelectFields[i] = fieldMetaInfo.getName();
+                stringBuilder.append('`').append(fieldMetaInfo.getName()).append('`');
             }
+            stringBuilder.append(',');
         }
-        return StringUtils.join(toSelectFields, ",");
+        if (stringBuilder.length() > 0) {
+            stringBuilder.setLength(stringBuilder.length() - 1);
+        }
+        return stringBuilder.toString();
     }
 
     public static String getOrderBySql(TableTopology topology,

@@ -28,7 +28,7 @@ import model.config.DdlMode;
 import model.config.EncryptionConfig;
 import model.config.ExportConfig;
 import model.config.FileFormat;
-import model.config.FileRecord;
+import model.config.FileLineRecord;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
 import org.apache.commons.cli.CommandLine;
@@ -374,7 +374,7 @@ public class CommandUtil {
     private static void configureProducerContext(CommandLine result,
                                                  ProducerExecutionContext producerExecutionContext) {
 
-        producerExecutionContext.setFileRecordList(getFileRecordList(result));
+        producerExecutionContext.setFileLineRecordList(getFileRecordList(result));
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setCharset(getCharset(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
@@ -383,6 +383,7 @@ public class CommandUtil {
         producerExecutionContext.setDdlMode(getDdlMode(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
+        producerExecutionContext.setFileFormat(getFileFormat(result));
         producerExecutionContext.setMaxErrorCount(getMaxErrorCount(result));
         if (result.hasOption(ARG_SHORT_HISTORY_FILE)) {
             producerExecutionContext.setHistoryFileAndParse(result.getOptionValue(ARG_SHORT_HISTORY_FILE));
@@ -391,7 +392,7 @@ public class CommandUtil {
             producerExecutionContext.setQuoteEncloseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
             if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
                 // 指定引号转义模式则采用安全的方式执行
-                producerExecutionContext.setParallelism(producerExecutionContext.getFileRecordList().size());
+                producerExecutionContext.setParallelism(producerExecutionContext.getFileLineRecordList().size());
             }
         }
     }
@@ -480,7 +481,7 @@ public class CommandUtil {
      * 解析文件路径与行号
      * 并检测文件是否存在
      */
-    private static List<FileRecord> getFileRecordList(CommandLine result) {
+    private static List<FileLineRecord> getFileRecordList(CommandLine result) {
         if (result.hasOption(ARG_SHORT_FROM)) {
             String filePathListStr = result.getOptionValue(ARG_SHORT_FROM);
             return Arrays.stream(StringUtils.split(filePathListStr, CMD_SEPARATOR))
@@ -489,11 +490,11 @@ public class CommandUtil {
                     String[] strs = StringUtils.split(s, CMD_FILE_LINE_SEPARATOR);
                     if (strs.length == 1) {
                         String fileAbsPath = FileUtil.getFileAbsPath(strs[0]);
-                        return new FileRecord(fileAbsPath);
+                        return new FileLineRecord(fileAbsPath);
                     } else if (strs.length == 2) {
                         String fileAbsPath = FileUtil.getFileAbsPath(strs[0]);
                         int startLine = Integer.parseInt(strs[1]);
-                        return new FileRecord(fileAbsPath, startLine);
+                        return new FileLineRecord(fileAbsPath, startLine);
                     } else {
                         throw new IllegalArgumentException("Illegal file: " + s);
                     }
@@ -501,7 +502,7 @@ public class CommandUtil {
         } else if (result.hasOption(ARG_SHORT_DIRECTORY)) {
             String dirPathStr = result.getOptionValue(ARG_SHORT_DIRECTORY);
             List<String> filePaths = FileUtil.getFilesAbsPathInDir(dirPathStr);
-            return FileRecord.fromFilePaths(filePaths);
+            return FileLineRecord.fromFilePaths(filePaths);
         }
         throw new IllegalStateException("cannot get file path list");
     }
@@ -568,6 +569,9 @@ public class CommandUtil {
         }
     }
 
+    /**
+     * TODO 文件格式、压缩格式、加密模式三者的设置冲突解决
+     */
     private static FileFormat getFileFormat(CommandLine result) {
         if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
             String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);

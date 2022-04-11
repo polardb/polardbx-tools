@@ -1,3 +1,19 @@
+/*
+ * Copyright [2013-2021], Alibaba Group Holding Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package worker.factory;
 
 import cmd.ExportCommand;
@@ -5,7 +21,7 @@ import exception.DatabaseException;
 import model.config.ExportConfig;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
-import model.encrypt.Cipher;
+import model.encrypt.BaseCipher;
 import util.DbUtil;
 import util.FileUtil;
 import worker.export.DirectExportWorker;
@@ -23,6 +39,7 @@ public class ExportWorkerFactory {
                                                                     ExportConfig config) {
 
         DirectExportWorker directExportWorker;
+        BaseCipher cipher = BaseCipher.getCipher(config.getEncryptionConfig(), true);
         switch (config.getExportWay()) {
         case MAX_LINE_NUM_IN_SINGLE_FILE:
             directExportWorker = new DirectExportWorker(druid,
@@ -30,21 +47,22 @@ public class ExportWorkerFactory {
                 config.getLimitNum(),
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
+                config.getQuoteEncloseMode(), config.getCompressMode(),
+                config.getFileFormat(), config.getCharset(), cipher);
             break;
         case DEFAULT:
             directExportWorker = new DirectExportWorker(druid,
                 topology, tableFieldMetaInfo,
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
+                config.getQuoteEncloseMode(), config.getCompressMode(),
+                config.getFileFormat(), config.getCharset(), cipher);
             break;
         case FIXED_FILE_NUM:
         default:
             throw new UnsupportedOperationException("Do not support direct export when fixed file num");
         }
         directExportWorker.setWhereCondition(config.getWhereCondition());
-        directExportWorker.setCipher(Cipher.getCipher(config.getEncryptionConfig(), true));
         return directExportWorker;
     }
 

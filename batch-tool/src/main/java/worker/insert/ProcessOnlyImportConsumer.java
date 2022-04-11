@@ -71,7 +71,9 @@ public class ProcessOnlyImportConsumer extends BaseWorkHandler {
                 stringBuilder.append("),");
             }
             // 去除最后一个逗号 发送数据到数据库
-            stringBuilder.setLength(stringBuilder.length() - 1);
+            if (stringBuilder.length() > 0) {
+                stringBuilder.setLength(stringBuilder.length() - 1);
+            }
             insertData(stringBuilder.toString());
         } catch (Exception e) {
             e.printStackTrace();

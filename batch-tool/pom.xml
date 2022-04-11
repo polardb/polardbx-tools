@@ -32,7 +32,7 @@
         <guava.version>27.0.1-jre</guava.version>
         <javax-validation.version>2.0.0.Final</javax-validation.version>
         <bouncycastle.version>1.60</bouncycastle.version>
-        <poi.version>4.1.0</poi.version>
+        <easy-excel.version>3.0.5</easy-excel.version>
     </properties>
 
     <repositories>
@@ -135,17 +135,10 @@
             <version>${bouncycastle.version}</version>
         </dependency>
 
-        <!-- excel -->
         <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi</artifactId>
-            <version>${poi.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml</artifactId>
-            <version>${poi.version}</version>
+            <groupId>com.alibaba</groupId>
+            <artifactId>easyexcel</artifactId>
+            <version>${easy-excel.version}</version>
         </dependency>
     </dependencies>
 

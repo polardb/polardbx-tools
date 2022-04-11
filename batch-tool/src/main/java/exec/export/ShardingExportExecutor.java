@@ -27,7 +27,7 @@ import model.CyclicAtomicInteger;
 import model.config.FileFormat;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
-import model.encrypt.Cipher;
+import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -136,6 +136,11 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                                              ExecutorService executor,
                                              Semaphore permitted,
                                              CountDownLatch countDownLatch) {
+        BaseCipher cipher = BaseCipher.getCipher(config.getEncryptionConfig(), true);
+        if (cipher != null && !cipher.supportBlock()) {
+            throw new UnsupportedOperationException(config.getEncryptionConfig().getEncryptionMode()
+                + " does not support export with fixed-number files");
+        }
         // 初始化缓冲区等
         EventFactory<ExportEvent> factory = ExportEvent::new;
         RingBuffer<ExportEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
@@ -154,7 +159,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 config.isWithHeader(),
                 config.getSeparator().getBytes(),
                 tableFieldMetaInfo, config.getCompressMode(), config.getCharset());
-            consumers[i].setCipher(Cipher.getCipher(config.getEncryptionConfig(), true));
+            consumers[i].setCipher(cipher);
         }
         WorkerPool<ExportEvent> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
         workerPool.start(executor);

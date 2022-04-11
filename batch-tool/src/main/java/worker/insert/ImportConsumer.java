@@ -17,7 +17,9 @@
 package worker.insert;
 
 import exception.DatabaseException;
+import model.config.ConfigConstant;
 import model.db.FieldMetaInfo;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import worker.common.BaseDefaultConsumer;
@@ -44,7 +46,8 @@ public class ImportConsumer extends BaseDefaultConsumer {
                 values, consumerContext.isSqlEscapeEnabled(), hasEscapedQuote);
         } catch (DatabaseException e) {
             // 在split预处理过后仍存在的问题
-            e.printStackTrace();
+            logger.error(StringUtils.join(values, ConfigConstant.MAGIC_CSV_SEP));
+            throw new RuntimeException(e);
         }
 
         stringBuilder.append("),");
