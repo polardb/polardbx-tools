@@ -19,279 +19,43 @@ package worker.common;
 import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
 import model.config.CompressMode;
-import model.config.ConfigConstant;
-import model.config.EncryptionConfig;
-import model.encrypt.Cipher;
+import model.config.FileBlockListRecord;
+import model.config.FileLineRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import worker.common.reader.BlockReader;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
 
 public class ReadFileWithBlockProducer extends ReadFileProducer {
     private static final Logger logger = LoggerFactory.getLogger(ReadFileWithBlockProducer.class);
 
-    /**
-     * 当前正在处理的文件序号
-     */
-    private final AtomicInteger currentFileIndex;
-    private final AtomicBoolean[] fileDoneList;
-    /**
-     * 每个文件已处理的block序号
-     */
-    private final AtomicLong[] startPosArr;
-
-    /**
-     * 默认2MB
-     */
-    private long readBlockSize;
-    /**
-     * 4KB
-     */
-    private static long READ_PADDING = 1024L * 4;
-
     private final CompressMode compressMode;
-    private final Cipher cipher;
+    private final FileBlockListRecord fileBlockListRecord;
 
     public ReadFileWithBlockProducer(ProducerExecutionContext context,
                                      RingBuffer<BatchLineEvent> ringBuffer,
-                                     String tableName) {
-        super(context, ringBuffer, tableName);
+                                     List<FileLineRecord> fileLineRecordList) {
+        super(context, ringBuffer, fileLineRecordList);
         this.compressMode = context.getCompressMode();
-        this.cipher = Cipher.getCipher(context.getEncryptionConfig(), false);
-        this.readBlockSize = context.getReadBlockSizeInMb() * 1024L * 1024;
-        this.currentFileIndex = new AtomicInteger(context.getNextFileIndex());
-
-
-        this.fileDoneList = new AtomicBoolean[fileList.size()];
-        this.startPosArr = new AtomicLong[fileList.size()];
-        for (int i = 0; i < startPosArr.length; i++) {
-            if (i < context.getNextFileIndex()) {
-                fileDoneList[i] = new AtomicBoolean(true);
-                startPosArr[i] = new AtomicLong(0);
-            } else if (i == context.getNextFileIndex()) {
-                fileDoneList[i] = new AtomicBoolean(false);
-                startPosArr[i] = new AtomicLong(context.getNextBlockIndex());
-            } else {
-                fileDoneList[i] = new AtomicBoolean(false);
-                startPosArr[i] = new AtomicLong(0);
-            }
-        }
+        this.fileBlockListRecord = new FileBlockListRecord(fileList, context.getNextFileIndex(),
+            context.getNextBlockIndex());
     }
 
     @Override
     public void produce() {
         int parallelism = context.getParallelism();
         ThreadPoolExecutor threadPool = context.getProducerExecutor();
-        BlockerReader readFileWorker = null;
-        try {
-            for (int i = 0; i < parallelism; i++) {
-                readFileWorker = new BlockerReader(ringBuffer, compressMode);
-                threadPool.submit(readFileWorker);
-            }
-        } catch (FileNotFoundException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        BlockReader readFileWorker = null;
+        for (int i = 0; i < parallelism; i++) {
+            readFileWorker = new BlockReader(context, fileBlockListRecord, ringBuffer, compressMode);
+            threadPool.submit(readFileWorker);
         }
     }
 
     public AtomicBoolean[] getFileDoneList() {
-        return fileDoneList;
+        return fileBlockListRecord.getFileDoneList();
     }
-
-    class BlockerReader extends ReadFileWorker {
-
-        private RandomAccessFile curRandomAccessFile;
-
-        public BlockerReader(RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) throws FileNotFoundException {
-            super(ringBuffer, compressMode);
-
-            // set localProcessingFileIndex and startPosArr[localProcessingFileIndex]
-            this.localProcessingFileIndex = currentFileIndex.get();
-            this.curRandomAccessFile = new RandomAccessFile(fileList.get(localProcessingFileIndex), "r");
-        }
-
-        public String rtrim(String s) {
-            int len = s.length();
-            while ((len > 0) && (s.charAt(len - 1) <= ' ')) {
-                len--;
-            }
-            return (len < s.length()) ? s.substring(0, len) : s;
-        }
-
-        @Override
-        public void run() {
-
-            byte[] buffer = new byte[(int) (readBlockSize + READ_PADDING)];
-            byte[] result;
-            byte[] tmpByteBuffer;
-
-            int curPos, curLen;
-            while (true) {
-                try {
-                    localProcessingBlockIndex = startPosArr[localProcessingFileIndex].getAndIncrement();
-                    long pos = localProcessingBlockIndex * readBlockSize;
-                    // 首次进入该block，开始处理 : counter++
-                    context.getEventCounter().get(localProcessingFileIndex)
-                        .putIfAbsent(localProcessingBlockIndex, new AtomicInteger(0));
-                    context.getEventCounter().get(localProcessingFileIndex)
-                        .get(localProcessingBlockIndex).incrementAndGet();
-                    // 跳过第一个换行符
-                    boolean skipFirst = (pos != 0);
-                    curRandomAccessFile.seek(pos);
-                    int len = curRandomAccessFile.read(buffer);
-
-                    if (len == -1) {
-                        if (!nextFile()) {
-                            // 没有再下一个要处理的文件了, 结束
-                            break;
-                        }
-                        continue;
-                    }
-                    // TODO 待重构
-                    if (this.compressMode == CompressMode.GZIP) {
-                        // 将buffer的内容解压
-                        GZIPInputStream gzipInputStream = new GZIPInputStream(new ByteArrayInputStream(buffer),
-                            ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE);
-                        ByteArrayOutputStream gzipOutputBuffer = new ByteArrayOutputStream(buffer.length * 2);
-                        int num = 0;
-                        byte[] gzipBuffer = new byte[buffer.length];
-                        while ((num = gzipInputStream.read(gzipBuffer, 0, len)) != -1) {
-                            gzipOutputBuffer.write(gzipBuffer, 0, num);
-                        }
-                        buffer = gzipOutputBuffer.toByteArray();
-                        len = buffer.length;
-                        gzipInputStream.close();
-                    }
-                    if (cipher != null) {
-                        buffer = cipher.decrypt(buffer);
-                    }
-
-                    curPos = 0;
-                    curLen = 0;
-                    label_reading:
-                    while (curPos + curLen < len) {
-                        // 读取行
-                        switch (buffer[curLen + curPos]) {
-                        case '\n':
-                            if (skipFirst) {
-                                skipFirst = false;
-                            } else if (!(curPos == 0 && context.isWithHeader())) {
-                                if (curLen + curPos - 1 >= 0 && buffer[curLen + curPos - 1] == '\r') {
-                                    tmpByteBuffer = new byte[curLen - 1];
-                                    System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen - 1);
-                                } else {
-                                    tmpByteBuffer = new byte[curLen];
-                                    System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen);
-                                }
-                                String line = new String(tmpByteBuffer, context.getCharset());
-                                line = rtrim(line);
-                                // Remove BOM if utf?.
-                                if (!line.isEmpty() && line.charAt(0) == '\uFEFF' && context.getCharset().toString()
-                                    .toLowerCase().contains("utf")) {
-                                    line = line.substring(1);
-                                }
-                                appendToLineBuffer(line);
-                            }
-
-                            curPos = curLen + curPos + 1;
-                            curLen = 0;
-                            if (curPos + curLen > readBlockSize) {
-                                // 到达了padding处 停止
-                                break label_reading;
-                            }
-                            break;
-                        default:
-                            curLen++;
-                        }
-                    }
-                    // Dealing last line without '\n'.
-                    if (curPos + curLen == len && // Read till EOF.
-                        curPos + curLen <= readBlockSize) { // And not in padding.
-                        // Dealing last line.
-                        if (curLen + curPos - 1 >= 0 && buffer[curLen + curPos - 1] == '\r') {
-                            tmpByteBuffer = new byte[curLen - 1];
-                            System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen - 1);
-                        } else {
-                            tmpByteBuffer = new byte[curLen];
-                            System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen);
-                        }
-                        String line = new String(tmpByteBuffer, context.getCharset());
-                        line = rtrim(line);
-                        // Remove BOM if utf?.
-                        if (!line.isEmpty() && line.charAt(0) == '\uFEFF' && context.getCharset().toString()
-                            .toLowerCase().contains("utf")) {
-                            line = line.substring(1);
-                        }
-                        appendToLineBuffer(line);
-                    }
-                    // 正常处理完本block数据 : counter--
-                    context.getEventCounter().get(localProcessingFileIndex)
-                        .get(localProcessingBlockIndex).getAndDecrement();
-                } catch (EOFException e) {
-                    if (!nextFile()) {
-                        // 没有再下一个要处理的文件了, 结束
-                        break;
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    logger.error(e.getMessage());
-                    break;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    logger.error(e.getMessage());
-                    System.exit(1);
-                }
-            }
-            // 发送剩余数据
-            if (bufferedLineCount != 0) {
-                emitLineBuffer();
-            }
-            context.getCountDownLatch().countDown();
-        }
-
-        private boolean nextFile() {
-            if (fileDoneList[localProcessingFileIndex].compareAndSet(false, true)) {
-                logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
-            }
-            // 未处理足一个block就进入下一个文件 : counter--
-            context.getEventCounter().get(localProcessingFileIndex)
-                .get(localProcessingBlockIndex).getAndDecrement();
-            // 进入下一个文件
-            if (localProcessingFileIndex < fileList.size() - 1) {
-                currentFileIndex.compareAndSet(localProcessingFileIndex, localProcessingFileIndex + 1);
-                // 如果并发很大的话 可以考虑一次性跳过多个文件
-                localProcessingFileIndex++;
-                localProcessingBlockIndex = -1;
-                try {
-                    curRandomAccessFile = new RandomAccessFile(fileList.get(localProcessingFileIndex), "r");
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        protected void beforePublish() {
-            context.getEmittedDataCounter().getAndIncrement();
-            context.getEventCounter().get(localProcessingFileIndex).
-                get(localProcessingBlockIndex).getAndIncrement();
-        }
-    }
-
 }

@@ -36,12 +36,12 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
     protected String tableName;
 
     protected void initLocalVars() {
-        if (consumerContext.isUsingBlock()) {
-            this.sep = consumerContext.getSeparator();
-            hasEscapedQuote = false;
-        } else {
+        if (consumerContext.isUseMagicSeparator()) {
             this.sep = ConfigConstant.MAGIC_CSV_SEP;
             hasEscapedQuote = true;
+        } else {
+            this.sep = consumerContext.getSeparator();
+            hasEscapedQuote = false;
         }
     }
 

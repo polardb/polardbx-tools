@@ -16,16 +16,16 @@
 
 package worker.common;
 
+import com.google.common.base.Preconditions;
 import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
-import model.config.FileRecord;
+import model.config.FileLineRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public abstract class ReadFileProducer {
 
@@ -35,32 +35,17 @@ public abstract class ReadFileProducer {
     final RingBuffer<BatchLineEvent> ringBuffer;
 
     protected final List<File> fileList;
+    protected final List<FileLineRecord> fileLineRecordList;
 
     public ReadFileProducer(ProducerExecutionContext context,
                             RingBuffer<BatchLineEvent> ringBuffer,
-                            String tableName) {
+                            List<FileLineRecord> fileLineRecordList) {
         this.context = context;
         this.ringBuffer = ringBuffer;
-        List<FileRecord> allFilePathList = context.getFileRecordList();
-        if (allFilePathList == null || allFilePathList.isEmpty()) {
-            throw new IllegalArgumentException("File path list cannot be empty");
-        }
-        this.fileList = new ArrayList<>(allFilePathList.size());
-        if (allFilePathList.size() == 1) {
-            // 当只有一个文件时 无需匹配表名与文件名
-            initFileList(allFilePathList.stream()
-                .map(FileRecord::getFilePath).collect(Collectors.toList()));
-            return;
-        }
-        // FIXME 文件名与表名的匹配判断
-        List<String> filePathList = allFilePathList.stream()
-            .map(FileRecord::getFilePath)
-            .filter(filePath -> filePath.contains(tableName))
-            .collect(Collectors.toList());
-        if (filePathList.isEmpty()) {
-            throw new IllegalArgumentException("No filename contains table: " + tableName);
-        }
-        initFileList(filePathList);
+        Preconditions.checkArgument(!fileLineRecordList.isEmpty(), "No file for producer");
+        this.fileLineRecordList = fileLineRecordList;
+        this.fileList = new ArrayList<>(fileLineRecordList.size());
+        initFileList();
     }
 
     public abstract void produce();
@@ -69,15 +54,18 @@ public abstract class ReadFileProducer {
      * 初始化文件列表
      * 若有文件路径不存在 提前报错结束
      */
-    private void initFileList(List<String> filePathList) {
-        for (String path : filePathList) {
-            File file = new File(path);
+    private void initFileList() {
+        for (FileLineRecord fileRecord : fileLineRecordList) {
+            File file = new File(fileRecord.getFilePath());
             if (!file.exists()) {
-                logger.error("File {} doesn't exist", path);
+                logger.error("File {} doesn't exist", fileRecord.getFilePath());
                 throw new RuntimeException("File doesn't exist");
             }
             this.fileList.add(file);
         }
     }
 
+    public boolean useMagicSeparator() {
+        return false;
+    }
 }

@@ -19,6 +19,7 @@ package worker.export.order;
 import model.db.FieldMetaInfo;
 import org.apache.commons.io.FileUtils;
 import util.FileUtil;
+import util.IOUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -111,7 +112,7 @@ public abstract class MergeExportConsumer {
 
 
     public void writeToFile(byte[] rowData) throws IOException {
-        FileUtil.writeNio(appendChannel, rowData);
+        IOUtil.writeNio(appendChannel, rowData);
     }
 
     private void createNewPartFile() {

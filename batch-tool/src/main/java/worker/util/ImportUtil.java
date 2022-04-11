@@ -97,7 +97,7 @@ public class ImportUtil {
                                                    String[] values, boolean sqlEscapeEnabled,
                                                    boolean hasEscapedQuote) throws DatabaseException {
         if (fieldMetaInfoList.size() != values.length) {
-            throw new DatabaseException(String.format(": required field size %d, "
+            throw new DatabaseException(String.format("required field size %d, "
                 + "actual size %d", fieldMetaInfoList.size(), values.length));
         }
         int fieldLen = fieldMetaInfoList.size();

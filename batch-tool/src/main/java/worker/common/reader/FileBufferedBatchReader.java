@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package worker.common;
+package worker.common.reader;
 
 import com.lmax.disruptor.RingBuffer;
+import model.ProducerExecutionContext;
 import model.config.CompressMode;
 import model.config.ConfigConstant;
-import model.config.GlobalVar;
+import worker.common.BatchLineEvent;
+
+import java.io.File;
+import java.util.List;
 
 import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
-public abstract class ReadFileWorker implements Runnable {
+public abstract class FileBufferedBatchReader implements Runnable {
 
     protected final RingBuffer<BatchLineEvent> ringBuffer;
     protected int bufferedLineCount = 0;
@@ -31,13 +35,21 @@ public abstract class ReadFileWorker implements Runnable {
     protected volatile int localProcessingFileIndex;
     protected long localProcessingBlockIndex = -1;
     protected final CompressMode compressMode;
+    protected final ProducerExecutionContext context;
+    protected final List<File> fileList;
 
-    protected ReadFileWorker(RingBuffer<BatchLineEvent> ringBuffer) {
-        this(ringBuffer, CompressMode.NONE);
+    protected FileBufferedBatchReader(ProducerExecutionContext context,
+                                      List<File> fileList,
+                                      RingBuffer<BatchLineEvent> ringBuffer) {
+        this(context, fileList, ringBuffer, CompressMode.NONE);
     }
 
-    protected ReadFileWorker(RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) {
+    protected FileBufferedBatchReader(ProducerExecutionContext context,
+                                      List<File> fileList,
+                                      RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) {
+        this.context = context;
         this.ringBuffer = ringBuffer;
+        this.fileList = fileList;
         this.lineBuffer = new String[EMIT_BATCH_SIZE];
         this.compressMode = compressMode;
     }
@@ -67,6 +79,21 @@ public abstract class ReadFileWorker implements Runnable {
             beforePublish();
             ringBuffer.publish(sequence);
         }
+    }
+
+    @Override
+    public void run() {
+        try {
+            readData();
+        } finally {
+            afterRun();
+        }
+    }
+
+    protected abstract void readData();
+
+    private void afterRun() {
+        context.getCountDownLatch().countDown();
     }
 
     protected abstract void beforePublish();

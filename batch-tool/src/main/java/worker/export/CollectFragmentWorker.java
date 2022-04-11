@@ -19,7 +19,7 @@ package worker.export;
 import model.CyclicAtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.FileUtil;
+import util.IOUtil;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -54,7 +54,7 @@ public class CollectFragmentWorker implements Runnable {
             try {
                 FileChannel appendChannel = FileChannel.open(Paths.get(filePath),
                     StandardOpenOption.APPEND);
-                FileUtil.writeNio(appendChannel, data);
+                IOUtil.writeNio(appendChannel, data);
                 logger.debug("向文件 {} 写入碎片数据 ", filePath);
             } catch (IOException e) {
                 e.printStackTrace();

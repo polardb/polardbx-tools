@@ -1,10 +1,26 @@
+/*
+ * Copyright [2013-2021], Alibaba Group Holding Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package worker.insert;
 
 import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
-import model.config.FileRecord;
+import model.config.FileLineRecord;
 import model.db.FieldMetaInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +48,7 @@ public class DirectImportWorker implements Runnable {
 
     private final DataSource dataSource;
     private final char sep;
-    private final List<FileRecord> fileRecords;
+    private final List<FileLineRecord> fileRecords;
     private final String tableName;
     private final Charset charset;
     private final List<FieldMetaInfo> fieldMetaInfoList;
@@ -40,7 +56,7 @@ public class DirectImportWorker implements Runnable {
 
     public DirectImportWorker(DataSource dataSource, String sep,
                               Charset charset,
-                              List<FileRecord> fileRecords, String tableName,
+                              List<FileLineRecord> fileRecords, String tableName,
                               List<FieldMetaInfo> fieldMetaInfoList,
                               int maxErrorCount) {
         if (sep.length() != 1) {
@@ -64,7 +80,7 @@ public class DirectImportWorker implements Runnable {
         String prepareSql = DbUtil.getPrepareInsertSql(tableName, fieldMetaInfoList.size(), true);
         try (Connection conn = dataSource.getConnection();
             PreparedStatement stmt = conn.prepareStatement(prepareSql)) {
-            for (FileRecord fileRecord : fileRecords) {
+            for (FileLineRecord fileRecord : fileRecords) {
                 String filePath = fileRecord.getFilePath();
                 int startLine = fileRecord.getStartLine();
                 curFile = filePath;

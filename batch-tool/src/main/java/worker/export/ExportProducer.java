@@ -108,7 +108,7 @@ public class ExportProducer extends BaseExportWorker {
         int bufferedRowNum = 0;
         byte[] value;
         // 字段数过多可考虑增加os的初始长度
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ByteArrayOutputStream os = new ByteArrayOutputStream(metaInfoList.size() * 8);
         Connection conn = null;
         Statement stmt = null;
         ResultSet resultSet = null;

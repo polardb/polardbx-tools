@@ -16,19 +16,21 @@
 
 package worker.common;
 
+import com.google.common.base.Preconditions;
 import com.lmax.disruptor.RingBuffer;
-import com.opencsv.CSVParser;
-import com.opencsv.CSVParserBuilder;
-import com.opencsv.CSVReader;
-import com.opencsv.CSVReaderBuilder;
 import model.ProducerExecutionContext;
-import model.config.ConfigConstant;
+import model.config.EncryptionConfig;
+import model.config.FileFormat;
+import model.config.FileLineRecord;
+import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import worker.common.reader.CipherLineReader;
+import worker.common.reader.CsvReader;
+import worker.common.reader.FileBufferedBatchReader;
+import worker.common.reader.XlsxReader;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
+import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -39,18 +41,23 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class ReadFileWithLineProducer extends ReadFileProducer {
 
     private static final Logger logger = LoggerFactory.getLogger(ReadFileWithLineProducer.class);
-    private final char sepChar;
+
+    private boolean useMagicSeparator = false;
+    private final FileBufferedBatchReader[] fileReaders;
 
     public ReadFileWithLineProducer(ProducerExecutionContext context,
                                     RingBuffer<BatchLineEvent> ringBuffer,
-                                    String tableName) {
-        super(context, ringBuffer, tableName);
-        String sep = context.getSeparator();
-        if (sep.length() != 1) {
-            logger.error("In quote escape mode only allows single char separator");
-            System.exit(1);
+                                    List<FileLineRecord> fileLineRecordList) {
+        super(context, ringBuffer, fileLineRecordList);
+        Preconditions.checkArgument(!fileLineRecordList.isEmpty(), "File record is empty");
+        this.fileReaders = new FileBufferedBatchReader[fileLineRecordList.size()];
+        initFileReaders();
+    }
+
+    private void initFileReaders() {
+        for (int i = 0; i < fileReaders.length; i++) {
+            fileReaders[i] = initFileReader(i);
         }
-        this.sepChar = sep.charAt(0);
     }
 
     @Override
@@ -58,54 +65,43 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
         // 并行度大小为文件数量
         // todo 暂时与文件数量相同 如果文件数量太多将控制并发度
         ThreadPoolExecutor threadPool = context.getProducerExecutor();
-        CsvLineReader readFileWorker = null;
-        try {
-            for (int i = 0; i < fileList.size(); i++) {
-                readFileWorker = new CsvLineReader(ringBuffer, i);
-                threadPool.submit(readFileWorker);
-            }
-        } catch (FileNotFoundException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+
+        for (FileBufferedBatchReader reader : fileReaders) {
+            threadPool.submit(reader);
         }
     }
 
-    class CsvLineReader extends ReadFileWorker {
-
-        private final CSVReader reader;
-
-        public CsvLineReader(RingBuffer<BatchLineEvent> ringBuffer, int fileIndex) throws FileNotFoundException {
-            super(ringBuffer);
-
-            CSVParser parser = new CSVParserBuilder().withSeparator(sepChar).build();
-            this.reader = new CSVReaderBuilder(new InputStreamReader(
-                new FileInputStream(fileList.get(fileIndex).getAbsolutePath()), context.getCharset()))
-                .withCSVParser(parser).build();
-            this.localProcessingFileIndex = fileIndex;
+    private FileBufferedBatchReader initFileReader(int workerIndex) {
+        FileFormat fileFormat = context.getFileFormat();
+        switch (fileFormat) {
+        case XLSX:
+        case XLS:
+        case ET:
+            this.useMagicSeparator = true;
+            return new XlsxReader(context, fileList, workerIndex, ringBuffer);
+        case CSV:
+        case LOG:
+        case TXT:
+            this.useMagicSeparator = true;
+            return new CsvReader(context, fileList, workerIndex, ringBuffer);
+        case NONE:
+            // do nothing
+            break;
+        default:
+            throw new UnsupportedOperationException("Unknown file format type: " + fileFormat);
         }
-
-        @Override
-        public void run() {
-            try {
-                for (String[] fields; (fields = reader.readNext()) != null; ) {
-                    localProcessingBlockIndex++;
-                    String line = String.join(ConfigConstant.MAGIC_CSV_SEP, fields);
-                    appendToLineBuffer(line);
-                }
-
-                reader.close();
-                emitLineBuffer();
-                logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                context.getCountDownLatch().countDown();
-            }
+        if (!context.getEncryptionConfig().getEncryptionMode().isSupportStreamingBit()) {
+            BaseCipher cipher = BaseCipher.getCipher(context.getEncryptionConfig(), false);
+            return new CipherLineReader(context, fileList, workerIndex, cipher, ringBuffer);
         }
-
-        @Override
-        protected void beforePublish() {
-            context.getEmittedDataCounter().getAndIncrement();
+        if (context.getEncryptionConfig().equals(EncryptionConfig.NONE)) {
+            return new CsvReader(context, fileList, workerIndex, ringBuffer);
         }
+        throw new IllegalArgumentException("Should use BlockReader in streaming bit encryption");
+    }
+
+    @Override
+    public boolean useMagicSeparator() {
+        return this.useMagicSeparator;
     }
 }
