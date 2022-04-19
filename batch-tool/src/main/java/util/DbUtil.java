@@ -589,4 +589,19 @@ public class DbUtil {
         stringBuilder.append(");");
         return stringBuilder.toString();
     }
+
+    public static boolean isBroadCast(Connection conn, String tableName) throws DatabaseException {
+        String sql = String.format("show rule from `%s`", tableName);
+        try (Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            if (!rs.next()) {
+                throw new DatabaseException("Unable to get rule of table " + tableName);
+            }
+            return rs.getBoolean("BROADCAST");
+        } catch (SQLException e) {
+            throw new DatabaseException("Unable to get rule of table " + tableName, e);
+        } finally {
+            JdbcUtils.close(conn);
+        }
+    }
 }

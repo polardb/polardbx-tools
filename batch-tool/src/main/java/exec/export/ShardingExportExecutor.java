@@ -86,7 +86,13 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
             config.getFilenamePrefix(), tableName);
         try {
+            boolean isBroadCast = DbUtil.isBroadCast(dataSource.getConnection(), tableName);
             List<TableTopology> topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
+            if (isBroadCast) {
+                TableTopology firstTopology = topologyList.get(0);
+                topologyList.clear();
+                topologyList.add(firstTopology);
+            }
             TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
                 getSchemaName(), tableName);
             // 分片数
