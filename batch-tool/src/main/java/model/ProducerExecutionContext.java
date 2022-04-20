@@ -19,6 +19,7 @@ package model;
 import model.config.BaseConfig;
 import model.config.ConfigConstant;
 import model.config.FileLineRecord;
+import model.config.QuoteEncloseMode;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.BufferedWriter;
@@ -162,6 +163,9 @@ public class ProducerExecutionContext extends BaseConfig {
      * TODO to be refactored
      */
     public void setHistoryFileAndParse(String historyFile) {
+        if (historyFile == null) {
+            return;
+        }
         setHistoryFile(historyFile);
         File file = new File(historyFile);
         Scanner fromFile = null;
@@ -232,6 +236,14 @@ public class ProducerExecutionContext extends BaseConfig {
             || this.charset.equals(StandardCharsets.UTF_16);
     }
 
+    public Exception getException() {
+        return exception;
+    }
+
+    public void setException(Exception exception) {
+        this.exception = exception;
+    }
+
     @Override
     public String toString() {
         return "ProducerExecutionContext{" +
@@ -240,5 +252,15 @@ public class ProducerExecutionContext extends BaseConfig {
             ", readBlockSizeInMb=" + readBlockSizeInMb +
             ", " + super.toString() +
             '}';
+    }
+
+    @Override
+    public void validate() {
+        super.validate();
+
+        if (this.quoteEncloseMode == QuoteEncloseMode.FORCE) {
+            // 指定引号转义模式则采用安全的方式执行
+            this.parallelism = fileRecordList.size();
+        }
     }
 }

@@ -44,7 +44,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
-import java.util.stream.Collectors;
 
 /**
  * 直接拿到数据库数据并写入文件的工作线程
@@ -315,7 +314,7 @@ public class DirectExportWorker extends BaseExportWorker {
                 }
                 fileWriter.writeLine(values);
                 if (line % 1000 == 0) {
-                    logger.info("{} current written lines: {} ", filename, line);
+                    logger.info("{} 当前已写入行数: {} ", filename, line);
                 }
             }
         } catch (SQLException e) {

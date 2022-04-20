@@ -137,6 +137,8 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     private boolean useMagicSeparator = false;
 
+    private volatile Exception exception;
+
     public ConsumerExecutionContext() {
         super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
     }
@@ -399,5 +401,13 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     public boolean isSingleThread() {
         return this.parallelism == 1;
+    }
+
+    public Exception getException() {
+        return exception;
+    }
+
+    public void setException(Exception exception) {
+        this.exception = exception;
     }
 }

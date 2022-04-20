@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -218,7 +219,7 @@ public abstract class BaseExecutor {
             && !consumerExecutionContext.isReadProcessFileOnly()) {
             checkConsumeProgress((ReadFileWithBlockProducer) producer, consumers);
         }
-        waitForFinish(countDownLatch, emittedDataCounter);
+        waitForFinish(countDownLatch, emittedDataCounter, producerExecutionContext, consumerExecutionContext);
         workerPool.halt();
         consumerThreadPool.shutdown();
         producerThreadPool.shutdown();
@@ -273,6 +274,33 @@ public abstract class BaseExecutor {
             e.printStackTrace();
         }
         onWorkFinished();
+    }
+
+    protected void waitForFinish(CountDownLatch countDownLatch, AtomicInteger emittedDataCounter,
+                                 ProducerExecutionContext producerContext,
+                                 ConsumerExecutionContext consumerContext) {
+        try {
+            // 等待生产者结束
+            while (!countDownLatch.await(10, TimeUnit.SECONDS)) {
+                if (producerContext.getException() != null) {
+                    logger.warn("Early exit because of producer exception");
+                    return;
+                }
+            }
+            // 等待消费者消费完成
+            int remain;
+            while ((remain = emittedDataCounter.get()) > 0) {
+                if (consumerContext.getException() != null) {
+                    logger.warn("Early exit because of consumer exception");
+                    return;
+                }
+                Thread.sleep(500);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            onWorkFinished();
+        }
     }
 
     protected void checkConsumeProgress(ReadFileWithBlockProducer producers, BaseWorkHandler[] consumers) {

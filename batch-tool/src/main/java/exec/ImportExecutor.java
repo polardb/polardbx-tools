@@ -134,6 +134,16 @@ public class ImportExecutor extends WriteDbExecutor {
                 }
             }
 
+            if (producerExecutionContext.getException() != null) {
+                logger.error("导入数据到 {} 失败：{}", tableName,
+                    producerExecutionContext.getException().getMessage());
+                return;
+            }
+            if (consumerExecutionContext.getException() != null) {
+                logger.error("导入数据到 {} 失败：{}", tableName,
+                    consumerExecutionContext.getException().getMessage());
+                return;
+            }
             logger.info("导入数据到 {} 完成", tableName);
         }
     }

@@ -21,6 +21,7 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import model.config.FileLineRecord;
+import model.config.GlobalVar;
 import model.db.FieldMetaInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,8 @@ public class DirectImportWorker implements Runnable {
     private final List<FieldMetaInfo> fieldMetaInfoList;
     private final int maxErrorCount;
 
+    private final int reportLine;
+
     public DirectImportWorker(DataSource dataSource, String sep,
                               Charset charset,
                               List<FileLineRecord> fileRecords, String tableName,
@@ -69,6 +72,7 @@ public class DirectImportWorker implements Runnable {
         this.fieldMetaInfoList = fieldMetaInfoList;
         this.tableName = tableName;
         this.maxErrorCount = maxErrorCount;
+        this.reportLine = GlobalVar.EMIT_BATCH_SIZE * 10;
     }
 
     @Override
@@ -95,11 +99,15 @@ public class DirectImportWorker implements Runnable {
                         stmt.setObject(i1 + 1, values[i1]);
                     }
                     try {
-                        stmt.executeUpdate();
+                        // Batch prepare 导入
+                        stmt.addBatch();
                         importedLines++;
-
-                        if (importedLines % 1000 == 0) {
-                            logger.info("File {} import {} line", curFile, importedLines);
+                        if (importedLines % GlobalVar.EMIT_BATCH_SIZE == 0) {
+                            stmt.executeBatch();
+                            stmt.clearBatch();
+                        }
+                        if (importedLines % reportLine == 0) {
+                            logger.info("文件 {} 已导入 {} 行", curFile, importedLines);
                         }
                     } catch (SQLException e) {
                         curErrorCount++;
@@ -112,7 +120,7 @@ public class DirectImportWorker implements Runnable {
                     curLine++;
                 }
                 IOUtil.close(reader);
-                logger.info("File {} import successfully!", curFile);
+                logger.info("文件 {} 导入成功!", curFile);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -121,6 +129,4 @@ public class DirectImportWorker implements Runnable {
             throw new RuntimeException(e);
         }
     }
-
-
 }

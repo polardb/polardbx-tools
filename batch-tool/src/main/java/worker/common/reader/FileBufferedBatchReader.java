@@ -85,6 +85,9 @@ public abstract class FileBufferedBatchReader implements Runnable {
     public void run() {
         try {
             readData();
+        } catch (Exception e) {
+            context.setException(e);
+            throw e;
         } finally {
             afterRun();
         }

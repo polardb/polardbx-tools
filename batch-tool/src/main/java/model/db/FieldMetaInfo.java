@@ -27,7 +27,7 @@ public class FieldMetaInfo {
      */
     private int index;
 
-    // todo 类型有待补充
+    // todo 类型有待补充(blob)
     public static final ImmutableSet<String> STRING_TYPE_SET = ImmutableSet.of(
         "varchar",
         "char",

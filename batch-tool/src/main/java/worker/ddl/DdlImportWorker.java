@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 直接通过source导入库表
+ * 直接通过读取SQL导入库表
  */
 public class DdlImportWorker implements Runnable {
 
@@ -63,6 +63,7 @@ public class DdlImportWorker implements Runnable {
     @Override
     public void run() {
         BufferedReader reader = null;
+        // TODO 线程池异步
         try (Connection conn = dataSource.getConnection();
             Statement stmt = conn.createStatement()) {
 
@@ -79,7 +80,7 @@ public class DdlImportWorker implements Runnable {
                     } else {
                         sqlStringBuilder.append(line);
                         String sql = sqlStringBuilder.toString();
-                        logger.info("Executing DDL sql: " + sql);
+                        logger.info("正在执行 DDL 语句: " + sql);
                         stmt.execute(sql);
                         sqlStringBuilder.setLength(0);
                     }

@@ -159,7 +159,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
                     if (produceProgress[i].get()) {
                         // means all file consume over
                         if (i + 1 == produceProgress.length) {
-                            logger.info("deal with all files over");
+                            logger.info("所有文件处理完毕");
                         }
                     } else {
                         producerExecutionContext.setNextFileIndex(i);
@@ -173,8 +173,8 @@ public abstract class WriteDbExecutor extends BaseExecutor {
                 }
             }
             producerExecutionContext.saveToHistoryFile(false);
-            logger.info("next file {}", producerExecutionContext.getNextFileIndex());
-            logger.info("next block {}", producerExecutionContext.getNextBlockIndex());
+            logger.info("下一个文件 {}", producerExecutionContext.getNextFileIndex());
+            logger.info("下一数据块 {}", producerExecutionContext.getNextBlockIndex());
         }, 30, 60, TimeUnit.SECONDS);
         checkConsumePartFinishScheduler.shutdown();
     }
