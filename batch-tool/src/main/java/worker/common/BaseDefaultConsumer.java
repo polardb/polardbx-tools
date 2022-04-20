@@ -40,6 +40,10 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
 
     @Override
     public void onProxyEvent(BatchLineEvent event) {
+        if (consumerContext.getException() != null) {
+            // fail fast on exception
+            return;
+        }
         initLocalVars();
         try {
             String[] lines = event.getBatchLines();
@@ -60,6 +64,7 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
                 execSql(stringBuilder);
             }
         } catch (Exception e) {
+            consumerContext.setException(e);
             logger.error(e.getMessage());
             // 认为无法恢复
             throw new RuntimeException(e);
@@ -69,7 +74,6 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
                 consumerContext.getEventCounter().get(event.getLocalProcessingFileIndex()).
                     get(event.getLocalProcessingBlockIndex()).getAndDecrement();
             }
-
         }
     }
 
@@ -77,7 +81,7 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
 
     protected abstract String getSql(StringBuilder data);
 
-    protected void execSql(StringBuilder data) {
+    protected void execSql(StringBuilder data) throws SQLException {
         Connection conn = null;
         Statement stmt = null;
         String sql = null;
@@ -87,10 +91,8 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
             sql = getSql(data);
             stmt.execute(sql);
         } catch (SQLException e) {
-            e.printStackTrace();
-            logger.error(sql);
-            logger.error(e.getMessage());
-            System.exit(1);
+//            logger.error(sql);
+            throw e;
         } finally {
             JdbcUtils.close(stmt);
             JdbcUtils.close(conn);

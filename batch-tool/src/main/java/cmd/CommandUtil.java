@@ -91,7 +91,7 @@ public class CommandUtil {
         return result;
     }
 
-// --- 数据源设置 start ---
+    //region 数据源设置
     private static void validateDataSourceArgs(CommandLine result) {
         requireArg(result, ARG_SHORT_HOST);
         requireArg(result, ARG_SHORT_USERNAME);
@@ -161,10 +161,9 @@ public class CommandUtil {
         }
         return null;
     }
+    //endregion 数据源设置
 
-// --- 数据源设置 end ---
-
-// --- 批命令解析 end ---
+    //region 批处理命令解析
     public static BaseOperateCommand getOperateCommandFromCmd(CommandLine result) {
         validateOperateArgs(result);
         BaseOperateCommand command = initCommand(result);
@@ -210,26 +209,6 @@ public class CommandUtil {
         }
     }
 
-    private static ExportCommand parseExportCommand(CommandLine result) {
-        List<String> tableNames = getTableNames(result);
-        ExportConfig exportConfig = new ExportConfig();
-        setCharset(result, exportConfig);
-        setFirstLineColumn(result, exportConfig);
-        exportConfig.setSeparator(getSeparator(result));
-        exportConfig.setFilenamePrefix(result.getOptionValue(ARG_SHORT_PREFIX));
-        exportConfig.setWhereCondition(result.getOptionValue(ARG_SHORT_WHERE));
-        exportConfig.setDdlMode(getDdlMode(result));
-        exportConfig.setEncryptionConfig(getEncryptionConfig(result));
-        exportConfig.setFileFormat(getFileFormat(result));
-        exportConfig.setCompressMode(getCompressMode(result));
-        setFileNum(result, exportConfig);
-        setFileLine(result, exportConfig);
-        setOrderBy(result, exportConfig);
-        setQuoteEncloseMode(result, exportConfig);
-        setParallelism(result, exportConfig);
-        return new ExportCommand(getDbName(result), tableNames, exportConfig);
-    }
-
     private static List<String> getTableNames(CommandLine result) {
         if (!result.hasOption(ARG_SHORT_TABLE)) {
             return null;
@@ -271,10 +250,100 @@ public class CommandUtil {
         consumerExecutionContext.setFuncSqlForUpdateEnabled(getFuncEnabled(result));
         return new UpdateCommand(getDbName(result), producerExecutionContext, consumerExecutionContext);
     }
+    //endregion 批处理命令解析
 
-// --- 批命令解析 end ---
+    //region 读写文件相关配置
+    private static String getSep(CommandLine result) {
+        return result.getOptionValue(ARG_SHORT_SEP);
+    }
 
-// --- 导出相关设置 start ---
+    private static Charset getCharset(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_CHARSET)) {
+            String charset = result.getOptionValue(ARG_SHORT_CHARSET);
+            return Charset.forName(charset);
+        } else {
+            return ConfigConstant.DEFAULT_CHARSET;
+        }
+    }
+
+    private static boolean getWithHeader(CommandLine result) {
+        return result.hasOption(ARG_SHORT_WITH_HEADER);
+    }
+
+    private static CompressMode getCompressMode(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_COMPRESS)) {
+            return CompressMode.fromString(result.getOptionValue(ARG_SHORT_COMPRESS));
+        } else {
+            return ConfigConstant.DEFAULT_COMPRESS_MODE;
+        }
+    }
+
+    private static EncryptionConfig getEncryptionConfig(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_ENCRYPTION)) {
+            String encryptionMode = result.getOptionValue(ARG_SHORT_ENCRYPTION);
+            String key = result.getOptionValue(ARG_SHORT_KEY);
+            return EncryptionConfig.parse(encryptionMode, key);
+        } else {
+            return DEFAULT_ENCRYPTION_CONFIG;
+        }
+    }
+
+    private static int getReadBlockSizeInMb(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_READ_BLOCK_SIZE)) {
+            return Integer.parseInt(
+                result.getOptionValue(ARG_SHORT_READ_BLOCK_SIZE));
+        } else {
+            return ConfigConstant.DEFAULT_READ_BLOCK_SIZE_IN_MB;
+        }
+    }
+
+    private static boolean getWithLastSep(CommandLine result) {
+        return result.hasOption(ARG_SHORT_WITH_LAST_SEP);
+    }
+
+    /**
+     * TODO 文件格式、压缩格式、加密模式三者的设置冲突解决
+     */
+    private static FileFormat getFileFormat(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
+            String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);
+            return FileFormat.fromString(fileFormat);
+        } else {
+            return DEFAULT_FILE_FORMAT;
+        }
+    }
+    //endregion 读写文件相关配置
+
+    //region 导出相关设置
+    private static ExportCommand parseExportCommand(CommandLine result) {
+        List<String> tableNames = getTableNames(result);
+        ExportConfig exportConfig = new ExportConfig();
+        exportConfig.setCharset(getCharset(result));
+        exportConfig.setWithHeader(getWithHeader(result));
+        exportConfig.setSeparator(getSep(result));
+        exportConfig.setWhereCondition(getWhereCondition(result));
+        exportConfig.setDdlMode(getDdlMode(result));
+        exportConfig.setEncryptionConfig(getEncryptionConfig(result));
+        exportConfig.setFileFormat(getFileFormat(result));
+        exportConfig.setCompressMode(getCompressMode(result));
+        exportConfig.setParallelism(getProducerParallelism(result));
+        exportConfig.setQuoteEncloseMode(getQuoteEncloseMode(result));
+        setFilenamePrefix(result, exportConfig);
+        setFileNum(result, exportConfig);
+        setFileLine(result, exportConfig);
+        setOrderBy(result, exportConfig);
+        exportConfig.validate();
+        return new ExportCommand(getDbName(result), tableNames, exportConfig);
+    }
+
+    private static void setFilenamePrefix(CommandLine result, ExportConfig exportConfig) {
+        if (result.hasOption(ARG_SHORT_PREFIX)) {
+            exportConfig.setFilenamePrefix(result.getOptionValue(ARG_SHORT_PREFIX));
+        } else {
+            exportConfig.setFilenamePrefix("");
+        }
+    }
+
     private static void setOrderBy(CommandLine result, ExportConfig exportConfig) {
         if (result.hasOption(ARG_SHORT_ORDER)) {
             if (!result.hasOption(ARG_SHORT_ORDER_COLUMN)) {
@@ -313,41 +382,12 @@ public class CommandUtil {
         }
     }
 
-    private static void setFirstLineColumn(CommandLine result, BaseConfig config) {
-        config.setWithHeader(getWithHeader(result));
-    }
-
-    private static void setCharset(CommandLine result, BaseConfig config) {
-        if (result.hasOption(ARG_SHORT_CHARSET)) {
-            String charset = result.getOptionValue(ARG_SHORT_CHARSET);
-            config.setCharset(Charset.forName(charset));
-        }
-    }
-
-    private static String getSeparator(CommandLine result) {
-        return result.getOptionValue(ARG_SHORT_SEP);
-    }
-
     private static boolean getParaMerge(CommandLine result) {
         return result.hasOption(ARG_SHORT_PARALLEL_MERGE);
     }
+    //endregion 导出相关设置
 
-    private static void setQuoteEncloseMode(CommandLine result, ExportConfig config) {
-        if (result.hasOption(ARG_SHORT_QUOTE_ENCLOSE_MODE)) {
-            config.setQuoteEncloseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
-        }
-    }
-
-    private static void setParallelism(CommandLine result, ExportConfig config) {
-        if (result.hasOption(ARG_SHORT_PRODUCER)) {
-            config.setParallelism(Integer.parseInt(result.getOptionValue(ARG_SHORT_PRODUCER)));
-        }
-    }
-
-// --- 导出相关设置 end ---
-
-// --- 写入数据库操作的设置 start ---
-
+    //region 写入数据库操作的设置
     /**
      * 主要针对插入/更新/删除
      * 配置公共的上下文执行环境
@@ -355,9 +395,9 @@ public class CommandUtil {
     private static void configureCommonContext(CommandLine result,
                                                ProducerExecutionContext producerExecutionContext,
                                                ConsumerExecutionContext consumerExecutionContext) {
+        configureGlobalVar(result);
         configureProducerContext(result, producerExecutionContext);
         configureConsumerContext(result, consumerExecutionContext);
-        configureGlobalVar(result);
     }
 
     /**
@@ -373,29 +413,23 @@ public class CommandUtil {
      */
     private static void configureProducerContext(CommandLine result,
                                                  ProducerExecutionContext producerExecutionContext) {
-
+        producerExecutionContext.setCharset(getCharset(result));
+        producerExecutionContext.setSeparator(getSep(result));
         producerExecutionContext.setFileLineRecordList(getFileRecordList(result));
         producerExecutionContext.setParallelism(getProducerParallelism(result));
-        producerExecutionContext.setCharset(getCharset(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
         producerExecutionContext.setWithHeader(getWithHeader(result));
-        producerExecutionContext.setSeparator(getSep(result));
         producerExecutionContext.setDdlMode(getDdlMode(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
         producerExecutionContext.setFileFormat(getFileFormat(result));
         producerExecutionContext.setMaxErrorCount(getMaxErrorCount(result));
-        if (result.hasOption(ARG_SHORT_HISTORY_FILE)) {
-            producerExecutionContext.setHistoryFileAndParse(result.getOptionValue(ARG_SHORT_HISTORY_FILE));
-        }
-        if (result.hasOption(ARG_SHORT_QUOTE_ENCLOSE_MODE)) {
-            producerExecutionContext.setQuoteEncloseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
-            if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
-                // 指定引号转义模式则采用安全的方式执行
-                producerExecutionContext.setParallelism(producerExecutionContext.getFileLineRecordList().size());
-            }
-        }
+        producerExecutionContext.setHistoryFileAndParse(getHistoryFile(result));
+        producerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
+
+        producerExecutionContext.validate();
     }
+
 
     /**
      * 配置消费者
@@ -415,25 +449,8 @@ public class CommandUtil {
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
     }
 
-    private static boolean getWithHeader(CommandLine result) {
-        return result.hasOption(ARG_SHORT_WITH_HEADER);
-    }
-
-    private static boolean getWithLastSep(CommandLine result) {
-        return result.hasOption(ARG_SHORT_WITH_LAST_SEP);
-    }
-
     private static boolean getWhereInEnabled(CommandLine result) {
         return result.hasOption(ARG_SHORT_USING_IN);
-    }
-
-    private static int getReadBlockSizeInMb(CommandLine result) {
-        if (result.hasOption(ARG_SHORT_READ_BLOCK_SIZE)) {
-            return Integer.parseInt(
-                result.getOptionValue(ARG_SHORT_READ_BLOCK_SIZE));
-        } else {
-            return ConfigConstant.DEFAULT_READ_BLOCK_SIZE_IN_MB;
-        }
     }
 
     private static boolean getReadAndProcessFileOnly(CommandLine result) {
@@ -468,10 +485,17 @@ public class CommandUtil {
         }
     }
 
+    private static QuoteEncloseMode getQuoteEncloseMode(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_QUOTE_ENCLOSE_MODE)) {
+            return QuoteEncloseMode.parseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
+        } else {
+            return DEFAULT_QUOTE_ENCLOSE_MODE;
+        }
+    }
+
     private static boolean getForceParallelism(CommandLine result) {
         if (result.hasOption(ARG_SHORT_FORCE_CONSUMER)) {
-            boolean forceParallelism = Boolean.parseBoolean(result.getOptionValue(ARG_SHORT_FORCE_CONSUMER));
-            return forceParallelism;
+            return Boolean.parseBoolean(result.getOptionValue(ARG_SHORT_FORCE_CONSUMER));
         } else {
             return ConfigConstant.DEFAULT_FORCE_CONSUMER_PARALLELISM;
         }
@@ -523,42 +547,11 @@ public class CommandUtil {
         return result.hasOption(ARG_SHORT_IGNORE_AND_RESUME);
     }
 
-    private static String getSep(CommandLine result) {
-        return result.getOptionValue(ARG_SHORT_SEP);
-    }
-
-    private static Charset getCharset(CommandLine result) {
-        if (result.hasOption(ARG_SHORT_CHARSET)) {
-            String charset = result.getOptionValue(ARG_SHORT_CHARSET);
-            return Charset.forName(charset);
-        } else {
-            return ConfigConstant.DEFAULT_CHARSET;
-        }
-    }
-
     private static DdlMode getDdlMode(CommandLine result) {
         if (!result.hasOption(ARG_SHORT_WITH_DDL)) {
             return DdlMode.NO_DDL;
         }
         return DdlMode.fromString(result.getOptionValue(ARG_SHORT_WITH_DDL));
-    }
-
-    private static CompressMode getCompressMode(CommandLine result) {
-        if (result.hasOption(ARG_SHORT_COMPRESS)) {
-            return CompressMode.fromString(result.getOptionValue(ARG_SHORT_COMPRESS));
-        } else {
-            return ConfigConstant.DEFAULT_COMPRESS_MODE;
-        }
-    }
-
-    private static EncryptionConfig getEncryptionConfig(CommandLine result) {
-        if (result.hasOption(ARG_SHORT_ENCRYPTION)) {
-            String encryptionMode = result.getOptionValue(ARG_SHORT_ENCRYPTION);
-            String key = result.getOptionValue(ARG_SHORT_KEY);
-            return EncryptionConfig.parse(encryptionMode, key);
-        } else {
-            return DEFAULT_ENCRYPTION_CONFIG;
-        }
     }
 
     private static int getMaxErrorCount(CommandLine result) {
@@ -569,15 +562,11 @@ public class CommandUtil {
         }
     }
 
-    /**
-     * TODO 文件格式、压缩格式、加密模式三者的设置冲突解决
-     */
-    private static FileFormat getFileFormat(CommandLine result) {
-        if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
-            String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);
-            return FileFormat.fromString(fileFormat);
+    private static String getHistoryFile(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_HISTORY_FILE)) {
+            return result.getOptionValue(ARG_SHORT_HISTORY_FILE);
         } else {
-            return DEFAULT_FILE_FORMAT;
+            return null;
         }
     }
 
@@ -592,9 +581,9 @@ public class CommandUtil {
     private static boolean getFuncEnabled(CommandLine result) {
         return result.hasOption(ARG_SHORT_SQL_FUNC);
     }
-// --- 写入数据库操作的设置 end ---
+    //endregion 写入数据库操作的设置
 
-// --- 全局相关设置 start ---
+    //region 全局相关设置
     private static void setRingBufferSize(CommandLine result) {
         if (result.hasOption(ARG_SHORT_RING_BUFFER_SIZE)) {
             int size = Integer.parseInt(result.getOptionValue(ARG_SHORT_RING_BUFFER_SIZE));
@@ -611,8 +600,9 @@ public class CommandUtil {
                 result.getOptionValue(ARG_SHORT_BATCH_SIZE));
         }
     }
-// --- 全局相关设置 end ---
+    //endregion 全局相关设置
 
+    //region 命令行参数校验与帮助
     /**
      * 保证命令有参数 argShort
      * 否则抛出异常
@@ -1000,4 +990,5 @@ public class CommandUtil {
     private static boolean isShowVersion(CommandLine result) {
         return result.hasOption(ARG_SHORT_VERSION);
     }
+    //endregion 命令行参数校验与帮助
 }

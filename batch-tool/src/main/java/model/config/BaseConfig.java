@@ -23,6 +23,37 @@ import java.nio.charset.Charset;
  * 导入导出通用配置
  */
 public class BaseConfig {
+
+    private static class FileMode {
+        static final byte COMPRESS_FLAG = 1;
+        static final byte ENCRYPTION_FLAG = 1 << 2;
+        static final byte FILE_FORMAT_FLAG = 1 << 3;
+
+        byte flag = 0;
+
+        void setCompress() {
+            this.flag |= COMPRESS_FLAG;
+        }
+
+        void setEncryption() {
+            this.flag |= ENCRYPTION_FLAG;
+        }
+
+        void setFileFormat() {
+            this.flag |= FILE_FORMAT_FLAG;
+        }
+
+        int bitCount() {
+            int count = 0;
+            byte n = flag;
+            while (n != 0) {
+                n &= n - 1;
+                count++;
+            }
+            return count;
+        }
+    }
+
     /**
      * 分隔符
      */
@@ -51,6 +82,8 @@ public class BaseConfig {
      * 引号模式
      */
     protected QuoteEncloseMode quoteEncloseMode;
+
+    private FileMode fileMode = new FileMode();
 
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
@@ -90,6 +123,14 @@ public class BaseConfig {
         return shardingEnabled;
     }
 
+    public QuoteEncloseMode getQuoteEncloseMode() {
+        return quoteEncloseMode;
+    }
+
+    public void setQuoteEncloseMode(QuoteEncloseMode quoteEncloseMode) {
+        this.quoteEncloseMode = quoteEncloseMode;
+    }
+
     public DdlMode getDdlMode() {
         return ddlMode;
     }
@@ -103,10 +144,10 @@ public class BaseConfig {
     }
 
     public void setCompressMode(CompressMode compressMode) {
-        if (this.encryptionConfig.getEncryptionMode() != EncryptionMode.NONE && compressMode != CompressMode.NONE) {
-            throw new UnsupportedOperationException("Do not support compression with encryption");
-        }
         this.compressMode = compressMode;
+        if (compressMode != CompressMode.NONE) {
+            fileMode.setCompress();
+        }
     }
 
     public EncryptionConfig getEncryptionConfig() {
@@ -114,22 +155,10 @@ public class BaseConfig {
     }
 
     public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
-        if (this.compressMode != CompressMode.NONE && encryptionConfig.getEncryptionMode() != EncryptionMode.NONE) {
-            throw new UnsupportedOperationException("Do not support encryption with compression");
-        }
         this.encryptionConfig = encryptionConfig;
-    }
-
-    public QuoteEncloseMode getQuoteEncloseMode() {
-        return quoteEncloseMode;
-    }
-
-    public void setQuoteEncloseMode(QuoteEncloseMode quoteEncloseMode) {
-        this.quoteEncloseMode = quoteEncloseMode;
-    }
-
-    public void setQuoteEncloseMode(String Mode) {
-        this.quoteEncloseMode = QuoteEncloseMode.parseMode(Mode);
+        if (!encryptionConfig.equals(EncryptionConfig.NONE)) {
+            fileMode.setEncryption();
+        }
     }
 
     public FileFormat getFileFormat() {
@@ -137,10 +166,21 @@ public class BaseConfig {
     }
 
     public void setFileFormat(FileFormat fileFormat) {
-        if (this.compressMode != CompressMode.NONE && fileFormat != FileFormat.NONE) {
-            throw new IllegalArgumentException("Do not support file format in compression mode");
-        }
         this.fileFormat = fileFormat;
+        if (fileFormat != FileFormat.NONE) {
+            fileMode.setFileFormat();
+        }
+    }
+
+    /**
+     * 目前 压缩模式、加密、特殊文件格式三者配置互不兼容
+     */
+    public void validate() {
+        if (fileMode.bitCount() > 1) {
+            throw new IllegalArgumentException(String.format(
+                "Please check compression/encryption/file-format config: %s/%s/%s",
+                compressMode, encryptionConfig, fileFormat));
+        }
     }
 
     @Override

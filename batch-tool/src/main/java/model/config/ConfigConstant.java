@@ -93,6 +93,11 @@ public class ConfigConstant {
      */
     public static final String CMD_FILE_LINE_SEPARATOR = ":";
 
+    /**
+     * 默认引号转义模式
+     */
+    public static final QuoteEncloseMode DEFAULT_QUOTE_ENCLOSE_MODE = QuoteEncloseMode.AUTO;
+
     public static final int DEFAULT_READ_BLOCK_SIZE_IN_MB = 2;
 
     /**

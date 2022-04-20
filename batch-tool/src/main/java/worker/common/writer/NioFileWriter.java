@@ -28,7 +28,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPOutputStream;
 
 @NotThreadSafe
-// TODO 待重构
 public class NioFileWriter implements IFileWriter {
 
     private FileChannel appendChannel = null;

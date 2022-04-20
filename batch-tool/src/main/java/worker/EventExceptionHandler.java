@@ -22,8 +22,7 @@ public class EventExceptionHandler implements ExceptionHandler {
 
     @Override
     public void handleEventException(Throwable throwable, long l, Object o) {
-        throwable.printStackTrace();
-        System.out.println("handleEventException：" + throwable);
+        // ignore
     }
 
     @Override

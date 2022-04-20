@@ -80,14 +80,22 @@ public class ShardingExportExecutor extends BaseExportExecutor {
 
     /**
      * 处理分库分表导出命令
-     * TODO 重构执行逻辑
      */
     private void doExportWithSharding(String tableName) {
         String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
             config.getFilenamePrefix(), tableName);
+        List<TableTopology> topologyList = null;
+        try {
+            topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
+        } catch (DatabaseException e) {
+            logger.error("{}. Try export with -sharding off", e.getMessage());
+            throw new RuntimeException(e);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
         try {
             boolean isBroadCast = DbUtil.isBroadCast(dataSource.getConnection(), tableName);
-            List<TableTopology> topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
             if (isBroadCast) {
                 TableTopology firstTopology = topologyList.get(0);
                 topologyList.clear();
