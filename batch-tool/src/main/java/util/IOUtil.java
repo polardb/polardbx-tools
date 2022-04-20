@@ -16,8 +16,10 @@
 
 package util;
 
+import model.config.ConfigConstant;
 import org.apache.commons.io.FileUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +30,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.zip.DeflaterOutputStream;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static model.config.ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE;
@@ -91,7 +94,6 @@ public class IOUtil {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
-
     }
 
     public static void close(Closeable closeable) {
@@ -111,6 +113,16 @@ public class IOUtil {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    public static GZIPInputStream createGzipInputStream() {
+        try {
+            return new GZIPInputStream(new ByteArrayInputStream(new byte[ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE / 2]),
+                ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 }

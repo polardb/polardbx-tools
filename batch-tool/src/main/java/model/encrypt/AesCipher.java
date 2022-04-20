@@ -45,8 +45,13 @@ public class AesCipher extends BaseCipher {
     }
 
     @Override
-    public byte[] innerDecrypt(byte[] plainText) throws Exception {
-        throw new UnsupportedOperationException();
+    protected byte[] innerDecrypt(byte[] crypto, int offset, int length) throws Exception {
+        byte[] output = new byte[cipher.getOutputSize(crypto.length)];
+        int len = cipher.processBytes(crypto, 0, crypto.length, output, 0);
+        len += cipher.doFinal(output, len);
+        byte[] result = new byte[len];
+        System.arraycopy(output, 0, result, 0, result.length);
+        return result;
     }
 
     @Override

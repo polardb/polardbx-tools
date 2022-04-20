@@ -94,7 +94,10 @@ public abstract class FileBufferedBatchReader implements Runnable {
 
     private void afterRun() {
         context.getCountDownLatch().countDown();
+        close();
     }
+
+    protected abstract void close();
 
     protected abstract void beforePublish();
 }

@@ -24,11 +24,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IllegalFormatException;
@@ -386,5 +385,13 @@ public class FileUtil {
             throw new IllegalArgumentException("Failed to read from " + filename);
         }
         return file.getAbsolutePath();
+    }
+
+    public static RandomAccessFile openRafForRead(File file) {
+        try {
+            return new RandomAccessFile(file, "r");
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

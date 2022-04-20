@@ -28,9 +28,9 @@ import java.util.List;
 
 import static model.config.ConfigConstant.ORDER_BY_TYPE_ASC;
 import static model.config.ConfigConstant.ORDER_BY_TYPE_DESC;
+import static worker.util.PolarxHint.DIRECT_NODE_HINT;
 
 public class ExportUtil {
-
 
     /**
      * 带日期格式转化
@@ -42,7 +42,7 @@ public class ExportUtil {
             return getDirectSqlWithFormattedDate(topology, fieldMetaInfoList);
         }
 
-        return String.format("/*+TDDL:node='%s'*/ select %s from %s where %s;",
+        return String.format(DIRECT_NODE_HINT + "select %s from %s where %s;",
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), whereCondition);
     }
@@ -50,7 +50,7 @@ public class ExportUtil {
     private static String getDirectSqlWithFormattedDate(TableTopology topology,
                                                         List<FieldMetaInfo> fieldMetaInfoList) {
 
-        return String.format("/*+TDDL:node='%s'*/ select %s from %s;",
+        return String.format(DIRECT_NODE_HINT + "select %s from %s;",
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName());
     }
@@ -69,13 +69,15 @@ public class ExportUtil {
         StringBuilder stringBuilder = new StringBuilder(fieldLen * 8);
         for (FieldMetaInfo metaInfo : fieldMetaInfoList) {
             fieldMetaInfo = metaInfo;
-            if (fieldMetaInfo.getType() == FieldMetaInfo.Type.DATE) {
-                // 对日期进行格式化
-                stringBuilder.append("DATE_FORMAT(`").append(fieldMetaInfo.getName())
-                    .append("`, \"%%Y%%m%%d\")");
-            } else {
-                stringBuilder.append('`').append(fieldMetaInfo.getName()).append('`');
-            }
+            /*
+                后期再支持如时间日期字段值的格式化
+             */
+//            if (fieldMetaInfo.getType() == FieldMetaInfo.Type.DATE) {
+//                // 对日期进行格式化
+//                stringBuilder.append("DATE_FORMAT(`").append(fieldMetaInfo.getName())
+//                    .append("`, \"%%Y%%m%%d\")");
+//            }
+            stringBuilder.append('`').append(fieldMetaInfo.getName()).append('`');
             stringBuilder.append(',');
         }
         if (stringBuilder.length() > 0) {
@@ -88,7 +90,7 @@ public class ExportUtil {
                                        List<FieldMetaInfo> fieldMetaInfoList,
                                        String columnName, boolean isAscending) {
         String orderType = isAscending ? "asc" : "desc";
-        return String.format("/!TDDL:node='%s'*/ select %s from %s order by %s " + orderType,
+        return String.format(DIRECT_NODE_HINT + "select %s from %s order by %s " + orderType,
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), columnName);
     }
@@ -97,7 +99,7 @@ public class ExportUtil {
                                        List<FieldMetaInfo> fieldMetaInfoList,
                                        List<String> columnNameList, boolean isAscending) {
         String orderType = isAscending ? "asc" : "desc";
-        return String.format("/!TDDL:node='%s'*/ select %s from %s order by %s " + orderType,
+        return String.format(DIRECT_NODE_HINT + "select %s from %s order by %s " + orderType,
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(),
             StringUtils.join(columnNameList, ","));
@@ -111,7 +113,7 @@ public class ExportUtil {
             return getOrderBySql(topology, fieldMetaInfoList, columnName, isAscending);
         }
         String orderType = isAscending ? "asc" : "desc";
-        return String.format("/!TDDL:node='%s'*/ select %s from %s where %s order by %s " + orderType,
+        return String.format(DIRECT_NODE_HINT + "select %s from %s where %s order by %s " + orderType,
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), whereCondition, columnName);
     }
@@ -124,7 +126,7 @@ public class ExportUtil {
             return getOrderBySql(topology, fieldMetaInfoList, columnNameList, isAscending);
         }
         String orderType = isAscending ? "asc" : "desc";
-        return String.format("/!TDDL:node='%s'*/ select %s from %s where %s order by %s " + orderType,
+        return String.format(DIRECT_NODE_HINT + "select %s from %s where %s order by %s " + orderType,
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), whereCondition,
             StringUtils.join(columnNameList, ","));

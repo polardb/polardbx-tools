@@ -58,38 +58,39 @@ public class XlsxReader extends FileBufferedBatchReader {
 
     @Override
     protected void readData() {
-        try {
-            ReadListener<Map<Integer, String >> listener = new AnalysisEventListener<Map<Integer, String>>() {
-                @Override
-                public void invokeHeadMap(Map<Integer, String> map, AnalysisContext analysisContext) {
-                    if (context.isWithHeader()) {
-                        return;
-                    }
-                    appendData(map.values());
+        ReadListener<Map<Integer, String >> listener = new AnalysisEventListener<Map<Integer, String>>() {
+            @Override
+            public void invokeHeadMap(Map<Integer, String> map, AnalysisContext analysisContext) {
+                if (context.isWithHeader()) {
+                    return;
                 }
+                appendData(map.values());
+            }
 
-                @Override
-                public void invoke(Map<Integer, String> map, AnalysisContext analysisContext) {
-                    appendData(map.values());
-                }
+            @Override
+            public void invoke(Map<Integer, String> map, AnalysisContext analysisContext) {
+                appendData(map.values());
+            }
 
-                private void appendData(Collection<String> values) {
-                    localProcessingBlockIndex++;
-                    String line = String.join(ConfigConstant.MAGIC_CSV_SEP, values);
-                    appendToLineBuffer(line);
-                }
+            private void appendData(Collection<String> values) {
+                localProcessingBlockIndex++;
+                String line = String.join(ConfigConstant.MAGIC_CSV_SEP, values);
+                appendToLineBuffer(line);
+            }
 
-                @Override
-                public void doAfterAllAnalysed(AnalysisContext analysisContext) {
-                    emitLineBuffer();
-                }
-            };
+            @Override
+            public void doAfterAllAnalysed(AnalysisContext analysisContext) {
+                emitLineBuffer();
+            }
+        };
 
-            EasyExcel.read(inputStream, listener).sheet().doRead();
-            logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
-        } finally {
-            IOUtil.close(inputStream);
-        }
+        EasyExcel.read(inputStream, listener).sheet().doRead();
+        logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
+    }
+
+    @Override
+    protected void close() {
+        IOUtil.close(inputStream);
     }
 
     @Override

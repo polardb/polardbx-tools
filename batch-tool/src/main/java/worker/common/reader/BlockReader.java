@@ -24,18 +24,61 @@ import model.config.FileBlockListRecord;
 import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.FileUtil;
+import util.IOUtil;
 import worker.common.BatchLineEvent;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
 public class BlockReader extends FileBufferedBatchReader {
+
+    private static class BlockByteBuffer {
+        byte[] buffer;
+        int len;
+
+        BlockByteBuffer(int size) {
+            this.buffer = new byte[size];
+            this.len = 0;
+        }
+
+        int getCapacity() {
+            return buffer.length;
+        }
+
+        void reload(byte[] data) {
+            this.buffer = data;
+            this.len = data.length;
+        }
+    }
+
+    private static class BlockPosMarker {
+        int curPos, curLen;
+
+        public BlockPosMarker() {
+            this.curPos = 0;
+            this.curLen = 0;
+        }
+
+        int getReadingPos() {
+            return curPos + curLen;
+        }
+
+        void reset() {
+            this.curPos = 0;
+            this.curLen = 0;
+        }
+
+        void resetPos(int newPos) {
+            this.curPos = newPos;
+            this.curLen = 0;
+        }
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(BlockReader.class);
 
     private RandomAccessFile curRandomAccessFile;
@@ -43,13 +86,18 @@ public class BlockReader extends FileBufferedBatchReader {
     /**
      * 默认2MB
      */
-    private long readBlockSize;
+    private final long readBlockSize;
     /**
      * 4KB
+     * 根据文本数据特征可适当调整
      */
     private static long READ_PADDING = 1024L * 4;
     private final BaseCipher cipher;
     private final FileBlockListRecord fileBlockListRecord;
+
+    private final BlockByteBuffer byteBuffer;
+    private final BlockPosMarker posMarker;
+    private final byte[] gzipBuffer;
 
     public BlockReader(ProducerExecutionContext context,
                        FileBlockListRecord fileBlockListRecord,
@@ -59,29 +107,20 @@ public class BlockReader extends FileBufferedBatchReader {
         // set localProcessingFileIndex and startPosArr[localProcessingFileIndex]
         this.localProcessingFileIndex = fileBlockListRecord.getCurrentFileIndex().get();
         this.fileBlockListRecord = fileBlockListRecord;
-        try {
-            this.curRandomAccessFile = new RandomAccessFile(fileList.get(localProcessingFileIndex), "r");
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e.getMessage());
-        }
+        this.curRandomAccessFile = FileUtil.openRafForRead(fileList.get(localProcessingFileIndex));
         this.cipher = BaseCipher.getCipher(context.getEncryptionConfig(), false);
-    }
-
-    public String rtrim(String s) {
-        int len = s.length();
-        while ((len > 0) && (s.charAt(len - 1) <= ' ')) {
-            len--;
+        if (this.compressMode != CompressMode.NONE) {
+            this.gzipBuffer = new byte[(int) (readBlockSize + READ_PADDING)];
+        } else {
+            this.gzipBuffer = null;
         }
-        return (len < s.length()) ? s.substring(0, len) : s;
+        this.byteBuffer = new BlockByteBuffer((int) (readBlockSize + READ_PADDING));
+        this.posMarker = new BlockPosMarker();
     }
-
 
     @Override
     protected void readData() {
-        byte[] buffer = new byte[(int) (readBlockSize + READ_PADDING)];
-        byte[] tmpByteBuffer;
-
-        int curPos, curLen;
+        int curReadingPos;
         while (true) {
             try {
                 localProcessingBlockIndex = fileBlockListRecord.getStartPosArr()[localProcessingFileIndex].getAndIncrement();
@@ -93,105 +132,52 @@ public class BlockReader extends FileBufferedBatchReader {
                     .get(localProcessingBlockIndex).incrementAndGet();
                 // 跳过第一个换行符
                 boolean skipFirst = (pos != 0);
-                curRandomAccessFile.seek(pos);
-                int len = curRandomAccessFile.read(buffer);
+                seekAndRead(pos);
 
-                if (len == -1) {
+                if (byteBuffer.len == -1) {
                     if (!nextFile()) {
                         // 没有再下一个要处理的文件了, 结束
                         break;
                     }
                     continue;
                 }
-                // TODO 待重构
-                if (this.compressMode == CompressMode.GZIP) {
-                    // 将buffer的内容解压
-                    GZIPInputStream gzipInputStream = new GZIPInputStream(new ByteArrayInputStream(buffer),
-                        ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE);
-                    ByteArrayOutputStream gzipOutputBuffer = new ByteArrayOutputStream(buffer.length * 2);
-                    int num = 0;
-                    byte[] gzipBuffer = new byte[buffer.length];
-                    while ((num = gzipInputStream.read(gzipBuffer, 0, len)) != -1) {
-                        gzipOutputBuffer.write(gzipBuffer, 0, num);
-                    }
-                    buffer = gzipOutputBuffer.toByteArray();
-                    len = buffer.length;
-                    gzipInputStream.close();
-                }
-                if (cipher != null) {
-                    buffer = cipher.decrypt(buffer);
-                }
+                preprocessBuffer();
 
-                curPos = 0;
-                curLen = 0;
+                posMarker.reset();
                 label_reading:
-                while (curPos + curLen < len) {
+                while ((curReadingPos = posMarker.getReadingPos()) < byteBuffer.len) {
                     // 读取行
-                    switch (buffer[curLen + curPos]) {
+                    switch (byteBuffer.buffer[curReadingPos]) {
                     case '\n':
                         if (skipFirst) {
                             skipFirst = false;
-                        } else if (!(curPos == 0 && context.isWithHeader())) {
-                            if (curLen + curPos - 1 >= 0 && buffer[curLen + curPos - 1] == '\r') {
-                                tmpByteBuffer = new byte[curLen - 1];
-                                System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen - 1);
-                            } else {
-                                tmpByteBuffer = new byte[curLen];
-                                System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen);
-                            }
-                            String line = new String(tmpByteBuffer, context.getCharset());
-                            line = rtrim(line);
-                            // Remove BOM if utf?.
-                            if (!line.isEmpty() && line.charAt(0) == '\uFEFF' && context.getCharset().toString()
-                                .toLowerCase().contains("utf")) {
-                                line = line.substring(1);
-                            }
-                            appendToLineBuffer(line);
+                        } else if (pos == 0 && posMarker.curPos == 0 && context.isWithHeader()) {
+                            // do nothing
+                            // curPos will be updated after skip header
+                        } else {
+                            handleLine(pos == 0);
                         }
 
-                        curPos = curLen + curPos + 1;
-                        curLen = 0;
-                        if (curPos + curLen > readBlockSize) {
+                        posMarker.resetPos(curReadingPos + 1);
+                        if (posMarker.getReadingPos() > readBlockSize) {
                             // 到达了padding处 停止
                             break label_reading;
                         }
                         break;
                     default:
-                        curLen++;
+                        posMarker.curLen++;
                     }
                 }
+                curReadingPos = posMarker.getReadingPos();
                 // Dealing last line without '\n'.
-                if (curPos + curLen == len && // Read till EOF.
-                    curPos + curLen <= readBlockSize) { // And not in padding.
+                if (curReadingPos == byteBuffer.len && // Read till EOF.
+                    curReadingPos <= readBlockSize) { // And not in padding.
                     // Dealing last line.
-                    if (curLen + curPos - 1 >= 0 && buffer[curLen + curPos - 1] == '\r') {
-                        tmpByteBuffer = new byte[curLen - 1];
-                        System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen - 1);
-                    } else {
-                        tmpByteBuffer = new byte[curLen];
-                        System.arraycopy(buffer, curPos, tmpByteBuffer, 0, curLen);
-                    }
-                    String line = new String(tmpByteBuffer, context.getCharset());
-                    line = rtrim(line);
-                    // Remove BOM if utf?.
-                    if (!line.isEmpty() && line.charAt(0) == '\uFEFF' && context.getCharset().toString()
-                        .toLowerCase().contains("utf")) {
-                        line = line.substring(1);
-                    }
-                    appendToLineBuffer(line);
+                    handleLine(pos == 0);
                 }
                 // 正常处理完本block数据 : counter--
                 context.getEventCounter().get(localProcessingFileIndex)
                     .get(localProcessingBlockIndex).getAndDecrement();
-            } catch (EOFException e) {
-                if (!nextFile()) {
-                    // 没有再下一个要处理的文件了, 结束
-                    break;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
-                break;
             } catch (Exception e) {
                 e.printStackTrace();
                 logger.error(e.getMessage());
@@ -201,6 +187,74 @@ public class BlockReader extends FileBufferedBatchReader {
         // 发送剩余数据
         if (bufferedLineCount != 0) {
             emitLineBuffer();
+        }
+    }
+
+    private void handleLine(boolean checkBom) {
+        int curReadingPos = posMarker.getReadingPos();
+        byte[] tmpByteBuffer;
+        if (curReadingPos - 1 >= 0 && byteBuffer.buffer[curReadingPos - 1] == '\r') {
+            // handle \r\n
+            tmpByteBuffer = new byte[posMarker.curLen - 1];
+            System.arraycopy(byteBuffer.buffer, posMarker.curPos, tmpByteBuffer, 0, posMarker.curLen - 1);
+        } else {
+            tmpByteBuffer = new byte[posMarker.curLen];
+            System.arraycopy(byteBuffer.buffer, posMarker.curPos, tmpByteBuffer, 0, posMarker.curLen);
+        }
+        int bytesEnd = tmpByteBuffer.length - 1, bytesOffset = 0;
+        // remove BOM
+        if (checkBom && bytesEnd >= 2 && context.isUtfCharset()) {
+            if (tmpByteBuffer[0] == (byte) 0xEF && tmpByteBuffer[1] == (byte) 0xBB
+                && tmpByteBuffer[2] == (byte) 0xBF) {
+                bytesOffset = 3;
+            }
+        }
+        // trim right
+        while ((bytesEnd >= bytesOffset) && (tmpByteBuffer[bytesEnd] <= ' ')) {
+            bytesEnd--;
+        }
+        if (bytesEnd < bytesOffset) {
+            return;
+        }
+
+        String line = new String(tmpByteBuffer, bytesOffset, bytesEnd - bytesOffset + 1,
+            context.getCharset());
+        appendToLineBuffer(line);
+    }
+
+    private void seekAndRead(long pos) {
+        try {
+            curRandomAccessFile.seek(pos);
+            byteBuffer.len = curRandomAccessFile.read(byteBuffer.buffer);
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 进行解压/解密等预处理
+     */
+    private void preprocessBuffer() {
+        try {
+            if (this.compressMode == CompressMode.GZIP) {
+                // 将buffer的内容解压
+                GZIPInputStream gzipInputStream = new GZIPInputStream(new ByteArrayInputStream(byteBuffer.buffer),
+                    ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE);
+                ByteArrayOutputStream gzipOutputBuffer = new ByteArrayOutputStream(byteBuffer.len * 2);
+                int num = 0;
+                while ((num = gzipInputStream.read(gzipBuffer, 0, byteBuffer.len)) != -1) {
+                    gzipOutputBuffer.write(gzipBuffer, 0, num);
+                }
+                byteBuffer.reload(gzipOutputBuffer.toByteArray());
+                gzipInputStream.close();
+            }
+            if (cipher != null) {
+                byteBuffer.reload(cipher.decrypt(byteBuffer.buffer));
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
@@ -217,12 +271,7 @@ public class BlockReader extends FileBufferedBatchReader {
             // 如果并发很大的话 可以考虑一次性跳过多个文件
             localProcessingFileIndex++;
             localProcessingBlockIndex = -1;
-            try {
-                curRandomAccessFile = new RandomAccessFile(fileList.get(localProcessingFileIndex), "r");
-            } catch (FileNotFoundException e) {
-                logger.error(e.getMessage());
-                return false;
-            }
+            curRandomAccessFile = FileUtil.openRafForRead(fileList.get(localProcessingFileIndex));
             return true;
         }
         return false;
@@ -233,5 +282,10 @@ public class BlockReader extends FileBufferedBatchReader {
         context.getEmittedDataCounter().getAndIncrement();
         context.getEventCounter().get(localProcessingFileIndex).
             get(localProcessingBlockIndex).getAndIncrement();
+    }
+
+    @Override
+    protected void close() {
+        IOUtil.close(this.curRandomAccessFile);
     }
 }

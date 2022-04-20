@@ -23,6 +23,8 @@ import util.FileUtil;
 
 import java.util.List;
 
+import static worker.util.PolarxHint.DIRECT_NODE_HINT;
+
 public class ImportUtil {
 
     private static final String BATCH_INSERT_SQL_PATTERN =
@@ -32,10 +34,10 @@ public class ImportUtil {
         "INSERT IGNORE INTO `%s` VALUES %s;";
 
     private static final String BATCH_INSERT_HINT_SQL_PATTERN =
-        "/!TDDL:node='%s'*/ INSERT INTO `%s` VALUES %s;";
+        DIRECT_NODE_HINT + "INSERT INTO `%s` VALUES %s;";
 
     private static final String BATCH_INSERT_IGNORE_HINT_SQL_PATTERN =
-        "/!TDDL:node='%s'*/ INSERT IGNORE INTO `%s` VALUES %s;";
+        DIRECT_NODE_HINT + "INSERT IGNORE INTO `%s` VALUES %s;";
 
     public static String getBatchInsertSql(String tableName, String values, boolean insertIgnoreEnabled) {
         if (insertIgnoreEnabled) {
