@@ -37,8 +37,8 @@ public class CaesarCipher extends BaseCipher {
     }
 
     @Override
-    protected byte[] innerDecrypt(byte[] crypto) throws Exception {
-        byte[] plainText = new byte[crypto.length];
+    protected byte[] innerDecrypt(byte[] crypto, int offset, int length) throws Exception {
+        byte[] plainText = new byte[length];
         for (int i = 0; i < plainText.length; i++) {
             plainText[i] = (byte) ((crypto[i] + mask) ^ mask);
         }

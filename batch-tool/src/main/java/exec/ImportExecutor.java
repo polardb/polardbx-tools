@@ -202,9 +202,6 @@ public class ImportExecutor extends WriteDbExecutor {
         if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
             return false;
         }
-        if (producerExecutionContext.getCompressMode() != CompressMode.NONE) {
-            return false;
-        }
         if (!producerExecutionContext.getEncryptionConfig().getEncryptionMode().isSupportStreamingBit()) {
             return false;
         }

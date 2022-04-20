@@ -72,9 +72,12 @@ public class CsvReader extends FileBufferedBatchReader {
             logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
         } catch (IOException e) {
             logger.error(e.getMessage());
-        } finally {
-            IOUtil.close(reader);
         }
+    }
+
+    @Override
+    protected void close() {
+        IOUtil.close(reader);
     }
 
     @Override

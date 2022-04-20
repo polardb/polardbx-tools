@@ -25,6 +25,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,6 +63,8 @@ public class ProducerExecutionContext extends BaseConfig {
     private AtomicInteger emittedDataCounter;
 
     private CountDownLatch countDownLatch;
+
+    private volatile Exception exception;
 
     public ProducerExecutionContext() {
         super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
@@ -222,6 +225,11 @@ public class ProducerExecutionContext extends BaseConfig {
 
     public void setMaxErrorCount(int maxErrorCount) {
         this.maxErrorCount = maxErrorCount;
+    }
+
+    public boolean isUtfCharset() {
+        return this.charset.equals(StandardCharsets.UTF_8)
+            || this.charset.equals(StandardCharsets.UTF_16);
     }
 
     @Override

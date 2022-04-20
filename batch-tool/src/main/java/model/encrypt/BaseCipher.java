@@ -39,13 +39,17 @@ public abstract class BaseCipher {
     protected abstract byte[] innerEncrypt(byte[] plainText) throws Exception;
 
     public final byte[] decrypt(byte[] crypto) throws Exception {
+        return decrypt(crypto, 0, crypto.length);
+    }
+
+    public final byte[] decrypt(byte[] crypto, int offset, int length) throws Exception {
         if (encrypting) {
             throw new IllegalStateException("Cannot decrypt in encryption mode");
         }
-        return innerDecrypt(crypto);
+        return innerDecrypt(crypto, offset, length);
     }
 
-    protected abstract byte[] innerDecrypt(byte[] crypto) throws Exception;
+    protected abstract byte[] innerDecrypt(byte[] crypto, int offset, int length) throws Exception;
 
     public abstract void reset();
 

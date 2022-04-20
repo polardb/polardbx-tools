@@ -54,9 +54,9 @@ public class DbUtil {
         "SELECT COLUMN_NAME,DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS "
             + "WHERE TABLE_SCHEMA='%s' and TABLE_NAME='%s' and COLUMN_NAME in (%s);";
 
-    private static final String PARTITION_KEY_SQL_PATTERN = "SHOW RULE FROM %s;";
+    private static final String PARTITION_KEY_SQL_PATTERN = "SHOW RULE FROM `%s`;";
 
-    private static final String ROW_COUNT_SQL_PATTERN = "SELECT COUNT(*) FROM %s;";
+    private static final String ROW_COUNT_SQL_PATTERN = "SELECT COUNT(*) FROM `%s`;";
 
     private static final String PARTITION_KEY_INFO_SQL_PATTERN =
         "SELECT DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS WHERE "
@@ -85,37 +85,6 @@ public class DbUtil {
             return topologyList;
         } catch (SQLException e) {
             throw new DatabaseException("Unable to get topology of table " + tableName, e);
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
-        }
-    }
-
-    /**
-     * 获取数据表主键
-     * 仅单个主键
-     */
-    public static PrimaryKey getPkIndex(Connection conn, String schemaName, String tableName) throws DatabaseException {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        String sql = String.format(PK_INDEX_SQL_PATTERN, schemaName, tableName);
-        int index;
-        String name;
-        try {
-            stmt = conn.createStatement();
-            resultSet = stmt.executeQuery(sql);
-
-            if (resultSet.next()) {
-                index = resultSet.getInt(1);
-                name = resultSet.getString(2);
-                return new PrimaryKey(index, name);
-            } else {
-                throw new DatabaseException("Unable to get primary key of table " + tableName);
-            }
-
-        } catch (SQLException e) {
-            throw new DatabaseException("Unable to get primary key of table " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -339,6 +308,10 @@ public class DbUtil {
         }
     }
 
+    /**
+     * 对于 auto 模式不适用
+     */
+    @Deprecated
     public static int getPartitionIndex(String value, PartitionKey partitionKey) {
         int partitionSize = partitionKey.getPartitionSize();
         switch (partitionKey.getFieldMetaInfo().getType()) {
@@ -348,62 +321,6 @@ public class DbUtil {
             return (int) (Math.abs(Long.parseLong(value)) % partitionSize);
         default:
             throw new UnsupportedOperationException("Unsupported partition key type!");
-        }
-    }
-
-    public static FieldMetaInfo getPkMetaInfo(Connection conn, String schemaName,
-                                              String tableName) throws DatabaseException {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        String metaInfoSql = String.format(PK_INFO_SQL_PATTERN, schemaName, tableName);
-        FieldMetaInfo fieldMetaInfo;
-        try {
-            // 开始获取字段信息
-            stmt = conn.createStatement();
-            resultSet = stmt.executeQuery(metaInfoSql);
-            if (resultSet.next()) {
-                fieldMetaInfo = new FieldMetaInfo();
-                fieldMetaInfo.setName(resultSet.getString(1));
-                fieldMetaInfo.setType(resultSet.getString(2));
-                fieldMetaInfo.setIndex(resultSet.getInt(3) - 1);
-            } else {
-                throw new DatabaseException("Unable to get pk info of " + tableName);
-            }
-            return fieldMetaInfo;
-        } catch (SQLException e) {
-            throw new DatabaseException("Unable to get pk info of " + tableName, e);
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
-        }
-    }
-
-    public static FieldMetaInfo getFieldMetaInfo(Connection conn, String schemaName,
-                                                 String tableName, String fieldName) throws DatabaseException {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        String metaInfoSql = String.format(SINGLE_FIELD_INFO_SQL_PATTERN, schemaName, tableName, fieldName);
-        FieldMetaInfo fieldMetaInfo;
-        try {
-            // 开始获取字段信息
-            stmt = conn.createStatement();
-            resultSet = stmt.executeQuery(metaInfoSql);
-            if (resultSet.next()) {
-                fieldMetaInfo = new FieldMetaInfo();
-                fieldMetaInfo.setName(fieldName);
-                fieldMetaInfo.setType(resultSet.getString(1));
-                fieldMetaInfo.setIndex(resultSet.getInt(2) - 1);
-            } else {
-                throw new DatabaseException("Unable to get field info of " + fieldName);
-            }
-            return fieldMetaInfo;
-        } catch (SQLException e) {
-            throw new DatabaseException("Unable to get field info of " + fieldName, e);
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -591,7 +508,7 @@ public class DbUtil {
     }
 
     public static boolean isBroadCast(Connection conn, String tableName) throws DatabaseException {
-        String sql = String.format("show rule from `%s`", tableName);
+        String sql = String.format(PARTITION_KEY_SQL_PATTERN, tableName);
         try (Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sql)) {
             if (!rs.next()) {

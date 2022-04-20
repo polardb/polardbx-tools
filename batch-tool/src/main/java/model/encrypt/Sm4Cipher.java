@@ -66,8 +66,8 @@ public class Sm4Cipher extends BaseCipher {
     }
 
     @Override
-    protected byte[] innerDecrypt(byte[] crypto) throws Exception {
-        return cipher.doFinal(crypto);
+    protected byte[] innerDecrypt(byte[] crypto, int offset, int length) throws Exception {
+        return cipher.doFinal(crypto, offset, length);
     }
 
     @Override

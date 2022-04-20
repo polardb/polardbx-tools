@@ -39,7 +39,6 @@ public class CipherLineReader extends FileBufferedBatchReader {
     private final BufferedInputStream inputStream;
     private final ByteBuffer byteBuffer;
 
-
     public CipherLineReader(ProducerExecutionContext context,
                             List<File> fileList, int fileIndex,
                             BaseCipher cipher,
@@ -119,6 +118,11 @@ public class CipherLineReader extends FileBufferedBatchReader {
     @Override
     protected void beforePublish() {
         context.getEmittedDataCounter().getAndIncrement();
+    }
+
+    @Override
+    protected void close() {
+        IOUtil.close(inputStream);
     }
 }
 

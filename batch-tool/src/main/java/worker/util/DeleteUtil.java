@@ -24,13 +24,15 @@ import util.DbUtil;
 
 import java.util.List;
 
+import static worker.util.PolarxHint.DIRECT_NODE_HINT;
+
 public class DeleteUtil {
 
     private static final String BATCH_DELETE_HINT_SQL_PATTERN =
-        "/!TDDL:node='%s'*/ DELETE FROM `%s` WHERE (%s) IN (%s) ";
+        DIRECT_NODE_HINT + "DELETE FROM `%s` WHERE (%s) IN (%s) ";
 
     private static final String BATCH_DELETE_WHERE_HINT_SQL_PATTERN =
-        "/!TDDL:node='%s'*/ DELETE FROM `%s` WHERE (%s) IN (%s) "
+        DIRECT_NODE_HINT + "DELETE FROM `%s` WHERE (%s) IN (%s) "
             + "AND %s";
 
     /**
@@ -71,7 +73,7 @@ public class DeleteUtil {
         if (StringUtils.isEmpty(where)) {
             return getDeleteSqlWithHint(nodeName, tableName, pkList, values);
         }
-        String sqlPattern = "/!TDDL:node='%s'*/ DELETE FROM `%s` WHERE %s AND %s;";
+        String sqlPattern = DIRECT_NODE_HINT + "DELETE FROM `%s` WHERE %s AND %s;";
         String[] pkConditions = new String[pkList.size()];
         for (int i = 0; i < pkList.size(); i++) {
             pkConditions[i] = pkList.get(i).getName() + "='" + values[i] + "'";
@@ -85,7 +87,7 @@ public class DeleteUtil {
      */
     public static String getDeleteSqlWithHint(String nodeName, String tableName, List<PrimaryKey> pkList,
                                               String[] values) {
-        String sqlPattern = "/!TDDL:node='%s'*/ DELETE FROM `%s` WHERE %s ;";
+        String sqlPattern = DIRECT_NODE_HINT + "DELETE FROM `%s` WHERE %s ;";
         String[] pkConditions = new String[pkList.size()];
         for (int i = 0; i < pkList.size(); i++) {
             pkConditions[i] = pkList.get(i).getName() + "='" + values[i] + "'";
