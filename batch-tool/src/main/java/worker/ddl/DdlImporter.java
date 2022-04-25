@@ -16,6 +16,7 @@
 
 package worker.ddl;
 
+import com.alibaba.druid.util.JdbcUtils;
 import model.config.ConfigConstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,9 +43,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DdlImporter {
 
     private static final Logger logger = LoggerFactory.getLogger(DdlExportWorker.class);
+    private static final int DDL_RETRY_COUNT = 3;
+    private static final int DDL_PARALLELISM = 10;
+
     private final List<String> filepaths = new ArrayList<>();;
     private final DataSource dataSource;
-    private final ExecutorService ddlThreadPool = MyThreadPool.createFixedExecutor("DDL-importer", 10);
+    private final ExecutorService ddlThreadPool = MyThreadPool.createFixedExecutor("DDL-importer", DDL_PARALLELISM);
     private final AtomicInteger taskCount = new AtomicInteger(0);
     private volatile String useDbSql = null;
 
@@ -138,17 +142,38 @@ public class DdlImporter {
     private void submitDDL(String sql) {
         taskCount.incrementAndGet();
         ddlThreadPool.submit(() -> {
-            try (Connection conn = dataSource.getConnection();
-                 Statement stmt = conn.createStatement()) {
-                logger.info("正在执行 DDL 语句: {} ...", sql.substring(0, Math.min(50, sql.length())));
+            Connection conn = null;
+            Statement stmt = null;
+            String ddlSample = sql.substring(0, Math.min(50, sql.length()));
+            try {
+                conn = dataSource.getConnection();
+                stmt = conn.createStatement();
+                logger.info("正在执行 DDL 语句: {} ...", ddlSample);
                 if (useDbSql != null) {
                     stmt.execute(useDbSql);
                 }
                 stmt.execute(sql);
             } catch (SQLException e) {
+                if (e.getMessage().contains("ERR_GMS_ACCESS_TO_SYSTEM_TABLE") && stmt != null) {
+                    int retryCount = 0;
+                    for (; retryCount < DDL_RETRY_COUNT; retryCount++) {
+                        try {
+                            logger.info("正在重试 DDL 语句: {} ...", ddlSample);
+                            stmt.execute(sql);
+                            break;
+                        } catch (SQLException e2) {
+                            e2.printStackTrace();
+                        }
+                    }
+                    if (retryCount < DDL_RETRY_COUNT) {
+                        return;
+                    }
+                }
                 logger.error("Failed to import DDL: [{}] due to [{}]", sql, e.getMessage());
             } finally {
                 taskCount.decrementAndGet();
+                JdbcUtils.close(conn);
+                JdbcUtils.close(stmt);
             }
         });
     }

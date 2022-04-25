@@ -48,6 +48,7 @@ import worker.common.ReadFileWithBlockProducer;
 import worker.common.ReadFileWithLineProducer;
 
 import javax.sql.DataSource;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -200,8 +201,8 @@ public abstract class BaseExecutor {
         }
 
 
-        logger.info("producer config {}", producerExecutionContext);
-        logger.info("consumer config {}", consumerExecutionContext);
+        logger.debug("producer config {}", producerExecutionContext);
+        logger.debug("consumer config {}", consumerExecutionContext);
 
         // 开启线程工作
         WorkerPool<BatchLineEvent> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
@@ -247,10 +248,30 @@ public abstract class BaseExecutor {
         }
         // 匹配文件名与表名
         List<FileLineRecord> fileRecordList = allFilePathList.stream()
-            .filter(fileRecord -> fileRecord.getFilePath().contains(tableName))
+            .filter(fileRecord -> {
+                String fileName = new File(fileRecord.getFilePath()).getName();
+                if (!(fileName.length() >= tableName.length() + 2)) {
+                    return false;
+                }
+                int i = 0;
+                for (; i < tableName.length(); i++) {
+                    if (tableName.charAt(i) != fileName.charAt(i)) {
+                        return false;
+                    }
+                }
+                if (fileName.charAt(i++) != '_') {
+                    return false;
+                }
+                for (; i < fileName.length(); i++) {
+                    if (!Character.isDigit(fileName.charAt(i))) {
+                        return false;
+                    }
+                }
+                return true;
+            })
             .collect(Collectors.toList());
         if (fileRecordList.isEmpty()) {
-            throw new IllegalArgumentException("No filename contains table: " + tableName);
+            throw new IllegalArgumentException("No filename with suffix starts with table name: " + tableName);
         }
         return fileRecordList;
     }

@@ -84,6 +84,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
      * 设置字段信息
      */
     protected void configureFieldMetaInfo() {
+        logger.info("正在获取所有表的元信息...");
         Map<String, TableFieldMetaInfo> tableFieldMetaInfo = new HashMap<>();
         for (String tableName : tableNames) {
             TableFieldMetaInfo metaInfo = null;
@@ -97,6 +98,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
             }
         }
         consumerExecutionContext.setTableFieldMetaInfo(tableFieldMetaInfo);
+        logger.info("所有表的元信息获取完毕");
     }
 
     /**
