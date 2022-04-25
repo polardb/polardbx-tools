@@ -42,7 +42,6 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
 
     private static final Logger logger = LoggerFactory.getLogger(ReadFileWithLineProducer.class);
 
-    private boolean useMagicSeparator = false;
     private final FileBufferedBatchReader[] fileReaders;
 
     public ReadFileWithLineProducer(ProducerExecutionContext context,
@@ -77,12 +76,10 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
         case XLSX:
         case XLS:
         case ET:
-            this.useMagicSeparator = true;
             return new XlsxReader(context, fileList, workerIndex, ringBuffer);
         case CSV:
         case LOG:
         case TXT:
-            this.useMagicSeparator = true;
             return new CsvReader(context, fileList, workerIndex, ringBuffer);
         case NONE:
             // do nothing
@@ -102,6 +99,6 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
 
     @Override
     public boolean useMagicSeparator() {
-        return this.useMagicSeparator;
+        return fileReaders[0].useMagicSeparator();
     }
 }

@@ -103,4 +103,8 @@ public abstract class FileBufferedBatchReader implements Runnable {
     protected abstract void close();
 
     protected abstract void beforePublish();
+
+    public boolean useMagicSeparator() {
+        return false;
+    }
 }
