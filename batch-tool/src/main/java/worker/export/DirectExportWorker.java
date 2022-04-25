@@ -73,7 +73,7 @@ public class DirectExportWorker extends BaseExportWorker {
      */
     private int curFileSeq;
 
-    private String whereCondition;
+    protected String whereCondition;
 
     /**
      * 首行是否为字段名header
@@ -83,7 +83,7 @@ public class DirectExportWorker extends BaseExportWorker {
     private CountDownLatch countDownLatch;
     private Semaphore permitted;
 
-    public DirectExportWorker(DataSource druid,
+    public DirectExportWorker(DataSource dataSource,
                               TableTopology topology,
                               TableFieldMetaInfo tableFieldMetaInfo,
                               String filename,
@@ -94,7 +94,7 @@ public class DirectExportWorker extends BaseExportWorker {
                               FileFormat fileFormat,
                               Charset charset,
                               BaseCipher cipher) {
-        this(druid, topology,  tableFieldMetaInfo, 0,
+        this(dataSource, topology,  tableFieldMetaInfo, 0,
             filename, separator, isWithHeader, quoteEncloseMode,
             compressMode, fileFormat, charset, cipher);
     }
@@ -102,7 +102,7 @@ public class DirectExportWorker extends BaseExportWorker {
     /**
      * @param maxLine 单个文件最大行数
      */
-    public DirectExportWorker(DataSource druid, TableTopology topology,
+    public DirectExportWorker(DataSource dataSource, TableTopology topology,
                               TableFieldMetaInfo tableFieldMetaInfo,
                               int maxLine,
                               String filename,
@@ -113,7 +113,7 @@ public class DirectExportWorker extends BaseExportWorker {
                               FileFormat fileFormat,
                               Charset charset,
                               BaseCipher cipher) {
-        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
+        super(dataSource, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;
@@ -225,8 +225,7 @@ public class DirectExportWorker extends BaseExportWorker {
     }
 
     private void produceData() {
-        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
-            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
+        String sql = getExportSql();
 
         try (Connection conn = druid.getConnection();
             Statement stmt = DataSourceUtil.createStreamingStatement(conn);
@@ -298,8 +297,7 @@ public class DirectExportWorker extends BaseExportWorker {
      * 按行从数据库中读取并写入文件
      */
     private void produceDataByLine() {
-        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
-            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
+        String sql = getExportSql();
         try (Connection conn = druid.getConnection();
             Statement stmt = DataSourceUtil.createStreamingStatement(conn);
             ResultSet rs = stmt.executeQuery(sql)) {
@@ -320,6 +318,11 @@ public class DirectExportWorker extends BaseExportWorker {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    protected String getExportSql() {
+        return ExportUtil.getDirectSql(topology,
+            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
     }
 
     private boolean isLimitLine() {

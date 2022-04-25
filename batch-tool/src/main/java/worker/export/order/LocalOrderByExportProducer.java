@@ -67,20 +67,16 @@ public class LocalOrderByExportProducer implements Runnable {
     }
 
     public void produceData() {
-        Connection conn = null;
-        Statement stmt = null;
-        ResultSet resultSet = null;
         String sql = ExportUtil.getOrderBySql(topology, tableFieldMetaInfo.getFieldMetaInfoList(),
             orderByColumnName, whereCondition, isAscending);
         // 字段数
         int colNum;
 
         long startTime = System.currentTimeMillis();
-        try {
-            conn = druid.getConnection();
-            stmt = DataSourceUtil.createStreamingStatement(conn);
+        try (Connection conn = druid.getConnection();
+            Statement stmt = DataSourceUtil.createStreamingStatement(conn);
+            ResultSet resultSet = stmt.executeQuery(sql)){
             logger.info("{} 开始获取数据", topology);
-            resultSet = stmt.executeQuery(sql);
             colNum = resultSet.getMetaData().getColumnCount();
             while (resultSet.next()) {
                 byte[][] data = getRowBytes(resultSet, colNum);
@@ -89,12 +85,9 @@ public class LocalOrderByExportProducer implements Runnable {
             long endTime = System.currentTimeMillis();
             logger.debug("{} 发送至缓冲区完毕，耗时 {} s", topology, (endTime - startTime) / 1000F);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         } finally {
             countDownLatch.countDown();
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 

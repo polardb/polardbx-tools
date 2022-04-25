@@ -94,10 +94,14 @@ public class ExportWorkerFactory {
         default:
             break;
         }
+        BaseCipher cipher = BaseCipher.getCipher(config.getEncryptionConfig(), true);
+
         return new DirectOrderExportWorker(druid, filePathPrefix,
                 tableFieldMetaInfo,
                 tableName, config.getOrderByColumnNameList(), maxLine,
-                config.getSeparator().getBytes(),
-                config.isAscending());
+                config.getCharset(),
+                config.getSeparator(),
+                config.isAscending(), config.isWithHeader(), config.getQuoteEncloseMode(),
+                config.getCompressMode(), config.getFileFormat(), cipher);
     }
 }

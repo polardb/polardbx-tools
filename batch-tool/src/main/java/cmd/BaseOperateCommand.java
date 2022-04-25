@@ -32,6 +32,11 @@ public class BaseOperateCommand {
     private List<String> tableNames;
 
     /**
+     * 仅支持单张表下指定列
+     */
+    private List<String> columnNames;
+
+    /**
      * 是否开启分库分表操作
      */
     private boolean shardingEnabled;
@@ -73,5 +78,13 @@ public class BaseOperateCommand {
 
     public boolean isDbOperation() {
         return this.tableNames == null;
+    }
+
+    public List<String> getColumnNames() {
+        return columnNames;
+    }
+
+    public void setColumnNames(List<String> columnNames) {
+        this.columnNames = columnNames;
     }
 }

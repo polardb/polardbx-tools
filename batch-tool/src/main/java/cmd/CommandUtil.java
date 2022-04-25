@@ -199,6 +199,7 @@ public class CommandUtil {
             throw new IllegalArgumentException("Unsupported command: " + commandTypeStr);
         }
         command.setTableNames(getTableNames(result));
+        command.setColumnNames(getColumnNames(result));
         return command;
     }
 
@@ -216,6 +217,15 @@ public class CommandUtil {
         String tableNameStr = result.getOptionValue(ARG_SHORT_TABLE);
         return Lists.newArrayList(
             StringUtils.split(tableNameStr, ConfigConstant.CMD_SEPARATOR));
+    }
+
+    private static List<String> getColumnNames(CommandLine result) {
+        if (!result.hasOption(ARG_SHORT_COLUMNS)) {
+            return null;
+        }
+        String columnNameStr = result.getOptionValue(ARG_SHORT_COLUMNS);
+        return Lists.newArrayList(
+            StringUtils.split(columnNameStr, ConfigConstant.CMD_SEPARATOR));
     }
 
     private static BaseOperateCommand parseImportCommand(CommandLine result) {
@@ -882,12 +892,19 @@ public class CommandUtil {
             .longOpt("orderCol")
             .hasArg()
             .argName("ordered column")
-            .desc("col1;col2;col3.")
+            .desc("col1;col2;col3")
+            .build());
+        // 添加指定列与顺序选项 -col --columns
+        options.addOption(Option.builder(ARG_SHORT_COLUMNS)
+            .longOpt("columns")
+            .hasArg()
+            .argName("export columns")
+            .desc("col1;col2;col3")
             .build());
         // 添加在本地做归并选项 -local --local
         options.addOption(Option.builder(ARG_SHORT_LOCAL_MERGE)
             .longOpt("localmerge")
-            .desc("o local merge sort.")
+            .desc("Use local merge sort.")
             .build());
         // 添加使用sql函数更新选项 -func
         options.addOption(Option.builder(ARG_SHORT_SQL_FUNC)

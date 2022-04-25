@@ -102,7 +102,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 topologyList.add(firstTopology);
             }
             TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
-                getSchemaName(), tableName);
+                getSchemaName(), tableName, command.getColumnNames());
             // 分片数
             final int shardSize = topologyList.size();
             int parallelism = config.getParallelism();

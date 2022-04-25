@@ -173,7 +173,7 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                 DirectOrderExportWorker directOrderByExportWorker = ExportWorkerFactory
                     .buildDirectOrderExportWorker(dataSource, tableFieldMetaInfo, command, tableName);
                 // 就单线程地写入
-                directOrderByExportWorker.produceData();
+                directOrderByExportWorker.exportSerially();
                 logger.info("导出 {} 数据完成", tableName);
             } catch (DatabaseException | SQLException e) {
                 e.printStackTrace();
