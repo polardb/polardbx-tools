@@ -20,6 +20,8 @@ import model.db.FieldMetaInfo;
 import org.apache.commons.io.FileUtils;
 import util.FileUtil;
 import util.IOUtil;
+import worker.common.writer.IFileWriter;
+import worker.common.writer.NioFileWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -55,8 +57,6 @@ public abstract class MergeExportConsumer {
      */
     protected int curFileSeq = 0;
 
-    protected FileChannel appendChannel = null;
-
     protected ByteArrayOutputStream outputStream;
 
     /**
@@ -65,7 +65,7 @@ public abstract class MergeExportConsumer {
     protected final int maxLine;
     protected final String filePath;
     protected final byte[] separator;
-
+    protected final IFileWriter fileWriter;
     protected Comparator comparator;
 
     protected MergeExportConsumer(List<FieldMetaInfo> orderByColumnInfoList, int maxLine,
@@ -76,15 +76,7 @@ public abstract class MergeExportConsumer {
         this.separator = separator;
 
         this.outputStream = new ByteArrayOutputStream();
-        File file = new File(filePath + curFileSeq);
-        try {
-            FileUtils.deleteQuietly(file);
-            file.createNewFile();
-            appendChannel = FileChannel.open(Paths.get(filePath + curFileSeq),
-                StandardOpenOption.APPEND);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.fileWriter = new NioFileWriter(filePath + curFileSeq);
     }
 
     protected void writeToBuffer(byte[][] rowData) throws IOException {
@@ -94,7 +86,7 @@ public abstract class MergeExportConsumer {
         curLineNum++;
         bufferedLineNum++;
         if (bufferedLineNum == EMIT_BATCH_SIZE) {
-            writeToFile(outputStream.toByteArray());
+            fileWriter.write(outputStream.toByteArray());
             outputStream.reset();
             bufferedLineNum = 0;
         }
@@ -110,33 +102,14 @@ public abstract class MergeExportConsumer {
         outputStream.write(FileUtil.SYS_NEW_LINE_BYTE);
     }
 
-
-    public void writeToFile(byte[] rowData) throws IOException {
-        IOUtil.writeNio(appendChannel, rowData);
-    }
-
     private void createNewPartFile() {
         if (bufferedLineNum != 0) {
-            try {
-                writeToFile(outputStream.toByteArray());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            fileWriter.write(outputStream.toByteArray());
             outputStream.reset();
             bufferedLineNum = 0;
         }
         curFileSeq++;
         String tmpFileName = filePath + curFileSeq;
-        File file = new File(tmpFileName);
-        try {
-            appendChannel.close();
-            FileUtils.deleteQuietly(file);
-            file.createNewFile();
-            appendChannel = FileChannel.open(Paths.get(tmpFileName),
-                StandardOpenOption.APPEND);
-            curLineNum = 0;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        fileWriter.nextFile(tmpFileName);
     }
 }

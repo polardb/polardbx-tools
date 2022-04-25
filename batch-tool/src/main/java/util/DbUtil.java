@@ -23,6 +23,7 @@ import model.db.PartitionKey;
 import model.db.PrimaryKey;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.sql.Connection;
@@ -30,7 +31,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class DbUtil {
 
@@ -258,6 +262,31 @@ public class DbUtil {
             JdbcUtils.close(stmt);
             JdbcUtils.close(conn);
         }
+    }
+
+    public static TableFieldMetaInfo getTableFieldMetaInfo(Connection conn,
+                                                           String schemaName,
+                                                           String tableName,
+                                                           List<String> columnNames) throws DatabaseException {
+
+        TableFieldMetaInfo tableFieldMetaInfo = getTableFieldMetaInfo(conn, schemaName, tableName);
+        if (CollectionUtils.isEmpty(columnNames)) {
+            return tableFieldMetaInfo;
+        }
+
+        List<FieldMetaInfo> fieldMetaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
+        Map<String, FieldMetaInfo> colMetaMap = fieldMetaInfoList.stream()
+            .collect(Collectors.toMap(FieldMetaInfo::getName, c -> c));
+        List<FieldMetaInfo> resMetaInfoList = new ArrayList<>();
+        for (String col : columnNames) {
+            FieldMetaInfo metaInfo = colMetaMap.get(col);
+            if (metaInfo == null) {
+                throw new IllegalArgumentException(String.format("Unknown column %s in %s", col, tableName));
+            }
+            resMetaInfoList.add(metaInfo);
+        }
+        tableFieldMetaInfo.setFieldMetaInfoList(resMetaInfoList);
+        return tableFieldMetaInfo;
     }
 
     /**

@@ -32,14 +32,11 @@ import static worker.util.PolarxHint.DIRECT_NODE_HINT;
 
 public class ExportUtil {
 
-    /**
-     * 带日期格式转化
-     */
-    public static String getDirectSqlWithFormattedDate(TableTopology topology,
-                                                       List<FieldMetaInfo> fieldMetaInfoList,
-                                                       String whereCondition) {
+    public static String getDirectSql(TableTopology topology,
+                                      List<FieldMetaInfo> fieldMetaInfoList,
+                                      String whereCondition) {
         if (StringUtils.isEmpty(whereCondition)) {
-            return getDirectSqlWithFormattedDate(topology, fieldMetaInfoList);
+            return getDirectSql(topology, fieldMetaInfoList);
         }
 
         return String.format(DIRECT_NODE_HINT + "select %s from %s where %s;",
@@ -47,8 +44,8 @@ public class ExportUtil {
             topology.getTableName(), whereCondition);
     }
 
-    private static String getDirectSqlWithFormattedDate(TableTopology topology,
-                                                        List<FieldMetaInfo> fieldMetaInfoList) {
+    private static String getDirectSql(TableTopology topology,
+                                       List<FieldMetaInfo> fieldMetaInfoList) {
 
         return String.format(DIRECT_NODE_HINT + "select %s from %s;",
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
@@ -57,8 +54,6 @@ public class ExportUtil {
 
     /**
      * select 语句中的字段列表
-     * 对日期类型进行 YYYYMMDD 的格式化
-     * 如果后期还有其他类型格式 再重构
      */
     public static String formatFieldWithDateType(List<FieldMetaInfo> fieldMetaInfoList) {
         if (fieldMetaInfoList.isEmpty()) {

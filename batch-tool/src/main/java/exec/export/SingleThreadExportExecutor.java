@@ -70,7 +70,7 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
                 config.getFilenamePrefix(), tableName) + 0;
             try {
                 TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
-                    getSchemaName(), tableName);
+                    getSchemaName(), tableName, command.getColumnNames());
                 DirectExportWorker directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
                     new TableTopology("", tableName), tableFieldMetaInfo,
                     fileName, config);

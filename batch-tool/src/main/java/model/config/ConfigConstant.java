@@ -37,6 +37,7 @@ public class ConfigConstant {
     public static final String ARG_SHORT_OPERATION = "o";
     public static final String ARG_SHORT_ORDER = "O";
     public static final String ARG_SHORT_ORDER_COLUMN = "OC";
+    public static final String ARG_SHORT_COLUMNS = "col";
     public static final String ARG_SHORT_TABLE = "t";
     public static final String ARG_SHORT_SEP = "s";
     public static final String ARG_SHORT_PREFIX = "pre";

@@ -21,14 +21,13 @@ import cmd.ImportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
-import model.config.CompressMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
 import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
-import worker.ddl.DdlImportWorker;
+import worker.ddl.DdlImporter;
 import worker.insert.DirectImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
@@ -152,24 +151,17 @@ public class ImportExecutor extends WriteDbExecutor {
      * 同步导入建库建表语句
      */
     private void handleDDL() {
-        DdlImportWorker ddlImportWorker;
+        DdlImporter ddlImporter;
         if (command.isDbOperation()) {
             if (producerExecutionContext.getFileLineRecordList().size() != 1) {
                 throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
             }
-            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFileLineRecordList()
+            ddlImporter = new DdlImporter(producerExecutionContext.getFileLineRecordList()
                 .get(0).getFilePath(), dataSource);
         } else {
-            ddlImportWorker = new DdlImportWorker(command.getTableNames(), dataSource);
+            ddlImporter = new DdlImporter(command.getTableNames(), dataSource);
         }
-
-        Thread ddlThread = new Thread(ddlImportWorker);
-        ddlThread.start();
-        try {
-            ddlThread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        ddlImporter.doImportSync();
     }
 
     private void doSingleThreadImport(String tableName) {

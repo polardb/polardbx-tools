@@ -100,7 +100,7 @@ public class ExportProducer extends BaseExportWorker {
 
     public void produceData() {
         List<FieldMetaInfo> metaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
-        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology, metaInfoList, whereCondition);
+        String sql = ExportUtil.getDirectSql(topology, metaInfoList, whereCondition);
 
         // 字段数
         int colNum;
