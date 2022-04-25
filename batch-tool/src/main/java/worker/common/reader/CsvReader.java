@@ -84,5 +84,10 @@ public class CsvReader extends FileBufferedBatchReader {
     protected void beforePublish() {
         context.getEmittedDataCounter().getAndIncrement();
     }
+
+    @Override
+    public boolean useMagicSeparator() {
+        return true;
+    }
 }
 

@@ -98,4 +98,8 @@ public class XlsxReader extends FileBufferedBatchReader {
         context.getEmittedDataCounter().getAndIncrement();
     }
 
+    @Override
+    public boolean useMagicSeparator() {
+        return true;
+    }
 }

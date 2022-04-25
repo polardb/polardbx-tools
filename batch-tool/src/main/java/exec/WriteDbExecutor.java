@@ -85,17 +85,13 @@ public abstract class WriteDbExecutor extends BaseExecutor {
      */
     protected void configureFieldMetaInfo() {
         logger.info("正在获取所有表的元信息...");
-        Map<String, TableFieldMetaInfo> tableFieldMetaInfo = new HashMap<>();
-        for (String tableName : tableNames) {
-            TableFieldMetaInfo metaInfo = null;
-            try {
-                metaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
-                    getSchemaName(), tableName);
-                tableFieldMetaInfo.put(tableName, metaInfo);
-            } catch (DatabaseException | SQLException e) {
-                logger.error(e.getMessage());
-                throw new RuntimeException(e);
-            }
+        Map<String, TableFieldMetaInfo> tableFieldMetaInfo = null;
+        try {
+            tableFieldMetaInfo = DbUtil.getDbFieldMetaInfo(dataSource.getConnection(),
+                getSchemaName(), tableNames);
+        } catch (DatabaseException | SQLException e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
         }
         consumerExecutionContext.setTableFieldMetaInfo(tableFieldMetaInfo);
         logger.info("所有表的元信息获取完毕");

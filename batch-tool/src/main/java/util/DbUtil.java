@@ -32,6 +32,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,6 +50,10 @@ public class DbUtil {
     private static final String FIELD_INFO_SQL_PATTERN =
         "SELECT COLUMN_NAME,DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='%s' and TABLE_NAME='%s'\n"
             + "ORDER BY ORDINAL_POSITION;";
+
+    private static final String DB_FIELD_INFO_SQL_PATTERN =
+        "SELECT COLUMN_NAME,DATA_TYPE,ORDINAL_POSITION,TABLE_NAME from INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='%s'\n"
+            + "ORDER BY TABLE_NAME,ORDINAL_POSITION;";
 
     private static final String SINGLE_FIELD_INFO_SQL_PATTERN =
         "SELECT DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS "
@@ -257,6 +262,47 @@ public class DbUtil {
             return tableFieldMetaInfo;
         } catch (SQLException e) {
             throw new DatabaseException("Unable to get meta info of columns in " + tableName, e);
+        } finally {
+            JdbcUtils.close(resultSet);
+            JdbcUtils.close(stmt);
+            JdbcUtils.close(conn);
+        }
+    }
+
+    public static Map<String, TableFieldMetaInfo> getDbFieldMetaInfo(Connection conn,
+                                                                     String schemaName,
+                                                                     List<String> tableNames)
+        throws DatabaseException {
+        Map<String, TableFieldMetaInfo> resultMap = new HashMap<>();
+        for (String tableName : tableNames) {
+            TableFieldMetaInfo metaInfo = new TableFieldMetaInfo();
+            metaInfo.setFieldMetaInfoList(new ArrayList<>());
+            resultMap.put(tableName, metaInfo);
+        }
+        Statement stmt = null;
+        ResultSet resultSet = null;
+        String metaInfoSql = String.format(DB_FIELD_INFO_SQL_PATTERN, schemaName);
+        FieldMetaInfo fieldMetaInfo;
+        try {
+            // 开始获取字段信息
+            stmt = conn.createStatement();
+            resultSet = stmt.executeQuery(metaInfoSql);
+            while (resultSet.next()) {
+                String tableName = resultSet.getString(4);
+                TableFieldMetaInfo metaInfo = resultMap.get(tableName);
+                if (metaInfo == null) {
+                    continue;
+                }
+
+                fieldMetaInfo = new FieldMetaInfo();
+                fieldMetaInfo.setName(resultSet.getString(1));
+                fieldMetaInfo.setType(resultSet.getString(2));
+                fieldMetaInfo.setIndex(resultSet.getInt(3) - 1);
+                metaInfo.getFieldMetaInfoList().add(fieldMetaInfo);
+            }
+            return resultMap;
+        } catch (SQLException e) {
+            throw new DatabaseException("Unable to get meta info of columns in DB: " + schemaName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);

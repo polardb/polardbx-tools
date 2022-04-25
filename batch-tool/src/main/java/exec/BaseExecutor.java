@@ -36,6 +36,7 @@ import model.config.ConfigConstant;
 import model.config.ExportConfig;
 import model.config.FileLineRecord;
 import model.config.GlobalVar;
+import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
