@@ -8,4 +8,4 @@ CREATE TABLE `customer` (
 	`C_MKTSEGMENT` char(255) DEFAULT NULL,
 	`C_COMMENT` varchar(255) DEFAULT NULL,
 	PRIMARY KEY (`C_CUSTKEY`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8  dbpartition by hash(`C_CUSTKEY`) tbpartition by hash(`C_CUSTKEY`) tbpartitions 4;
+) ENGINE = InnoDB DEFAULT CHARSET = utf8 PARTITION BY KEY(`C_CUSTKEY`);
