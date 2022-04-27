@@ -222,7 +222,7 @@ public abstract class BaseExecutor {
             checkConsumeProgress((ReadFileWithBlockProducer) producer, consumers);
         }
         waitForFinish(countDownLatch, emittedDataCounter, producerExecutionContext, consumerExecutionContext);
-        workerPool.halt();
+        workerPool.drainAndHalt();
         consumerThreadPool.shutdown();
         producerThreadPool.shutdown();
     }
