@@ -144,8 +144,9 @@ public class DdlImporter {
         ddlThreadPool.submit(() -> {
             Connection conn = null;
             Statement stmt = null;
-            String ddlSample = sql.substring(0, Math.min(50, sql.length()));
+            String ddlSample = null;
             try {
+                ddlSample = sql.substring(0, Math.min(50, sql.length()));
                 conn = dataSource.getConnection();
                 stmt = conn.createStatement();
                 logger.info("正在执行 DDL 语句: {} ...", ddlSample);

@@ -191,7 +191,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 producerExecutor.submit(producer);
             }
             waitForFinish(countDownLatch, emittedDataCounter);
-            workerPool.halt();
+            workerPool.drainAndHalt();
         } else {
             Queue<ExportEvent> fragmentQueue = new ArrayBlockingQueue<>(producerCount);
             // 将碎片放入缓冲队列
@@ -208,7 +208,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             CyclicAtomicInteger cyclicCounter = new CyclicAtomicInteger(consumerCount);
             // 待消费者消费结束
             waitForFinish(countDownLatch, emittedDataCounter);
-            workerPool.halt();
+            workerPool.drainAndHalt();
             CountDownLatch fragmentCountLatch = new CountDownLatch(consumerCount);
             // 再将碎片一次分配给每个文件
             for (int i = 0; i < consumerCount; i++) {
