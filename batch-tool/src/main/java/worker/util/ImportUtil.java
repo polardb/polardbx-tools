@@ -119,6 +119,17 @@ public class ImportUtil {
         }
     }
 
+    public static void getDirectImportSql(StringBuilder stringBuilder,
+                                          String tableName,
+                                          List<FieldMetaInfo> fieldMetaInfoList,
+                                          String[] values, boolean sqlEscapeEnabled,
+                                          boolean hasEscapedQuote) throws DatabaseException {
+        stringBuilder.append("INSERT INTO `").append(tableName).append("` VALUES (");
+        appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList, values,
+            sqlEscapeEnabled, hasEscapedQuote);
+        stringBuilder.append(");");
+    }
+
     public static String getBatchInsertSqlWithHint(String nodeName, String tableName, String data,
                                                    boolean insertIgnoreEnabled) {
         if (insertIgnoreEnabled) {

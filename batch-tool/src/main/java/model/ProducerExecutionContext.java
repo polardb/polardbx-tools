@@ -257,7 +257,6 @@ public class ProducerExecutionContext extends BaseConfig {
     @Override
     public void validate() {
         super.validate();
-
         if (this.quoteEncloseMode == QuoteEncloseMode.FORCE) {
             // 指定引号转义模式则采用安全的方式执行
             this.parallelism = fileRecordList.size();
