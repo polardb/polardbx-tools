@@ -205,6 +205,15 @@ public class ExportConfig extends BaseConfig {
     }
 
     @Override
+    public void validate() {
+        super.validate();
+        if (this.exportWay != ExportWay.DEFAULT && !this.fileFormat.isSupportBlock()) {
+            throw new UnsupportedOperationException(String.format("Export with format [%s] by [%s] is "
+                + "not supported yet", fileFormat, exportWay));
+        }
+    }
+
+    @Override
     public String toString() {
         return "ExportConfig{" +
             "path='" + path + '\'' +

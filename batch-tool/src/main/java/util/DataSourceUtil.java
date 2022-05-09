@@ -26,12 +26,9 @@ public class DataSourceUtil {
 
     /**
      * 1. 手动拼接Batch,无需rewriteBatch
-     * 2. useServerPrepStmts作为开关项
-     * 3.
      */
     public static String URL_PATTERN = "jdbc:mysql://%s:%s/%s?allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=1000"
-        + "&socketTimeout=600000&maintainTimeStats=false&zeroDateTimeBehavior=convertToNull&serverTimezone=Asia/Shanghai"
-        + "&useServerPrepStmts=true";
+        + "&socketTimeout=600000&maintainTimeStats=false&zeroDateTimeBehavior=convertToNull";
 
     public static String LOAD_BALANCE_URL_PATTERN = "jdbc:mysql:loadbalance://%s/%s?"
         + "loadBalanceAutoCommitStatementThreshold=5&allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=1000"
