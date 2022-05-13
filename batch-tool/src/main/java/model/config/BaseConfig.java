@@ -16,10 +16,44 @@
 
 package model.config;
 
+import java.nio.charset.Charset;
+
 /**
  * 可自定义且有默认参数的配置项
+ * 导入导出通用配置
  */
 public class BaseConfig {
+
+    private static class FileMode {
+        static final byte COMPRESS_FLAG = 1;
+        static final byte ENCRYPTION_FLAG = 1 << 2;
+        static final byte FILE_FORMAT_FLAG = 1 << 3;
+
+        byte flag = 0;
+
+        void setCompress() {
+            this.flag |= COMPRESS_FLAG;
+        }
+
+        void setEncryption() {
+            this.flag |= ENCRYPTION_FLAG;
+        }
+
+        void setFileFormat() {
+            this.flag |= FILE_FORMAT_FLAG;
+        }
+
+        int bitCount() {
+            int count = 0;
+            byte n = flag;
+            while (n != 0) {
+                n &= n - 1;
+                count++;
+            }
+            return count;
+        }
+    }
+
     /**
      * 分隔符
      */
@@ -27,7 +61,7 @@ public class BaseConfig {
     /**
      * 指定字符集
      */
-    protected String charset = ConfigConstant.DEFAULT_CHARSET;
+    protected Charset charset = ConfigConstant.DEFAULT_CHARSET;
 
     /**
      * 第一行是否为字段名
@@ -35,6 +69,21 @@ public class BaseConfig {
     protected boolean isWithHeader = ConfigConstant.DEFAULT_WITH_HEADER;
 
     protected boolean shardingEnabled;
+
+    protected DdlMode ddlMode = DdlMode.NO_DDL;
+
+    protected CompressMode compressMode = CompressMode.NONE;
+
+    protected EncryptionConfig encryptionConfig = EncryptionConfig.NONE;
+
+    protected FileFormat fileFormat = FileFormat.NONE;
+
+    /**
+     * 引号模式
+     */
+    protected QuoteEncloseMode quoteEncloseMode;
+
+    private FileMode fileMode = new FileMode();
 
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
@@ -54,11 +103,11 @@ public class BaseConfig {
         this.separator = separator;
     }
 
-    public String getCharset() {
+    public Charset getCharset() {
         return charset;
     }
 
-    public void setCharset(String charset) {
+    public void setCharset(Charset charset) {
         this.charset = charset;
     }
 
@@ -74,12 +123,74 @@ public class BaseConfig {
         return shardingEnabled;
     }
 
+    public QuoteEncloseMode getQuoteEncloseMode() {
+        return quoteEncloseMode;
+    }
+
+    public void setQuoteEncloseMode(QuoteEncloseMode quoteEncloseMode) {
+        this.quoteEncloseMode = quoteEncloseMode;
+    }
+
+    public DdlMode getDdlMode() {
+        return ddlMode;
+    }
+
+    public void setDdlMode(DdlMode ddlMode) {
+        this.ddlMode = ddlMode;
+    }
+
+    public CompressMode getCompressMode() {
+        return compressMode;
+    }
+
+    public void setCompressMode(CompressMode compressMode) {
+        this.compressMode = compressMode;
+        if (compressMode != CompressMode.NONE) {
+            fileMode.setCompress();
+        }
+    }
+
+    public EncryptionConfig getEncryptionConfig() {
+        return encryptionConfig;
+    }
+
+    public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
+        this.encryptionConfig = encryptionConfig;
+        if (!encryptionConfig.equals(EncryptionConfig.NONE)) {
+            fileMode.setEncryption();
+        }
+    }
+
+    public FileFormat getFileFormat() {
+        return fileFormat;
+    }
+
+    public void setFileFormat(FileFormat fileFormat) {
+        this.fileFormat = fileFormat;
+        if (fileFormat != FileFormat.NONE) {
+            fileMode.setFileFormat();
+        }
+    }
+
+    /**
+     * 目前 压缩模式、加密、特殊文件格式三者配置互不兼容
+     */
+    public void validate() {
+        if (fileMode.bitCount() > 1) {
+            throw new IllegalArgumentException(String.format(
+                "Please check compression/encryption/file-format config: %s/%s/%s",
+                compressMode, encryptionConfig, fileFormat));
+        }
+    }
+
     @Override
     public String toString() {
         return "BaseConfig{" +
             "separator='" + separator + '\'' +
             ", charset='" + charset + '\'' +
             ", isWithHeader='" + isWithHeader + '\'' +
+            ", compressMode='" + compressMode + '\'' +
+            ", encryptionConfig='" + encryptionConfig + '\'' +
             '}';
     }
 }

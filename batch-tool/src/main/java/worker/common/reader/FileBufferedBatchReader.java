@@ -14,25 +14,44 @@
  * limitations under the License.
  */
 
-package worker.common;
+package worker.common.reader;
 
 import com.lmax.disruptor.RingBuffer;
+import model.ProducerExecutionContext;
+import model.config.CompressMode;
 import model.config.ConfigConstant;
-import model.config.GlobalVar;
+import worker.common.BatchLineEvent;
+
+import java.io.File;
+import java.util.List;
 
 import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
-public abstract class ReadFileWorker implements Runnable {
+public abstract class FileBufferedBatchReader implements Runnable {
 
     protected final RingBuffer<BatchLineEvent> ringBuffer;
     protected int bufferedLineCount = 0;
     protected String[] lineBuffer;
     protected volatile int localProcessingFileIndex;
     protected long localProcessingBlockIndex = -1;
+    protected final CompressMode compressMode;
+    protected final ProducerExecutionContext context;
+    protected final List<File> fileList;
 
-    protected ReadFileWorker(RingBuffer<BatchLineEvent> ringBuffer) {
+    protected FileBufferedBatchReader(ProducerExecutionContext context,
+                                      List<File> fileList,
+                                      RingBuffer<BatchLineEvent> ringBuffer) {
+        this(context, fileList, ringBuffer, CompressMode.NONE);
+    }
+
+    protected FileBufferedBatchReader(ProducerExecutionContext context,
+                                      List<File> fileList,
+                                      RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) {
+        this.context = context;
         this.ringBuffer = ringBuffer;
+        this.fileList = fileList;
         this.lineBuffer = new String[EMIT_BATCH_SIZE];
+        this.compressMode = compressMode;
     }
 
     protected void appendToLineBuffer(String line) {
@@ -62,5 +81,30 @@ public abstract class ReadFileWorker implements Runnable {
         }
     }
 
+    @Override
+    public void run() {
+        try {
+            readData();
+        } catch (Exception e) {
+            context.setException(e);
+            throw e;
+        } finally {
+            afterRun();
+        }
+    }
+
+    protected abstract void readData();
+
+    private void afterRun() {
+        context.getCountDownLatch().countDown();
+        close();
+    }
+
+    protected abstract void close();
+
     protected abstract void beforePublish();
+
+    public boolean useMagicSeparator() {
+        return false;
+    }
 }

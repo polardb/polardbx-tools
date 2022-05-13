@@ -29,10 +29,11 @@ import java.util.Set;
 
 import static model.config.ConfigConstant.FLOAT_UPDATE_MULTIPLICAND;
 import static model.config.ConfigConstant.INT_UPDATE_MULTIPLICAND;
+import static worker.util.PolarxHint.DIRECT_NODE_HINT;
 
 public class UpdateUtil {
 
-    private static final String BATCH_REPLACE_PATTERN_WITH_HINT = "/!TDDL:node='%s'*/ REPLACE INTO `%s`(%s) "
+    private static final String BATCH_REPLACE_PATTERN_WITH_HINT = DIRECT_NODE_HINT + "REPLACE INTO `%s`(%s) "
         + "VALUES %s;";
 
     private static final String BATCH_REPLACE_PATTERN = " REPLACE INTO `%s`(%s) "

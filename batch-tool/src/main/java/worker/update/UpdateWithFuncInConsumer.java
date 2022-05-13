@@ -39,9 +39,9 @@ public class UpdateWithFuncInConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
-        this.pkList = consumerContext.getPkList();
+        this.pkList = consumerContext.getTablePkList(tableName);
         this.pkValues = new String[pkList.size()];
-        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo().getFieldMetaInfoList();
+        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
     }
 
     @Override
@@ -62,6 +62,6 @@ public class UpdateWithFuncInConsumer extends BaseDefaultConsumer {
         // 去除最后的逗号
         data.setLength(data.length() - 1);
         return UpdateUtil.getUpdateWithFuncInSql(consumerContext.getUpdateWithFuncPattern(),
-            consumerContext.getPkNames(), data.toString());
+            consumerContext.getTablePkName(tableName), data.toString());
     }
 }

@@ -16,7 +16,9 @@
 
 package model;
 
+import model.config.BaseConfig;
 import model.config.ConfigConstant;
+import model.config.FileLineRecord;
 import model.config.QuoteEncloseMode;
 import org.apache.commons.lang.StringUtils;
 
@@ -24,7 +26,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,13 +34,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ProducerExecutionContext {
+/**
+ * 读取文件的工作线程上下文
+ */
+public class ProducerExecutionContext extends BaseConfig {
 
     private ThreadPoolExecutor producerExecutor;
 
-    private List<String> filePathList;
-
-    private String sep;
+    private List<FileLineRecord> fileRecordList;
 
     private int parallelism;
 
@@ -56,18 +59,17 @@ public class ProducerExecutionContext {
 
     private String historyFile;
 
+    private int maxErrorCount;
+
     private AtomicInteger emittedDataCounter;
 
     private CountDownLatch countDownLatch;
 
-    private Charset charset;
+    private volatile Exception exception;
 
-    /**
-     * 第一行是否为字段名
-     */
-    private boolean isWithHeader;
-
-    private QuoteEncloseMode quoteEncloseMode = QuoteEncloseMode.AUTO;
+    public ProducerExecutionContext() {
+        super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
+    }
 
     public ThreadPoolExecutor getProducerExecutor() {
         return producerExecutor;
@@ -77,12 +79,12 @@ public class ProducerExecutionContext {
         this.producerExecutor = producerExecutor;
     }
 
-    public List<String> getFilePathList() {
-        return filePathList;
+    public List<FileLineRecord> getFileLineRecordList() {
+        return fileRecordList;
     }
 
-    public void setFilePathList(List<String> filePathList) {
-        this.filePathList = filePathList;
+    public void setFileLineRecordList(List<FileLineRecord> fileRecordList) {
+        this.fileRecordList = fileRecordList;
     }
 
     public int getParallelism() {
@@ -157,7 +159,13 @@ public class ProducerExecutionContext {
         this.historyFile = historyFile;
     }
 
+    /**
+     * TODO to be refactored
+     */
     public void setHistoryFileAndParse(String historyFile) {
+        if (historyFile == null) {
+            return;
+        }
         setHistoryFile(historyFile);
         File file = new File(historyFile);
         Scanner fromFile = null;
@@ -175,6 +183,9 @@ public class ProducerExecutionContext {
     }
 
     public void saveToHistoryFile(boolean isFinished) {
+        if (historyFile == null) {
+            return;
+        }
         try {
             File file = new File(historyFile);
             if (!file.exists()) {
@@ -183,7 +194,7 @@ public class ProducerExecutionContext {
             FileWriter fileWriter = new FileWriter(historyFile, false);
             BufferedWriter out = new BufferedWriter(fileWriter);
             if (isFinished) {
-                nextFileIndex = filePathList.size();
+                nextFileIndex = fileRecordList.size();
                 nextBlockIndex = 0;
             }
             out.write(contextString);
@@ -208,53 +219,47 @@ public class ProducerExecutionContext {
         this.countDownLatch = countDownLatch;
     }
 
-    public Charset getCharset() {
-        return charset;
+    public boolean isSingleThread() {
+        return this.parallelism == 1;
     }
 
-    public void setCharset(Charset charset) {
-        this.charset = charset;
+    public int getMaxErrorCount() {
+        return maxErrorCount;
     }
 
-    public void setCharset(String charset) {
-        if (StringUtils.isEmpty(charset)) {
-            this.charset = Charset.forName(ConfigConstant.DEFAULT_CHARSET);
-        } else {
-            this.charset = Charset.forName(charset);
-        }
+    public void setMaxErrorCount(int maxErrorCount) {
+        this.maxErrorCount = maxErrorCount;
+    }
+
+    public boolean isUtfCharset() {
+        return this.charset.equals(StandardCharsets.UTF_8)
+            || this.charset.equals(StandardCharsets.UTF_16);
+    }
+
+    public Exception getException() {
+        return exception;
+    }
+
+    public void setException(Exception exception) {
+        this.exception = exception;
     }
 
     @Override
     public String toString() {
         return "ProducerExecutionContext{" +
-            "filePathList=" + filePathList +
+            "filePathList=" + fileRecordList +
             ", parallelism=" + parallelism +
             ", readBlockSizeInMb=" + readBlockSizeInMb +
-            ", quoteEncloseMode=" + quoteEncloseMode.name() +
+            ", " + super.toString() +
             '}';
     }
 
-    public boolean isWithHeader() {
-        return isWithHeader;
-    }
-
-    public void setWithHeader(boolean withHeader) {
-        isWithHeader = withHeader;
-    }
-
-    public String getSep() {
-        return sep;
-    }
-
-    public void setSep(String sep) {
-        this.sep = sep;
-    }
-
-    public void setQuoteEncloseMode(String Mode) {
-        this.quoteEncloseMode = QuoteEncloseMode.parseMode(Mode);
-    }
-
-    public QuoteEncloseMode getQuoteEncloseMode() {
-        return this.quoteEncloseMode;
+    @Override
+    public void validate() {
+        super.validate();
+        if (this.quoteEncloseMode == QuoteEncloseMode.FORCE) {
+            // 指定引号转义模式则采用安全的方式执行
+            this.parallelism = fileRecordList.size();
+        }
     }
 }

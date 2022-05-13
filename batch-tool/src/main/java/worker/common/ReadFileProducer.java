@@ -16,8 +16,10 @@
 
 package worker.common;
 
+import com.google.common.base.Preconditions;
 import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
+import model.config.FileLineRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,15 +34,18 @@ public abstract class ReadFileProducer {
     final ProducerExecutionContext context;
     final RingBuffer<BatchLineEvent> ringBuffer;
 
-    final List<File> fileList;
+    protected final List<File> fileList;
+    protected final List<FileLineRecord> fileLineRecordList;
 
     public ReadFileProducer(ProducerExecutionContext context,
-                            RingBuffer<BatchLineEvent> ringBuffer) {
+                            RingBuffer<BatchLineEvent> ringBuffer,
+                            List<FileLineRecord> fileLineRecordList) {
         this.context = context;
         this.ringBuffer = ringBuffer;
-        List<String> filePathList = context.getFilePathList();
-        this.fileList = new ArrayList<>(filePathList.size());
-        initFileList(filePathList);
+        Preconditions.checkArgument(!fileLineRecordList.isEmpty(), "No file for producer");
+        this.fileLineRecordList = fileLineRecordList;
+        this.fileList = new ArrayList<>(fileLineRecordList.size());
+        initFileList();
     }
 
     public abstract void produce();
@@ -49,15 +54,18 @@ public abstract class ReadFileProducer {
      * 初始化文件列表
      * 若有文件路径不存在 提前报错结束
      */
-    private void initFileList(List<String> filePathList) {
-        for (String path : filePathList) {
-            File file = new File(path);
+    private void initFileList() {
+        for (FileLineRecord fileRecord : fileLineRecordList) {
+            File file = new File(fileRecord.getFilePath());
             if (!file.exists()) {
-                logger.error("File {} doesn't exist", path);
-                System.exit(1);
+                logger.error("File {} doesn't exist", fileRecord.getFilePath());
+                throw new RuntimeException("File doesn't exist");
             }
             this.fileList.add(file);
         }
     }
 
+    public boolean useMagicSeparator() {
+        return false;
+    }
 }

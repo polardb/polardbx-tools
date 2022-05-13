@@ -26,6 +26,11 @@ public class TableTopology {
      */
     private final String tableName;
 
+    public TableTopology(String tableName) {
+        this.tableName = tableName;
+        this.groupName = null;
+    }
+
     public TableTopology(String groupName, String tableName) {
         this.groupName = groupName;
         this.tableName = tableName;
@@ -41,6 +46,9 @@ public class TableTopology {
 
     @Override
     public String toString() {
+        if (groupName == null || groupName.length() == 0) {
+            return "{tableName='" + tableName + "'}";
+        }
         return "{" +
             "groupName='" + groupName + '\'' +
             ", tableName='" + tableName + '\'' +

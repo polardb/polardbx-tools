@@ -49,13 +49,17 @@ public class BatchTool {
 
 
     public void doBatchOp(BaseOperateCommand command, DataSourceConfig dataSourceConfig) {
-        logger.info("批量操作信息: {}", command);
+        logger.info("开始批量操作...");
         BaseExecutor commandExecutor = BaseExecutor.getExecutor(command, dataSourceConfig, druid);
-
-        long startTime = System.currentTimeMillis();
-        commandExecutor.execute();
-        long endTime = System.currentTimeMillis();
-        logger.info("运行耗时： {} s", (endTime - startTime) / 1000F);
+        commandExecutor.preCheck();
+        try {
+            long startTime = System.currentTimeMillis();
+            commandExecutor.execute();
+            long endTime = System.currentTimeMillis();
+            logger.info("运行耗时： {} s", (endTime - startTime) / 1000F);
+        } finally {
+            commandExecutor.close();
+        }
     }
 
     private void destroy() {

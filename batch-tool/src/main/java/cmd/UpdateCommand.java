@@ -21,8 +21,9 @@ import model.ProducerExecutionContext;
 
 public class UpdateCommand extends WriteDbCommand {
 
-    public UpdateCommand(ProducerExecutionContext producerExecutionContext,
+    public UpdateCommand(String dbName,
+                         ProducerExecutionContext producerExecutionContext,
                          ConsumerExecutionContext consumerExecutionContext) {
-        super(producerExecutionContext, consumerExecutionContext);
+        super(dbName, producerExecutionContext, consumerExecutionContext);
     }
 }

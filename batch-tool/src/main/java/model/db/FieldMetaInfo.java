@@ -27,14 +27,19 @@ public class FieldMetaInfo {
      */
     private int index;
 
-    // todo 类型有待补充
+    // todo 类型有待补充(blob)
     public static final ImmutableSet<String> STRING_TYPE_SET = ImmutableSet.of(
         "varchar",
         "char",
-        "text"
+        "text",
+        "tinytext",
+        "mediumtext",
+        "longtext",
+        "enum"
     );
 
     public static final ImmutableSet<String> NUMBER_INT_TYPE_SET = ImmutableSet.of(
+        "tinyint",
         "smallint",
         "integer",
         "int",
@@ -50,9 +55,11 @@ public class FieldMetaInfo {
     );
 
     public static final ImmutableSet<String> DATE_TYPE_SET = ImmutableSet.of(
-        "date"
-        //,"datetime"
-        // ...
+        "date",
+        "year",
+        "time",
+        "datetime",
+        "timestamp"
     );
 
     public enum Type {
@@ -60,6 +67,7 @@ public class FieldMetaInfo {
         INT,
         FLOAT,
         DATE,
+        DATETIME,
         OTHER
     }
 
@@ -79,6 +87,7 @@ public class FieldMetaInfo {
         switch (type) {
         case STRING:
         case DATE:
+        case DATETIME:
         case OTHER:
             return true;
         case INT:
@@ -101,6 +110,7 @@ public class FieldMetaInfo {
     }
 
     public void setType(String typeStr) {
+        typeStr = typeStr.toLowerCase();
         if (STRING_TYPE_SET.contains(typeStr)) {
             this.type = Type.STRING;
         } else if (NUMBER_INT_TYPE_SET.contains(typeStr)) {

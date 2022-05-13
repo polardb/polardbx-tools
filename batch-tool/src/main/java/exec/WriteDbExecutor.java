@@ -34,10 +34,11 @@ import worker.common.BaseWorkHandler;
 import worker.common.ReadFileWithBlockProducer;
 
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,7 +51,7 @@ public abstract class WriteDbExecutor extends BaseExecutor {
 
     protected ProducerExecutionContext producerExecutionContext;
     protected ConsumerExecutionContext consumerExecutionContext;
-    protected String tableName;
+    protected List<String> tableNames;
 
     public WriteDbExecutor(DataSourceConfig dataSourceConfig, DruidDataSource druid,
                            BaseOperateCommand baseCommand) {
@@ -58,64 +59,77 @@ public abstract class WriteDbExecutor extends BaseExecutor {
         WriteDbCommand writeDbCommand = (WriteDbCommand) baseCommand;
         this.producerExecutionContext = writeDbCommand.getProducerExecutionContext();
         this.consumerExecutionContext = writeDbCommand.getConsumerExecutionContext();
-        this.tableName = consumerExecutionContext.getTableName();
+        this.tableNames = consumerExecutionContext.getTableNames();
     }
 
     /**
      * 设置主键
      */
     protected void configurePkList() {
-        List<PrimaryKey> pkList = null;
-        try {
-            pkList = DbUtil.getPkList(druid.getConnection(), getSchemaName(), tableName);
-        } catch (DatabaseException | SQLException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        Map<String, List<PrimaryKey>> tablePkList = new HashMap<>();
+        for (String tableName : tableNames) {
+            List<PrimaryKey> pkList = null;
+            try {
+                pkList = DbUtil.getPkList(dataSource.getConnection(), getSchemaName(), tableName);
+                tablePkList.put(tableName, pkList);
+            } catch (DatabaseException | SQLException e) {
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
-        consumerExecutionContext.setPkList(pkList);
+        consumerExecutionContext.setTablePkList(tablePkList);
     }
 
     /**
      * 设置字段信息
      */
     protected void configureFieldMetaInfo() {
-        TableFieldMetaInfo tableFieldMetaInfo = null;
+        logger.info("正在获取所有表的元信息...");
+        Map<String, TableFieldMetaInfo> tableFieldMetaInfo = null;
         try {
-            tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(druid.getConnection(),
-                getSchemaName(), tableName);
+            tableFieldMetaInfo = DbUtil.getDbFieldMetaInfo(dataSource.getConnection(),
+                getSchemaName(), tableNames);
         } catch (DatabaseException | SQLException e) {
             logger.error(e.getMessage());
-            System.exit(1);
+            throw new RuntimeException(e);
         }
         consumerExecutionContext.setTableFieldMetaInfo(tableFieldMetaInfo);
+        logger.info("所有表的元信息获取完毕");
     }
 
     /**
      * 设置拓扑信息
      */
     protected void configureTopology() {
-        List<TableTopology> topologyList = null;
-        try {
-            topologyList = DbUtil.getTopology(druid.getConnection(), tableName);
-        } catch (DatabaseException | SQLException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        Map<String, List<TableTopology>> tableTopologyMap = new HashMap<>();
+        for (String tableName : tableNames) {
+            List<TableTopology> topologyList = null;
+            try {
+                topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
+                tableTopologyMap.put(tableName, topologyList);
+            } catch (DatabaseException | SQLException e) {
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
-        consumerExecutionContext.setTopologyList(topologyList);
+        consumerExecutionContext.setTopologyList(tableTopologyMap);
     }
 
     protected void configurePartitionKey() {
-        PartitionKey partitionKey = null;
-        try {
-            partitionKey = DbUtil.getPartitionKey(druid.getConnection(),
-                getSchemaName(), tableName);
-            logger.info("使用划分键 {}", partitionKey);
-
-        } catch (DatabaseException | SQLException e) {
-            logger.error(e.getMessage());
-            System.exit(1);
+        Map<String, PartitionKey> tablePartitionKey = new HashMap<>();
+        for (String tableName : tableNames) {
+            PartitionKey partitionKey = null;
+            try {
+                partitionKey = DbUtil.getPartitionKey(dataSource.getConnection(),
+                    getSchemaName(), tableName);
+                logger.info("表 {} 使用分片键 {}", tableName, partitionKey);
+                tablePartitionKey.put(tableName, partitionKey);
+            } catch (DatabaseException | SQLException e) {
+                logger.error(e.getMessage());
+                throw new RuntimeException(e);
+            }
         }
-        consumerExecutionContext.setPartitionKey(partitionKey);
+        consumerExecutionContext.setTablePartitionKey(tablePartitionKey);
     }
 
     /**
@@ -124,53 +138,43 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     @Override
     protected void checkConsumeProgress(ReadFileWithBlockProducer producers, BaseWorkHandler[] consumers) {
         ScheduledThreadPoolExecutor checkConsumePartFinishScheduler = new ScheduledThreadPoolExecutor(1,
-            new ThreadFactory() {
-
-                @Override
-                public Thread newThread(Runnable r) {
-                    return new Thread(r, "[check-progress-thread]");
-                }
-            });
-        checkConsumePartFinishScheduler.scheduleAtFixedRate(new Runnable() {
-
-            @Override
-            public void run() {
-                AtomicBoolean[] produceProgress = producers.getFileDoneList();
-                long nextDoBlockIndex;
-                for (int i = producerExecutionContext.getNextFileIndex(); i < produceProgress.length; ++i) {
-                    nextDoBlockIndex = Long.MAX_VALUE;
-                    ConcurrentHashMap<Long, AtomicInteger> fileDone =
-                        producerExecutionContext.getEventCounter().get(i);
-                    for (ConcurrentHashMap.Entry<Long, AtomicInteger> entry : fileDone.entrySet()) {
-                        if (entry.getValue().get() > 0) {
-                            nextDoBlockIndex = nextDoBlockIndex > entry.getKey() ?
-                                entry.getKey() : nextDoBlockIndex;
-                        }
+            r -> new Thread(r, "[check-progress-thread]"));
+        checkConsumePartFinishScheduler.scheduleAtFixedRate(() -> {
+            AtomicBoolean[] produceProgress = producers.getFileDoneList();
+            long nextDoBlockIndex;
+            for (int i = producerExecutionContext.getNextFileIndex(); i < produceProgress.length; ++i) {
+                nextDoBlockIndex = Long.MAX_VALUE;
+                ConcurrentHashMap<Long, AtomicInteger> fileDone =
+                    producerExecutionContext.getEventCounter().get(i);
+                for (ConcurrentHashMap.Entry<Long, AtomicInteger> entry : fileDone.entrySet()) {
+                    if (entry.getValue().get() > 0) {
+                        nextDoBlockIndex = nextDoBlockIndex > entry.getKey() ?
+                            entry.getKey() : nextDoBlockIndex;
                     }
-                    if (nextDoBlockIndex == Long.MAX_VALUE) {
-                        // means now nextDoFileIndex consume over
-                        if (produceProgress[i].get()) {
-                            // means all file consume over
-                            if (i + 1 == produceProgress.length) {
-                                logger.info("deal with all files over");
-                            }
-                        } else {
-                            producerExecutionContext.setNextFileIndex(i);
-                            producerExecutionContext.setNextBlockIndex(0);
-                            break;
+                }
+                if (nextDoBlockIndex == Long.MAX_VALUE) {
+                    // means now nextDoFileIndex consume over
+                    if (produceProgress[i].get()) {
+                        // means all file consume over
+                        if (i + 1 == produceProgress.length) {
+                            logger.info("所有文件处理完毕");
                         }
                     } else {
                         producerExecutionContext.setNextFileIndex(i);
-                        producerExecutionContext.setNextBlockIndex(nextDoBlockIndex);
+                        producerExecutionContext.setNextBlockIndex(0);
                         break;
                     }
+                } else {
+                    producerExecutionContext.setNextFileIndex(i);
+                    producerExecutionContext.setNextBlockIndex(nextDoBlockIndex);
+                    break;
                 }
-                producerExecutionContext.saveToHistoryFile(false);
-                logger.info("next file {}", producerExecutionContext.getNextFileIndex());
-                logger.info("next block {}", producerExecutionContext.getNextBlockIndex());
             }
-
+            producerExecutionContext.saveToHistoryFile(false);
+            logger.info("下一个文件 {}", producerExecutionContext.getNextFileIndex());
+            logger.info("下一数据块 {}", producerExecutionContext.getNextBlockIndex());
         }, 30, 60, TimeUnit.SECONDS);
+        checkConsumePartFinishScheduler.shutdown();
     }
 
     @Override

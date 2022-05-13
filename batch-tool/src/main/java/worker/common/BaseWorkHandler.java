@@ -30,14 +30,18 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
     private RateLimiter rateLimiter = null;
     protected boolean hasEscapedQuote = false;
     protected String sep;
+    /**
+     * TODO tableName 从 map 取出的内容cache在独立context中
+     */
+    protected String tableName;
 
     protected void initLocalVars() {
-        if (consumerContext.isUsingBlock()) {
-            this.sep = consumerContext.getSep();
-            hasEscapedQuote = false;
-        } else {
+        if (consumerContext.isUseMagicSeparator()) {
             this.sep = ConfigConstant.MAGIC_CSV_SEP;
             hasEscapedQuote = true;
+        } else {
+            this.sep = consumerContext.getSeparator();
+            hasEscapedQuote = false;
         }
     }
 
@@ -49,6 +53,10 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
         if (tpsLimit > 0) {
             this.rateLimiter = RateLimiter.create(tpsLimit);
         }
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
     }
 
     @Override

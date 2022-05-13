@@ -21,10 +21,16 @@ public class GlobalVar {
     /**
      * 发送一批数据的元组数
      */
-    public static int EMIT_BATCH_SIZE = 500;
+    public static int EMIT_BATCH_SIZE = 50;
 
     /**
      * RingBuffer 缓冲区大小
      */
     public static int DEFAULT_RING_BUFFER_SIZE = 1024;
+
+    /**
+     * 每个worker线程可分配的堆外内存
+     * 4K
+     */
+    public static int DEFAULT_DIRECT_BUFFER_SIZE_PER_WORKER = 1024 * 4;
 }

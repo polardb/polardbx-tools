@@ -24,10 +24,14 @@ import java.sql.Statement;
 
 public class DataSourceUtil {
 
-    public static String URL_PATTERN = "jdbc:mysql://%s:%s/%s?";
+    /**
+     * 1. 手动拼接Batch,无需rewriteBatch
+     */
+    public static String URL_PATTERN = "jdbc:mysql://%s:%s/%s?allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=1000"
+        + "&socketTimeout=600000&maintainTimeStats=false&zeroDateTimeBehavior=convertToNull";
 
     public static String LOAD_BALANCE_URL_PATTERN = "jdbc:mysql:loadbalance://%s/%s?"
-        + "loadBalanceAutoCommitStatementThreshold=5&useSSL=false&connectTimeout=1000"
+        + "loadBalanceAutoCommitStatementThreshold=5&allowPublicKeyRetrieval=true&useSSL=false&connectTimeout=1000"
         + "&socketTimeout=600000&loadBalanceBlacklistTimeout=900000";
 
     public static Statement createStreamingStatement(@NotNull Connection conn) throws SQLException {

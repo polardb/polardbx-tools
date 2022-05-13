@@ -23,6 +23,8 @@ import util.FileUtil;
 
 import java.util.List;
 
+import static worker.util.PolarxHint.DIRECT_NODE_HINT;
+
 public class ImportUtil {
 
     private static final String BATCH_INSERT_SQL_PATTERN =
@@ -32,10 +34,10 @@ public class ImportUtil {
         "INSERT IGNORE INTO `%s` VALUES %s;";
 
     private static final String BATCH_INSERT_HINT_SQL_PATTERN =
-        "/!TDDL:node='%s'*/ INSERT INTO `%s` VALUES %s;";
+        DIRECT_NODE_HINT + "INSERT INTO `%s` VALUES %s;";
 
     private static final String BATCH_INSERT_IGNORE_HINT_SQL_PATTERN =
-        "/!TDDL:node='%s'*/ INSERT IGNORE INTO `%s` VALUES %s;";
+        DIRECT_NODE_HINT + "INSERT IGNORE INTO `%s` VALUES %s;";
 
     public static String getBatchInsertSql(String tableName, String values, boolean insertIgnoreEnabled) {
         if (insertIgnoreEnabled) {
@@ -97,7 +99,7 @@ public class ImportUtil {
                                                    String[] values, boolean sqlEscapeEnabled,
                                                    boolean hasEscapedQuote) throws DatabaseException {
         if (fieldMetaInfoList.size() != values.length) {
-            throw new DatabaseException(String.format(": required field size %d, "
+            throw new DatabaseException(String.format("required field size %d, "
                 + "actual size %d", fieldMetaInfoList.size(), values.length));
         }
         int fieldLen = fieldMetaInfoList.size();
@@ -115,6 +117,17 @@ public class ImportUtil {
         } else {
             ImportUtil.appendInsertNonStrValue(stringBuilder, values[fieldLen - 1], hasEscapedQuote);
         }
+    }
+
+    public static void getDirectImportSql(StringBuilder stringBuilder,
+                                          String tableName,
+                                          List<FieldMetaInfo> fieldMetaInfoList,
+                                          String[] values, boolean sqlEscapeEnabled,
+                                          boolean hasEscapedQuote) throws DatabaseException {
+        stringBuilder.append("INSERT INTO `").append(tableName).append("` VALUES (");
+        appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList, values,
+            sqlEscapeEnabled, hasEscapedQuote);
+        stringBuilder.append(");");
     }
 
     public static String getBatchInsertSqlWithHint(String nodeName, String tableName, String data,

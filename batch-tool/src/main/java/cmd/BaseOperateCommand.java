@@ -16,36 +16,52 @@
 
 package cmd;
 
+import javax.validation.constraints.NotNull;
+import java.util.List;
+
 /**
  * 数据库操作相关配置
  */
 public class BaseOperateCommand {
 
+    private final String dbName;
+
     /**
-     * 批量操作仅支持单表
+     * 支持同一个库下的多张表
      */
-    private String tableName;
+    private List<String> tableNames;
+
+    /**
+     * 仅支持单张表下指定列
+     */
+    private List<String> columnNames;
 
     /**
      * 是否开启分库分表操作
      */
     private boolean shardingEnabled;
 
-    public BaseOperateCommand(boolean shardingEnabled) {
+    public BaseOperateCommand(@NotNull String dbName, boolean shardingEnabled) {
+        this.dbName = dbName;
         this.shardingEnabled = shardingEnabled;
     }
 
-    public BaseOperateCommand(String tableName, boolean shardingEnabled) {
-        this.tableName = tableName;
+    public BaseOperateCommand(@NotNull String dbName, List<String> tableName, boolean shardingEnabled) {
+        this.dbName = dbName;
+        this.tableNames = tableName;
         this.shardingEnabled = shardingEnabled;
     }
 
-    public String getTableName() {
-        return tableName;
+    public List<String> getTableNames() {
+        return tableNames;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
+    public void setTableNames(List<String> tableNames) {
+        this.tableNames = tableNames;
+    }
+
+    public boolean isSingleTable() {
+        return this.tableNames.size() == 1;
     }
 
     public boolean isShardingEnabled() {
@@ -54,5 +70,21 @@ public class BaseOperateCommand {
 
     public void setShardingEnabled(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
+    }
+
+    public String getDbName() {
+        return dbName;
+    }
+
+    public boolean isDbOperation() {
+        return this.tableNames == null;
+    }
+
+    public List<String> getColumnNames() {
+        return columnNames;
+    }
+
+    public void setColumnNames(List<String> columnNames) {
+        this.columnNames = columnNames;
     }
 }

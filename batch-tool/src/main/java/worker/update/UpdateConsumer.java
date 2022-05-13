@@ -34,9 +34,9 @@ public class UpdateConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
-        this.pkList = consumerContext.getPkList();
+        this.pkList = consumerContext.getTablePkList(tableName);
         this.pkValues = new String[pkList.size()];
-        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo().getFieldMetaInfoList();
+        this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
     }
 
     @Override
@@ -44,8 +44,8 @@ public class UpdateConsumer extends BaseDefaultConsumer {
         for (int i = 0; i < pkList.size(); i++) {
             pkValues[i] = values[pkList.get(i).getOrdinalPosition() - 1];
         }
-        stringBuilder.append(UpdateUtil.getUpdateSql(consumerContext.getTableName(),
-            pkList, consumerContext.getPkIndexSet(),
+        stringBuilder.append(UpdateUtil.getUpdateSql(tableName,
+            pkList, consumerContext.getTablePkIndexSet(tableName),
             fieldMetaInfoList, values,
             consumerContext.getWhereCondition()));
     }
