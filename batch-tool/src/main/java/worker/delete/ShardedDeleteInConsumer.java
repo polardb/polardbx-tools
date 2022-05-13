@@ -34,7 +34,7 @@ public class ShardedDeleteInConsumer extends BaseShardedConsumer {
 
     @Override
     protected void initLocalVars() {
-        pkList = consumerContext.getPkList();
+        pkList = consumerContext.getTablePkList(tableName);
         pkValues = new String[pkList.size()];
     }
 
@@ -61,7 +61,7 @@ public class ShardedDeleteInConsumer extends BaseShardedConsumer {
         // 去除最后的逗号
         data.setLength(data.length() - 1);
         return DeleteUtil.getBatchDeleteSqlWithHint(topology.getGroupName(),
-            topology.getTableName(), consumerContext.getPkList(), data.toString(),
+            topology.getTableName(), consumerContext.getTablePkList(tableName), data.toString(),
             consumerContext.getWhereCondition());
     }
 }

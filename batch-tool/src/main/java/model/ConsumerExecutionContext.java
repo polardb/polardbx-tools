@@ -16,44 +16,46 @@
 
 package model;
 
+import model.config.BaseConfig;
+import model.config.ConfigConstant;
 import model.db.PartitionKey;
 import model.db.PrimaryKey;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 
 import javax.sql.DataSource;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ConsumerExecutionContext {
+/**
+ * 连接数据库端的工作线程上下文
+ */
+public class ConsumerExecutionContext extends BaseConfig {
 
     private DataSource dataSource;
 
-    private String tableName;
-    /**
-     * 分隔符
-     */
-    private String sep;
+    private List<String> tableNames;
 
-    private String charset;
     /**
      * 对于已发送数据批的计数器
      */
     private AtomicInteger emittedDataCounter;
 
-    private List<PrimaryKey> pkList;
+    private Map<String, List<PrimaryKey>> tablePkList;
 
     /**
      * 主键序号集合
      */
-    private Set<Integer> pkIndexSet;
+    private Map<String, Set<Integer>> tablePkIndexSet;
     /**
      * 数据表元信息
      */
-    private TableFieldMetaInfo tableFieldMetaInfo;
+    private Map<String, TableFieldMetaInfo> tableFieldMetaInfo;
     /**
      * 是否开启insert ignore & resume breakpoint
      */
@@ -84,13 +86,13 @@ public class ConsumerExecutionContext {
     private String toUpdateColumns;
 
     /**
-     * 分库分表拓扑结构
+     * 物理库表拓扑结构
      */
-    private List<TableTopology> topologyList;
+    private Map<String, List<TableTopology>> topologyList;
     /**
      * 划分键
      */
-    private PartitionKey partitionKey;
+    private Map<String, PartitionKey> tablePartitionKey;
     /**
      * update tableName set x=2x,y=2y,str=REVERSE(str) where %s;
      */
@@ -111,7 +113,7 @@ public class ConsumerExecutionContext {
      */
     private boolean whereInEnabled = false;
 
-    private String pkNames;
+    private Map<String, String> tablePkName;
 
     /**
      * 文件每行的结尾是否为分隔符
@@ -131,22 +133,14 @@ public class ConsumerExecutionContext {
 
     private List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter;
 
-    private boolean isUsingBlock = true;
+    private boolean useBlock = true;
 
-    public String getSep() {
-        return sep;
-    }
+    private boolean useMagicSeparator = false;
 
-    public void setSep(String sep) {
-        this.sep = sep;
-    }
+    private volatile Exception exception;
 
-    public String getCharset() {
-        return charset;
-    }
-
-    public void setCharset(String charset) {
-        this.charset = charset;
+    public ConsumerExecutionContext() {
+        super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
     }
 
     public List<ConcurrentHashMap<Long, AtomicInteger>> getEventCounter() {
@@ -165,27 +159,39 @@ public class ConsumerExecutionContext {
         this.emittedDataCounter = emittedDataCounter;
     }
 
-    public List<PrimaryKey> getPkList() {
-        return pkList;
+    public Map<String, List<PrimaryKey>> getTablePkList() {
+        return tablePkList;
     }
 
-    public void setPkList(List<PrimaryKey> pkList) {
-        this.pkList = pkList;
-        pkIndexSet = new HashSet<>(pkList.size() * 2);
-        StringBuilder stringBuilder = new StringBuilder();
-        for (PrimaryKey primaryKey : pkList) {
-            pkIndexSet.add(primaryKey.getOrdinalPosition() - 1);
-            stringBuilder.append(primaryKey.getName()).append(",");
+    public List<PrimaryKey> getTablePkList(String tableName) {
+        return tablePkList.get(tableName);
+    }
+
+    public void setTablePkList(Map<String, List<PrimaryKey>> tablePkList) {
+        this.tablePkList = tablePkList;
+        this.tablePkIndexSet = new HashMap<>(tablePkList.size() * 2);
+        this.tablePkName = new HashMap<>(tablePkList.size() * 2);
+        for (Map.Entry<String, List<PrimaryKey>> tablePk : tablePkList.entrySet()) {
+            Set<Integer> pkSet = new HashSet<>();
+            StringBuilder stringBuilder = new StringBuilder();
+            for (PrimaryKey primaryKey : tablePk.getValue()) {
+                pkSet.add(primaryKey.getOrdinalPosition() - 1);
+                stringBuilder.append(primaryKey.getName()).append(",");
+            }
+            this.tablePkIndexSet.put(tablePk.getKey(), pkSet);
+            this.tablePkName.put(tablePk.getKey(), stringBuilder.toString());
         }
-        stringBuilder.setLength(stringBuilder.length() - 1);
-        pkNames = stringBuilder.toString();
     }
 
-    public TableFieldMetaInfo getTableFieldMetaInfo() {
+    public Map<String, TableFieldMetaInfo> getTableFieldMetaInfo() {
         return tableFieldMetaInfo;
     }
 
-    public void setTableFieldMetaInfo(TableFieldMetaInfo tableFieldMetaInfo) {
+    public TableFieldMetaInfo getTableFieldMetaInfo(String tableName) {
+        return tableFieldMetaInfo.get(tableName);
+    }
+
+    public void setTableFieldMetaInfo(Map<String, TableFieldMetaInfo> tableFieldMetaInfo) {
         this.tableFieldMetaInfo = tableFieldMetaInfo;
     }
 
@@ -205,12 +211,12 @@ public class ConsumerExecutionContext {
         this.insertIgnoreAndResumeEnabled = insertIgnoreAndResumeEnabled;
     }
 
-    public String getTableName() {
-        return tableName;
+    public List<String> getTableNames() {
+        return tableNames;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
+    public void setTableNames(List<String> tableNames) {
+        this.tableNames = tableNames;
     }
 
     public int getParallelism() {
@@ -221,8 +227,12 @@ public class ConsumerExecutionContext {
         this.parallelism = parallelism;
     }
 
-    public Set<Integer> getPkIndexSet() {
-        return pkIndexSet;
+    public Map<String, Set<Integer>> getTablePkIndexSet() {
+        return tablePkIndexSet;
+    }
+
+    public Set<Integer> getTablePkIndexSet(String tableName) {
+        return tablePkIndexSet.get(tableName);
     }
 
     public String getToUpdateColumns() {
@@ -241,20 +251,28 @@ public class ConsumerExecutionContext {
         this.whereCondition = whereCondition;
     }
 
-    public List<TableTopology> getTopologyList() {
+    public Map<String, List<TableTopology>> getTopologyList() {
         return topologyList;
     }
 
-    public void setTopologyList(List<TableTopology> topologyList) {
+    public List<TableTopology> getTopologyList(String tableName) {
+        return topologyList.get(tableName);
+    }
+
+    public void setTopologyList(Map<String, List<TableTopology>> topologyList) {
         this.topologyList = topologyList;
     }
 
-    public PartitionKey getPartitionKey() {
-        return partitionKey;
+    public Map<String, PartitionKey> getTablePartitionKey() {
+        return tablePartitionKey;
     }
 
-    public void setPartitionKey(PartitionKey partitionKey) {
-        this.partitionKey = partitionKey;
+    public PartitionKey getTablePartitionKey(String tableName) {
+        return tablePartitionKey.get(tableName);
+    }
+
+    public void setTablePartitionKey(Map<String, PartitionKey> tablePartitionKey) {
+        this.tablePartitionKey = tablePartitionKey;
     }
 
     public int getTpsLimit() {
@@ -276,11 +294,9 @@ public class ConsumerExecutionContext {
     @Override
     public String toString() {
         return "ConsumerExecutionContext{" +
-            "tableName='" + tableName + '\'' +
-            ", sep='" + sep + '\'' +
-            ", charset='" + charset + '\'' +
-            ", pkList=" + pkList +
-            ", pkIndexSet=" + pkIndexSet +
+            "tableName='" + tableNames + '\'' +
+            ", pkList=" + tablePkList +
+            ", pkIndexSet=" + tablePkIndexSet +
             ", tableFieldMetaInfo=" + tableFieldMetaInfo +
             ", insertIgnoreAndResumeEnabled=" + insertIgnoreAndResumeEnabled +
             ", funcSqlForUpdateEnabled=" + funcSqlForUpdateEnabled +
@@ -288,7 +304,7 @@ public class ConsumerExecutionContext {
             ", whereCondition='" + whereCondition + '\'' +
             ", toUpdateColumns='" + toUpdateColumns + '\'' +
             ", topologyList=" + topologyList +
-            ", partitionKey=" + partitionKey +
+            ", partitionKey=" + tablePartitionKey +
             ", updateWithFuncPattern='" + updateWithFuncPattern + '\'' +
             ", sqlEscapeEnabled=" + sqlEscapeEnabled +
             ", readProcessFileOnly=" + readProcessFileOnly +
@@ -335,8 +351,12 @@ public class ConsumerExecutionContext {
         this.whereInEnabled = whereInEnabled;
     }
 
-    public String getPkNames() {
-        return pkNames;
+    public Map<String, String> getTablePkName() {
+        return tablePkName;
+    }
+
+    public String getTablePkName(String tableName) {
+        return tablePkName.get(tableName);
     }
 
     public boolean isWithLastSep() {
@@ -363,11 +383,31 @@ public class ConsumerExecutionContext {
         this.forceParallelism = forceParallelism;
     }
 
-    public boolean isUsingBlock() {
-        return isUsingBlock;
+    public boolean isUseBlock() {
+        return useBlock;
     }
 
-    public void setUsingBlock(boolean usingBlock) {
-        isUsingBlock = usingBlock;
+    public void setUseBlock(boolean useBlock) {
+        this.useBlock = useBlock;
+    }
+
+    public boolean isUseMagicSeparator() {
+        return useMagicSeparator;
+    }
+
+    public void setUseMagicSeparator(boolean useMagicSeparator) {
+        this.useMagicSeparator = useMagicSeparator;
+    }
+
+    public boolean isSingleThread() {
+        return this.parallelism == 1;
+    }
+
+    public Exception getException() {
+        return exception;
+    }
+
+    public void setException(Exception exception) {
+        this.exception = exception;
     }
 }

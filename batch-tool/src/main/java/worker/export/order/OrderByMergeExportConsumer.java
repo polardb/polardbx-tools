@@ -108,10 +108,6 @@ public class OrderByMergeExportConsumer extends MergeExportConsumer {
         }
 
         // 写入缓冲区剩余的
-        try {
-            writeToFile(outputStream.toByteArray());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        fileWriter.write(outputStream.toByteArray());
     }
 }

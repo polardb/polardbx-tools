@@ -63,11 +63,6 @@ public class ExportConfig extends BaseConfig {
     private boolean isLocalMerge = false;
     private boolean isParallelMerge = false;
 
-    /**
-     * 引号模式
-     */
-    private QuoteEncloseMode quoteEncloseMode;
-
     public enum ExportWay {
         /**
          * 指定单个文件最大行数
@@ -86,21 +81,23 @@ public class ExportConfig extends BaseConfig {
     }
 
     public ExportConfig() {
-        this("", ConfigConstant.DEFAULT_SEPARATOR, ExportWay.DEFAULT, 0, "");
+        this("", ConfigConstant.DEFAULT_SEPARATOR, ExportWay.DEFAULT,
+            0, "", ConfigConstant.DEFAULT_QUOTE_ENCLOSE_MODE);
     }
 
     public ExportConfig(String filenamePrefix,
                         String separator,
                         ExportWay exportWay,
                         int limitNum,
-                        String whereCondition) {
+                        String whereCondition,
+                        QuoteEncloseMode quoteEncloseMode) {
         super(ConfigConstant.DEFAULT_EXPORT_SHARDING_ENABLED);
         this.separator = separator;
         this.filenamePrefix = filenamePrefix;
         this.exportWay = exportWay;
         this.limitNum = limitNum;
         this.whereCondition = whereCondition;
-        this.quoteEncloseMode = QuoteEncloseMode.AUTO;
+        this.quoteEncloseMode = quoteEncloseMode;
     }
 
     public void setFixedFileNum(int num) {
@@ -121,12 +118,7 @@ public class ExportConfig extends BaseConfig {
     }
 
     public void setFilenamePrefix(String filenamePrefix) {
-        if (filenamePrefix == null) {
-            this.filenamePrefix = "";
-        } else {
-            this.filenamePrefix = filenamePrefix;
-        }
-
+        this.filenamePrefix = filenamePrefix;
     }
 
     public ExportWay getExportWay() {
@@ -196,18 +188,6 @@ public class ExportConfig extends BaseConfig {
         isParallelMerge = parallelMerge;
     }
 
-    public QuoteEncloseMode getQuoteEncloseMode() {
-        return quoteEncloseMode;
-    }
-
-    public void setQuoteEncloseMode(QuoteEncloseMode quoteEncloseMode) {
-        this.quoteEncloseMode = quoteEncloseMode;
-    }
-
-    public void setQuoteEncloseMode(String Mode) {
-        this.quoteEncloseMode = QuoteEncloseMode.parseMode(Mode);
-    }
-
     public int getParallelism() {
         return parallelism;
     }
@@ -225,6 +205,15 @@ public class ExportConfig extends BaseConfig {
     }
 
     @Override
+    public void validate() {
+        super.validate();
+        if (this.exportWay != ExportWay.DEFAULT && !this.fileFormat.isSupportBlock()) {
+            throw new UnsupportedOperationException(String.format("Export with format [%s] by [%s] is "
+                + "not supported yet", fileFormat, exportWay));
+        }
+    }
+
+    @Override
     public String toString() {
         return "ExportConfig{" +
             "path='" + path + '\'' +
@@ -237,7 +226,6 @@ public class ExportConfig extends BaseConfig {
             ", isAscending=" + isAscending +
             ", isLocalMerge=" + isLocalMerge +
             ", isParallelMerge=" + isParallelMerge +
-            ", quoteEncloseMode=" + quoteEncloseMode.name() +
             ", parallelism=" + getParallelismConfig() +
             "} " + super.toString();
     }

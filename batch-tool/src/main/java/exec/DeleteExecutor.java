@@ -45,32 +45,34 @@ public class DeleteExecutor extends WriteDbExecutor {
     @Override
     public void execute() {
         configurePkList();
-        if (command.isShardingEnabled()) {
-            doShardingDelete();
-        } else {
-            doDefaultDelete();
+        for (String tableName : tableNames) {
+            if (command.isShardingEnabled()) {
+                doShardingDelete(tableName);
+            } else {
+                doDefaultDelete(tableName);
+            }
+            logger.info("删除 {} 数据完成", tableName);
         }
-        logger.info("删除 {} 数据完成", tableName);
     }
 
-    private void doDefaultDelete() {
+    private void doDefaultDelete(String tableName) {
         if (consumerExecutionContext.isWhereInEnabled()) {
             // 使用delete ... in (...)
             configureFieldMetaInfo();
             configureCommonContextAndRun(DeleteInConsumer.class,
-                producerExecutionContext, consumerExecutionContext);
+                producerExecutionContext, consumerExecutionContext, tableName);
         } else {
             configurePkList();
             configureCommonContextAndRun(DeleteConsumer.class,
-                producerExecutionContext, consumerExecutionContext);
+                producerExecutionContext, consumerExecutionContext, tableName);
         }
     }
 
-    private void doShardingDelete() {
+    private void doShardingDelete(String tableName) {
         configureFieldMetaInfo();
         configureTopology();
         configurePartitionKey();
         configureCommonContextAndRun(ShardedDeleteInConsumer.class,
-            producerExecutionContext, consumerExecutionContext);
+            producerExecutionContext, consumerExecutionContext, tableName);
     }
 }

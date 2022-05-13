@@ -17,74 +17,79 @@
 package worker.export;
 
 import com.lmax.disruptor.WorkHandler;
+import model.config.CompressMode;
 import model.db.TableFieldMetaInfo;
+import model.encrypt.BaseCipher;
 import util.FileUtil;
+import worker.common.writer.IFileWriter;
+import worker.common.writer.NioFileWriter;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 暂不支持 FileFormat
+ */
 public class ExportConsumer implements WorkHandler<ExportEvent> {
-    private final boolean isWithHeader;
     private final byte[] separator;
     private final TableFieldMetaInfo tableFieldMetaInfo;
-    private FileChannel appendChannel = null;
+    private final IFileWriter fileWriter;
     private final AtomicInteger emittedDataCounter;
+
+    private BaseCipher cipher = null;
 
     public ExportConsumer(String filename, AtomicInteger emittedDataCounter,
                           boolean isWithHeader, byte[] separator,
-                          TableFieldMetaInfo tableFieldMetaInfo) {
-        this.isWithHeader = isWithHeader;
+                          TableFieldMetaInfo tableFieldMetaInfo,
+                          CompressMode compressMode, Charset charset) {
         this.emittedDataCounter = emittedDataCounter;
         this.separator = separator;
         this.tableFieldMetaInfo = tableFieldMetaInfo;
-        try {
-            createNewFile(filename);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void createNewFile(String tmpFileName) throws IOException {
-        this.appendChannel = FileUtil.createEmptyFileAndOpenChannel(tmpFileName);
+        filename = getFilename(filename, compressMode);
+        this.fileWriter = new NioFileWriter(filename, compressMode, charset);
         if (isWithHeader) {
             appendHeader();
         }
     }
 
-    private void appendHeader() throws IOException {
+    private String getFilename(String filename, CompressMode compressMode) {
+        if (compressMode == CompressMode.GZIP) {
+            return filename + ".gz";
+        }
+        return filename;
+    }
+
+    private void appendHeader() {
         byte[] header = FileUtil.getHeaderBytes(tableFieldMetaInfo.getFieldMetaInfoList(), separator);
-        writeNio(header);
+        fileWriter.write(header);
     }
 
     @Override
     public void onEvent(ExportEvent exportEvent) {
-        writeNio(exportEvent.getData());
+        writeEvent(exportEvent.getData());
     }
 
-    public void writeNio(byte[] data) {
+    public void writeEvent(byte[] data) {
+        if (cipher != null) {
+            try {
+                data = cipher.encrypt(data);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
         try {
-            ByteBuffer src = ByteBuffer.wrap(data);
-            int length;
-            do {
-                length = appendChannel.write(src);
-            } while (length != 0);
-
-        } catch (IOException e) {
-            e.printStackTrace();
+            fileWriter.write(data);
         } finally {
             emittedDataCounter.getAndDecrement();
         }
     }
 
+    public void setCipher(BaseCipher cipher) {
+        this.cipher = cipher;
+    }
+
     public void close() {
-        if (appendChannel != null) {
-            try {
-                appendChannel.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        fileWriter.close();
     }
 }

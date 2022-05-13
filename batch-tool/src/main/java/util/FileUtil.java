@@ -16,6 +16,7 @@
 
 package util;
 
+import model.config.ConfigConstant;
 import model.db.FieldMetaInfo;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -23,11 +24,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IllegalFormatException;
@@ -119,24 +119,22 @@ public class FileUtil {
         os.write(DOUBLE_QUOTE_BYTE);
     }
 
-    public static FileChannel createEmptyFileAndOpenChannel(String tmpFileName) throws IOException {
-        File file = new File(tmpFileName);
-        FileUtils.deleteQuietly(file);
-        file.createNewFile();
-        return FileChannel.open(Paths.get(tmpFileName), StandardOpenOption.APPEND);
-    }
-
-    public static byte[] getHeaderBytes(List<FieldMetaInfo> metaInfoList, byte[] separator) throws IOException {
+    public static byte[] getHeaderBytes(List<FieldMetaInfo> metaInfoList, byte[] separator) {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         int len = metaInfoList.size();
-        for (int i = 0; i < len - 1; i++) {
-            FileUtil.writeToByteArrayStream(os, metaInfoList.get(i).getName().getBytes());
-            // 附加分隔符
-            os.write(separator);
+        try {
+            for (int i = 0; i < len - 1; i++) {
+                FileUtil.writeToByteArrayStream(os, metaInfoList.get(i).getName().getBytes());
+                // 附加分隔符
+                os.write(separator);
+            }
+            FileUtil.writeToByteArrayStream(os, metaInfoList.get(len - 1).getName().getBytes());
+            // 附加换行符
+            os.write(SYS_NEW_LINE_BYTE);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        FileUtil.writeToByteArrayStream(os, metaInfoList.get(len - 1).getName().getBytes());
-        // 附加换行符
-        os.write(SYS_NEW_LINE_BYTE);
         return os.toByteArray();
     }
 
@@ -145,13 +143,6 @@ public class FileUtil {
         return NULL_STR_WITH_COMMA_BYTE_BUFFER;
     }
 
-    public static void writeNio(FileChannel fileChannel, byte[] data) throws IOException {
-        ByteBuffer src = ByteBuffer.wrap(data);
-        int length = fileChannel.write(src);
-        while (length != 0) {
-            length = fileChannel.write(src);
-        }
-    }
 
     public static String[] split(String line, String sep, boolean withLastSep, boolean hasEscapedQuote) {
         ArrayList<String> values = splitWithQuoteEscape(line, sep, withLastSep, 10, hasEscapedQuote);
@@ -187,18 +178,28 @@ public class FileUtil {
         StringBuilder stringBuilder = new StringBuilder(line.length() / expectedCount);
         char sepStart = sep.charAt(0);
         boolean enclosingByQuote = false;
+        boolean endsWithSep = false;
         for (int i = 0; i < len; i++) {
-            if (i == len - 1 && chars[i] != '\"') {
+            if (i == len - 1) {
                 // 最后一个字符
-                if (!hasEscapedQuote && enclosingByQuote) {
-                    badFormatException("Unclosed quote", line);
-                } else {
-                    // 说明当前为最后一个字段
+                if (chars[i] == '\"' && hasEscapedQuote) {
                     stringBuilder.append(chars[i]);
                     subStrings.add(stringBuilder.toString());
                     stringBuilder.setLength(0);
-                    enclosingByQuote = false;
+                    break;
                 }
+                if (chars[i] != '\"') {
+                    if (!hasEscapedQuote && enclosingByQuote) {
+                        badFormatException("Unclosed quote", line);
+                    } else {
+                        // 说明当前为最后一个字段
+                        stringBuilder.append(chars[i]);
+                        subStrings.add(stringBuilder.toString());
+                        stringBuilder.setLength(0);
+                    }
+                    break;
+                }
+                badFormatException("Failed to split", line);
             }
             if (chars[i] == '\"' && !hasEscapedQuote) {
                 if (!enclosingByQuote) {
@@ -240,12 +241,18 @@ public class FileUtil {
                     stringBuilder.setLength(0);
                     enclosingByQuote = false;
                     i += sep.length() - 1;
+                    if (i == len -1) {
+                        endsWithSep = true;
+                    }
                 } else {
                     stringBuilder.append(chars[i]);
                 }
             } else {
                 stringBuilder.append(chars[i]);
             }
+        }
+        if (endsWithSep && !withLastSep) {
+            subStrings.add("");
         }
         return subStrings;
     }
@@ -330,6 +337,10 @@ public class FileUtil {
         return false;
     }
 
+    public static String getFilePathPrefix(String path, String filenamePrefix, String tableName) {
+        return String.format("%s%s%s_", path, filenamePrefix, tableName);
+    }
+
     public static Map<String, List<File>> getDataFile(String baseDirectory) {
         File dir = new File(baseDirectory);
         if (!dir.isDirectory()) {
@@ -354,13 +365,33 @@ public class FileUtil {
         return result;
     }
 
-    public static List<String> getFileAbsPathInDir(String dirPathStr) {
+    /**
+     * 筛选出非ddl的数据文件
+     */
+    public static List<String> getFilesAbsPathInDir(String dirPathStr) {
         File dir = new File(dirPathStr);
         if (!dir.exists()|| !dir.isDirectory()) {
             throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
         }
         return FileUtils.listFiles(dir, null, false).stream()
-            .filter(file -> file.isFile() && file.canRead())
+            .filter(file -> file.isFile() && file.canRead() &&
+                !file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
             .map(File::getAbsolutePath).collect(Collectors.toList());
+    }
+
+    public static String getFileAbsPath(String filename) {
+        File file = new File(filename);
+        if (!file.exists() || !file.isFile() || !file.canRead()) {
+            throw new IllegalArgumentException("Failed to read from " + filename);
+        }
+        return file.getAbsolutePath();
+    }
+
+    public static RandomAccessFile openRafForRead(File file) {
+        try {
+            return new RandomAccessFile(file, "r");
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

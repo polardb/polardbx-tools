@@ -21,8 +21,9 @@ import model.ProducerExecutionContext;
 
 public class ImportCommand extends WriteDbCommand {
 
-    public ImportCommand(ProducerExecutionContext producerExecutionContext,
+    public ImportCommand(String dbName,
+                         ProducerExecutionContext producerExecutionContext,
                          ConsumerExecutionContext consumerExecutionContext) {
-        super(producerExecutionContext, consumerExecutionContext);
+        super(dbName, producerExecutionContext, consumerExecutionContext);
     }
 }

@@ -16,7 +16,6 @@
 
 package util;
 
-import com.alibaba.druid.pool.DruidPooledConnection;
 import com.alibaba.druid.util.JdbcUtils;
 import exception.DatabaseException;
 import model.db.FieldMetaInfo;
@@ -24,6 +23,7 @@ import model.db.PartitionKey;
 import model.db.PrimaryKey;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.sql.Connection;
@@ -31,7 +31,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class DbUtil {
 
@@ -47,6 +50,10 @@ public class DbUtil {
         "SELECT COLUMN_NAME,DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='%s' and TABLE_NAME='%s'\n"
             + "ORDER BY ORDINAL_POSITION;";
 
+    private static final String DB_FIELD_INFO_SQL_PATTERN =
+        "SELECT COLUMN_NAME,DATA_TYPE,ORDINAL_POSITION,TABLE_NAME from INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='%s'\n"
+            + "ORDER BY TABLE_NAME,ORDINAL_POSITION;";
+
     private static final String SINGLE_FIELD_INFO_SQL_PATTERN =
         "SELECT DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS "
             + "WHERE TABLE_SCHEMA='%s' and TABLE_NAME='%s' and COLUMN_NAME='%s';";
@@ -55,9 +62,9 @@ public class DbUtil {
         "SELECT COLUMN_NAME,DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS "
             + "WHERE TABLE_SCHEMA='%s' and TABLE_NAME='%s' and COLUMN_NAME in (%s);";
 
-    private static final String PARTITION_KEY_SQL_PATTERN = "SHOW RULE FROM %s;";
+    private static final String PARTITION_KEY_SQL_PATTERN = "SHOW RULE FROM `%s`;";
 
-    private static final String ROW_COUNT_SQL_PATTERN = "SELECT COUNT(*) FROM %s;";
+    private static final String ROW_COUNT_SQL_PATTERN = "SELECT COUNT(*) FROM `%s`;";
 
     private static final String PARTITION_KEY_INFO_SQL_PATTERN =
         "SELECT DATA_TYPE,ORDINAL_POSITION from INFORMATION_SCHEMA.COLUMNS WHERE "
@@ -72,7 +79,7 @@ public class DbUtil {
     public static List<TableTopology> getTopology(Connection conn, String tableName) throws DatabaseException {
         Statement stmt = null;
         ResultSet resultSet = null;
-        String sql = "SHOW TOPOLOGY FROM " + tableName;
+        String sql = String.format("SHOW TOPOLOGY FROM `%s`", tableName);
         List<TableTopology> topologyList = new ArrayList<>();
         try {
             stmt = conn.createStatement();
@@ -85,40 +92,7 @@ public class DbUtil {
             }
             return topologyList;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get topology of table " + tableName);
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
-        }
-    }
-
-    /**
-     * 获取数据表主键
-     * 仅单个主键
-     */
-    public static PrimaryKey getPkIndex(Connection conn, String schemaName, String tableName) throws DatabaseException {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        String sql = String.format(PK_INDEX_SQL_PATTERN, schemaName, tableName);
-        int index;
-        String name;
-        try {
-            stmt = conn.createStatement();
-            resultSet = stmt.executeQuery(sql);
-
-            if (resultSet.next()) {
-                index = resultSet.getInt(1);
-                name = resultSet.getString(2);
-                return new PrimaryKey(index, name);
-            } else {
-                throw new DatabaseException("Unable to get primary key of table " + tableName);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get primary key of table " + tableName);
+            throw new DatabaseException("Unable to get topology of table " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -151,8 +125,7 @@ public class DbUtil {
             }
             return pkList;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get primary key of table " + tableName);
+            throw new DatabaseException("Unable to get primary key of table " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -203,8 +176,7 @@ public class DbUtil {
             tableFieldMetaInfo.setFieldMetaInfoList(fieldMetaInfoList);
             return tableFieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get meta info of columns in " + tableName);
+            throw new DatabaseException("Unable to get meta info of columns in " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -252,8 +224,7 @@ public class DbUtil {
             tableFieldMetaInfo.setFieldMetaInfoList(fieldMetaInfoList);
             return tableFieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get meta info of columns in " + tableName);
+            throw new DatabaseException("Unable to get meta info of columns in " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -289,13 +260,78 @@ public class DbUtil {
             tableFieldMetaInfo.setFieldMetaInfoList(fieldMetaInfoList);
             return tableFieldMetaInfo;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get meta info of columns in " + tableName);
+            throw new DatabaseException("Unable to get meta info of columns in " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
             JdbcUtils.close(conn);
         }
+    }
+
+    public static Map<String, TableFieldMetaInfo> getDbFieldMetaInfo(Connection conn,
+                                                                     String schemaName,
+                                                                     List<String> tableNames)
+        throws DatabaseException {
+        Map<String, TableFieldMetaInfo> resultMap = new HashMap<>();
+        for (String tableName : tableNames) {
+            TableFieldMetaInfo metaInfo = new TableFieldMetaInfo();
+            metaInfo.setFieldMetaInfoList(new ArrayList<>());
+            resultMap.put(tableName, metaInfo);
+        }
+        Statement stmt = null;
+        ResultSet resultSet = null;
+        String metaInfoSql = String.format(DB_FIELD_INFO_SQL_PATTERN, schemaName);
+        FieldMetaInfo fieldMetaInfo;
+        try {
+            // 开始获取字段信息
+            stmt = conn.createStatement();
+            resultSet = stmt.executeQuery(metaInfoSql);
+            while (resultSet.next()) {
+                String tableName = resultSet.getString(4);
+                TableFieldMetaInfo metaInfo = resultMap.get(tableName);
+                if (metaInfo == null) {
+                    continue;
+                }
+
+                fieldMetaInfo = new FieldMetaInfo();
+                fieldMetaInfo.setName(resultSet.getString(1));
+                fieldMetaInfo.setType(resultSet.getString(2));
+                fieldMetaInfo.setIndex(resultSet.getInt(3) - 1);
+                metaInfo.getFieldMetaInfoList().add(fieldMetaInfo);
+            }
+            return resultMap;
+        } catch (SQLException e) {
+            throw new DatabaseException("Unable to get meta info of columns in DB: " + schemaName, e);
+        } finally {
+            JdbcUtils.close(resultSet);
+            JdbcUtils.close(stmt);
+            JdbcUtils.close(conn);
+        }
+    }
+
+    public static TableFieldMetaInfo getTableFieldMetaInfo(Connection conn,
+                                                           String schemaName,
+                                                           String tableName,
+                                                           List<String> columnNames) throws DatabaseException {
+
+        TableFieldMetaInfo tableFieldMetaInfo = getTableFieldMetaInfo(conn, schemaName, tableName);
+        if (CollectionUtils.isEmpty(columnNames)) {
+            return tableFieldMetaInfo;
+        }
+
+        List<FieldMetaInfo> fieldMetaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
+        Map<String, FieldMetaInfo> colMetaMap = fieldMetaInfoList.stream()
+            .collect(Collectors.toMap(FieldMetaInfo::getName, c -> c));
+        List<FieldMetaInfo> resMetaInfoList = new ArrayList<>();
+        for (String col : columnNames) {
+            FieldMetaInfo metaInfo = colMetaMap.get(col);
+            if (metaInfo == null) {
+                throw new IllegalArgumentException(String.format("Unknown column %s in %s", col, tableName));
+            }
+            resMetaInfoList.add(metaInfo);
+        }
+        tableFieldMetaInfo.setFieldMetaInfoList(resMetaInfoList);
+        return tableFieldMetaInfo;
     }
 
     /**
@@ -338,8 +374,7 @@ public class DbUtil {
             }
             return partitionKey;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get partition key of " + tableName);
+            throw new DatabaseException("Unable to get partition key of " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -347,6 +382,10 @@ public class DbUtil {
         }
     }
 
+    /**
+     * 对于 auto 模式不适用
+     */
+    @Deprecated
     public static int getPartitionIndex(String value, PartitionKey partitionKey) {
         int partitionSize = partitionKey.getPartitionSize();
         switch (partitionKey.getFieldMetaInfo().getType()) {
@@ -356,64 +395,6 @@ public class DbUtil {
             return (int) (Math.abs(Long.parseLong(value)) % partitionSize);
         default:
             throw new UnsupportedOperationException("Unsupported partition key type!");
-        }
-    }
-
-    public static FieldMetaInfo getPkMetaInfo(DruidPooledConnection conn, String schemaName,
-                                              String tableName) throws DatabaseException {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        String metaInfoSql = String.format(PK_INFO_SQL_PATTERN, schemaName, tableName);
-        FieldMetaInfo fieldMetaInfo;
-        try {
-            // 开始获取字段信息
-            stmt = conn.createStatement();
-            resultSet = stmt.executeQuery(metaInfoSql);
-            if (resultSet.next()) {
-                fieldMetaInfo = new FieldMetaInfo();
-                fieldMetaInfo.setName(resultSet.getString(1));
-                fieldMetaInfo.setType(resultSet.getString(2));
-                fieldMetaInfo.setIndex(resultSet.getInt(3) - 1);
-            } else {
-                throw new DatabaseException("Unable to get pk info of " + tableName);
-            }
-            return fieldMetaInfo;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get pk info of " + tableName);
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
-        }
-    }
-
-    public static FieldMetaInfo getFieldMetaInfo(DruidPooledConnection conn, String schemaName,
-                                                 String tableName, String fieldName) throws DatabaseException {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        String metaInfoSql = String.format(SINGLE_FIELD_INFO_SQL_PATTERN, schemaName, tableName, fieldName);
-        FieldMetaInfo fieldMetaInfo;
-        try {
-            // 开始获取字段信息
-            stmt = conn.createStatement();
-            resultSet = stmt.executeQuery(metaInfoSql);
-            if (resultSet.next()) {
-                fieldMetaInfo = new FieldMetaInfo();
-                fieldMetaInfo.setName(fieldName);
-                fieldMetaInfo.setType(resultSet.getString(1));
-                fieldMetaInfo.setIndex(resultSet.getInt(2) - 1);
-            } else {
-                throw new DatabaseException("Unable to get field info of " + fieldName);
-            }
-            return fieldMetaInfo;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Unable to get field info of " + fieldName);
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -439,7 +420,7 @@ public class DbUtil {
             schemaName, tableName, StringUtils.join(columnConditionList, ","));
     }
 
-    public static List<FieldMetaInfo> getFieldMetaInfoListByColNames(DruidPooledConnection conn,
+    public static List<FieldMetaInfo> getFieldMetaInfoListByColNames(Connection conn,
                                                                      String schemaName,
                                                                      String tableName,
                                                                      List<String> orderByColumnNameList)
@@ -479,8 +460,7 @@ public class DbUtil {
             }
             return fieldMetaInfoList;
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Wrong order by columns" + orderByColumnNameList);
+            throw new DatabaseException("Wrong order by columns" + orderByColumnNameList, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
@@ -501,11 +481,117 @@ public class DbUtil {
             }
             return resultSet.getLong(1);
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DatabaseException("Cannot get row count of " + tableName);
+            throw new DatabaseException("Cannot get row count of " + tableName, e);
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
+            JdbcUtils.close(conn);
+        }
+    }
+
+    public static void useDb(Connection conn, String dbName) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("use " + dbName);
+        }
+    }
+
+    public static List<String> getAllTablesInDb(Connection conn, String dbName) throws DatabaseException {
+        List<String> allTables = new ArrayList<>();
+        try (Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery("show tables");
+            while (rs.next()) {
+                allTables.add(rs.getString(1));
+            }
+            return allTables;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to show tables in:" + dbName, e);
+        }
+    }
+
+    public static String getShowCreateDatabase(Connection conn, String dbName) throws DatabaseException {
+        try (Statement stmt = conn.createStatement()) {
+            // FIXME show create database does not contain charset, collation and mode
+            ResultSet rs = stmt.executeQuery("show create database " + dbName);
+
+            if (!rs.next()) {
+                throw new DatabaseException("Failed to show create database:" + dbName);
+            }
+            return rs.getString(2);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to show create database:" + dbName, e);
+        }
+    }
+
+    public static String getShowCreateTable(Connection conn, String tableName) throws DatabaseException {
+        try (Statement stmt = conn.createStatement()) {
+            // FIXME show create database does not contain GSI
+            ResultSet rs = stmt.executeQuery(String.format("show create table `%s`", tableName));
+
+            if (!rs.next()) {
+                throw new DatabaseException("Failed to show create table:" + tableName);
+            }
+            return rs.getString(2);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to show create table:" + tableName, e);
+        }
+    }
+
+    public static boolean checkTableExists(Connection conn, String tableName) throws DatabaseException {
+        try (Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery(String.format("show tables like '%s'", tableName));
+            return rs.next();
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to check table existence: " + tableName, e);
+        }
+    }
+
+    /**
+     * 不使用show databases like
+     */
+    public static boolean checkDatabaseExists(Connection conn, String dbName) throws DatabaseException {
+        try {
+            useDb(conn, dbName);
+        } catch (SQLException e) {
+            if (e.getMessage().contains("Unknown database")) {
+                return false;
+            } else {
+                throw new DatabaseException("Failed to check database existence: " + dbName, e);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * INSERT [IGNORE] INTO table_name VALUES (?,?, ... ?);
+     */
+    public static String getPrepareInsertSql(String tableName, int fieldCount, boolean ignore) {
+        if (fieldCount <= 0) {
+            throw new IllegalArgumentException("Insert value should be at lease 1");
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("INSERT ");
+        if (ignore) {
+            stringBuilder.append("IGNORE ");
+        }
+        stringBuilder.append("INTO ").append(tableName).append(" VALUES (?");
+        for (int i = 0; i < fieldCount - 1; i++) {
+            stringBuilder.append(",?");
+        }
+        stringBuilder.append(");");
+        return stringBuilder.toString();
+    }
+
+    public static boolean isBroadCast(Connection conn, String tableName) throws DatabaseException {
+        String sql = String.format(PARTITION_KEY_SQL_PATTERN, tableName);
+        try (Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            if (!rs.next()) {
+                throw new DatabaseException("Unable to get rule of table " + tableName);
+            }
+            return rs.getBoolean("BROADCAST");
+        } catch (SQLException e) {
+            throw new DatabaseException("Unable to get rule of table " + tableName, e);
+        } finally {
             JdbcUtils.close(conn);
         }
     }

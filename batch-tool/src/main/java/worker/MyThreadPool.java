@@ -26,10 +26,21 @@ public class MyThreadPool {
     private static final long ALIVE_TIME = 5 * 1000L;
     private static final int QUEUE_SIZE = 500;
 
+    @Deprecated
     public static ThreadPoolExecutor createExecutor(String name) {
         return new ThreadPoolExecutor(
             MAX_POOL_SIZE,
             MAX_POOL_SIZE,
+            ALIVE_TIME,
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(QUEUE_SIZE),
+            new NamedThreadFactory(name, false));
+    }
+
+    public static ThreadPoolExecutor createFixedExecutor(String name, int coreSize) {
+        return new ThreadPoolExecutor(
+            coreSize,
+            coreSize,
             ALIVE_TIME,
             TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(QUEUE_SIZE),
