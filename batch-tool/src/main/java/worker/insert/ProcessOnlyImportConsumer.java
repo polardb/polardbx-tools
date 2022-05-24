@@ -45,9 +45,15 @@ public class ProcessOnlyImportConsumer extends BaseWorkHandler {
     public void onProxyEvent(BatchLineEvent event) {
         try {
             String[] lines = event.getBatchLines();
-            StringBuilder stringBuilder = new StringBuilder();
+
             List<FieldMetaInfo> fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName)
                 .getFieldMetaInfoList();
+            int estimateLineSize = 10;
+            if (lines.length > 0 && lines[0] != null) {
+                estimateLineSize = Math.min(estimateLineSize, lines[0].length());
+            }
+            StringBuilder stringBuilder = new StringBuilder(lines.length * estimateLineSize);
+
             for (String line : lines) {
                 if (StringUtils.isEmpty(line)) {
                     continue;

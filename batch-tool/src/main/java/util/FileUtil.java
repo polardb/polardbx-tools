@@ -182,8 +182,10 @@ public class FileUtil {
         for (int i = 0; i < len; i++) {
             if (i == len - 1) {
                 // 最后一个字符
-                if (chars[i] == '\"' && hasEscapedQuote) {
-                    stringBuilder.append(chars[i]);
+                if (chars[i] == '\"') {
+                    if (hasEscapedQuote) {
+                        stringBuilder.append(chars[i]);
+                    }
                     subStrings.add(stringBuilder.toString());
                     stringBuilder.setLength(0);
                     break;
@@ -192,8 +194,12 @@ public class FileUtil {
                     if (!hasEscapedQuote && enclosingByQuote) {
                         badFormatException("Unclosed quote", line);
                     } else {
-                        // 说明当前为最后一个字段
-                        stringBuilder.append(chars[i]);
+                        if (sep.length() == 1 && chars[i] == sepStart) {
+                            endsWithSep = true;
+                        } else {
+                            // 说明当前为最后一个字段
+                            stringBuilder.append(chars[i]);
+                        }
                         subStrings.add(stringBuilder.toString());
                         stringBuilder.setLength(0);
                     }

@@ -33,4 +33,6 @@ public class GlobalVar {
      * 4K
      */
     public static int DEFAULT_DIRECT_BUFFER_SIZE_PER_WORKER = 1024 * 4;
+
+    public static boolean IN_PERF_MODE = false;
 }

@@ -36,7 +36,6 @@ import model.config.ConfigConstant;
 import model.config.ExportConfig;
 import model.config.FileLineRecord;
 import model.config.GlobalVar;
-import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -66,13 +65,14 @@ public abstract class BaseExecutor {
 
     private final DataSourceConfig dataSourceConfig;
     protected final DataSource dataSource;
+    protected final BaseOperateCommand command;
 
     public BaseExecutor(DataSourceConfig dataSourceConfig,
                         DataSource dataSource,
                         BaseOperateCommand baseCommand) {
         this.dataSourceConfig = dataSourceConfig;
         this.dataSource = dataSource;
-        setCommand(baseCommand);
+        this.command = baseCommand;
     }
 
     public void preCheck() {
@@ -91,8 +91,6 @@ public abstract class BaseExecutor {
             }
         }
     }
-
-    protected abstract void setCommand(BaseOperateCommand baseCommand);
 
     public abstract void execute();
 

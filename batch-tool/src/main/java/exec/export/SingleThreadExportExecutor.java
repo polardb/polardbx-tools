@@ -49,12 +49,6 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
     }
 
     @Override
-    protected void setCommand(BaseOperateCommand baseCommand) {
-        this.command = (ExportCommand) baseCommand;
-        this.config = command.getExportConfig();
-    }
-
-    @Override
     void exportData() {
         doDefaultExport();
     }

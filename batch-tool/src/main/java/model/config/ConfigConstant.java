@@ -77,6 +77,7 @@ public class ConfigConstant {
     public static final String ARG_SHORT_KEY = "key";
     public static final String ARG_SHORT_FILE_FORMAT = "format";
     public static final String ARG_SHORT_MAX_ERROR = "error";
+    public static final String ARG_SHORT_PERF_MODE = "perf";
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**

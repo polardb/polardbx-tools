@@ -416,6 +416,7 @@ public class CommandUtil {
     private static void configureGlobalVar(CommandLine result) {
         setBatchSize(result);
         setRingBufferSize(result);
+        setPerfMode(result);
     }
 
     /**
@@ -457,6 +458,17 @@ public class CommandUtil {
         consumerExecutionContext.setWhereInEnabled(getWhereInEnabled(result));
         consumerExecutionContext.setWithLastSep(getWithLastSep(result));
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
+        consumerExecutionContext.setUseColumns(getUseColumns(result));
+
+        consumerExecutionContext.validate();
+    }
+
+    private static String getUseColumns(CommandLine result) {
+        List<String> columnNames = getColumnNames(result);
+        if (columnNames == null) {
+            return null;
+        }
+        return StringUtils.join(columnNames, ",");
     }
 
     private static boolean getWhereInEnabled(CommandLine result) {
@@ -609,6 +621,10 @@ public class CommandUtil {
             GlobalVar.EMIT_BATCH_SIZE = Integer.parseInt(
                 result.getOptionValue(ARG_SHORT_BATCH_SIZE));
         }
+    }
+
+    private static void setPerfMode(CommandLine result) {
+        GlobalVar.IN_PERF_MODE = result.hasOption(ARG_SHORT_PERF_MODE);
     }
     //endregion 全局相关设置
 
@@ -807,6 +823,11 @@ public class CommandUtil {
             .longOpt("max-error")
             .hasArg()
             .desc("Max error count threshold.")
+            .build());
+        // 性能模式
+        options.addOption(Option.builder(ARG_SHORT_PERF_MODE)
+            .longOpt("perf")
+            .desc("perf mode")
             .build());
     }
 
