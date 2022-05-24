@@ -29,17 +29,10 @@ import worker.delete.ShardedDeleteInConsumer;
 public class DeleteExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(DeleteExecutor.class);
 
-    private DeleteCommand command;
-
     public DeleteExecutor(DataSourceConfig dataSourceConfig,
                           DruidDataSource druid,
                           BaseOperateCommand baseCommand) {
         super(dataSourceConfig, druid, baseCommand);
-    }
-
-    @Override
-    protected void setCommand(BaseOperateCommand baseCommand) {
-        this.command = (DeleteCommand) baseCommand;
     }
 
     @Override

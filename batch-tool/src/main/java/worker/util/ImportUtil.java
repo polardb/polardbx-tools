@@ -17,6 +17,7 @@
 package worker.util;
 
 import exception.DatabaseException;
+import model.config.GlobalVar;
 import model.db.FieldMetaInfo;
 import org.apache.commons.lang.StringUtils;
 import util.FileUtil;
@@ -33,6 +34,12 @@ public class ImportUtil {
     private static final String BATCH_INSERT_IGNORE_SQL_PATTERN =
         "INSERT IGNORE INTO `%s` VALUES %s;";
 
+    private static final String BATCH_INSERT_WITH_COL_SQL_PATTERN =
+        "INSERT INTO `%s` (%s) VALUES %s;";
+
+    private static final String BATCH_INSERT_IGNORE_SQL_WITH_COL_PATTERN =
+        "INSERT IGNORE INTO `%s` (%s) VALUES %s;";
+
     private static final String BATCH_INSERT_HINT_SQL_PATTERN =
         DIRECT_NODE_HINT + "INSERT INTO `%s` VALUES %s;";
 
@@ -47,20 +54,38 @@ public class ImportUtil {
         }
     }
 
+    public static void getBatchInsertSql(StringBuilder insertSqlBuilder,
+                                         String tableName, String columns,
+                                         StringBuilder values, boolean insertIgnoreEnabled) {
+        insertSqlBuilder.append("INSERT ");
+        if (insertIgnoreEnabled) {
+            insertSqlBuilder.append("IGNORE ");
+        }
+        insertSqlBuilder.append("INTO `").append(tableName).append("` ");
+        if (columns != null) {
+            insertSqlBuilder.append('(').append(columns).append(") ");
+        }
+        insertSqlBuilder.append("VALUES ").append(values).append(";");
+    }
+
     public static void appendInsertStrValue(StringBuilder sqlStringBuilder, String rawValue,
                                             boolean sqlEscapeEnabled, boolean hasEscapedQuote) {
         if (rawValue.equals(FileUtil.NULL_ESC_STR)) {
             // NULL字段处理
             sqlStringBuilder.append("NULL");
+            return;
+        }
+        if (GlobalVar.IN_PERF_MODE) {
+            sqlStringBuilder.append(rawValue);
+            return;
+        }
+        if (sqlEscapeEnabled) {
+            // 字符串要考虑转义
+            sqlStringBuilder.append("'")
+                .append(escapeSqlSpecialChar(rawValue))
+                .append("'");
         } else {
-            if (sqlEscapeEnabled) {
-                // 字符串要考虑转义
-                sqlStringBuilder.append("'")
-                    .append(escapeSqlSpecialChar(rawValue))
-                    .append("'");
-            } else {
-                sqlStringBuilder.append("'").append(rawValue).append("'");
-            }
+            sqlStringBuilder.append("'").append(rawValue).append("'");
         }
     }
 

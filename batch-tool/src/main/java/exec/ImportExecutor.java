@@ -23,6 +23,7 @@ import datasource.DataSourceConfig;
 import exception.DatabaseException;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
+import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,17 +41,10 @@ import java.util.List;
 public class ImportExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ImportExecutor.class);
 
-    private ImportCommand command;
-
     public ImportExecutor(DataSourceConfig dataSourceConfig,
                           DruidDataSource druid,
                           BaseOperateCommand baseCommand) {
         super(dataSourceConfig, druid, baseCommand);
-    }
-
-    @Override
-    protected void setCommand(BaseOperateCommand baseCommand) {
-        this.command = (ImportCommand) baseCommand;
     }
 
     @Override
@@ -198,6 +192,9 @@ public class ImportExecutor extends WriteDbExecutor {
     }
 
     private boolean useBlockReader() {
+        if (GlobalVar.IN_PERF_MODE) {
+            return true;
+        }
         if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
             return false;
         }
