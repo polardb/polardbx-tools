@@ -35,7 +35,7 @@ public class ReplaceConsumer extends BaseDefaultConsumer {
     }
 
     @Override
-    protected void fillLocalBuffer(StringBuilder stringBuilder, String[] values) {
+    protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
         stringBuilder.append("(");
         stringBuilder.append(UpdateUtil.getUpdatedValuesByMetaInfo(consumerContext.getTablePkIndexSet(tableName),
             values, fieldMetaInfoList));

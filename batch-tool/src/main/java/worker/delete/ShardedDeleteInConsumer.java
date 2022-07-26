@@ -43,11 +43,11 @@ public class ShardedDeleteInConsumer extends BaseShardedConsumer {
      */
     @Override
     protected void fillLocalBuffer(StringBuilder localBuffer,
-                                   String[] values,
+                                   List<String> values,
                                    List<FieldMetaInfo> fieldMetaInfoList) throws Throwable {
 
         for (int i = 0; i < pkList.size(); i++) {
-            pkValues[i] = values[pkList.get(i).getOrdinalPosition() - 1];
+            pkValues[i] = values.get(pkList.get(i).getOrdinalPosition() - 1);
         }
 
         localBuffer.append("(");

@@ -121,33 +121,33 @@ public class ImportUtil {
 
     public static void appendValuesByFieldMetaInfo(StringBuilder stringBuilder,
                                                    List<FieldMetaInfo> fieldMetaInfoList,
-                                                   String[] values, boolean sqlEscapeEnabled,
+                                                   List<String> values, boolean sqlEscapeEnabled,
                                                    boolean hasEscapedQuote) throws DatabaseException {
-        if (fieldMetaInfoList.size() != values.length) {
+        if (fieldMetaInfoList.size() != values.size()) {
             throw new DatabaseException(String.format("required field size %d, "
-                + "actual size %d", fieldMetaInfoList.size(), values.length));
+                + "actual size %d", fieldMetaInfoList.size(), values.size()));
         }
         int fieldLen = fieldMetaInfoList.size();
         for (int i = 0; i < fieldLen - 1; i++) {
             if (fieldMetaInfoList.get(i).needQuote()) {
                 // 字符串和日期都需要单引号
-                ImportUtil.appendInsertStrValue(stringBuilder, values[i], sqlEscapeEnabled, hasEscapedQuote);
+                ImportUtil.appendInsertStrValue(stringBuilder, values.get(i), sqlEscapeEnabled, hasEscapedQuote);
             } else {
-                ImportUtil.appendInsertNonStrValue(stringBuilder, values[i], hasEscapedQuote);
+                ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(i), hasEscapedQuote);
             }
             stringBuilder.append(",");
         }
         if (fieldMetaInfoList.get(fieldLen - 1).needQuote()) {
-            ImportUtil.appendInsertStrValue(stringBuilder, values[fieldLen - 1], sqlEscapeEnabled, hasEscapedQuote);
+            ImportUtil.appendInsertStrValue(stringBuilder, values.get(fieldLen - 1), sqlEscapeEnabled, hasEscapedQuote);
         } else {
-            ImportUtil.appendInsertNonStrValue(stringBuilder, values[fieldLen - 1], hasEscapedQuote);
+            ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(fieldLen - 1), hasEscapedQuote);
         }
     }
 
     public static void getDirectImportSql(StringBuilder stringBuilder,
                                           String tableName,
                                           List<FieldMetaInfo> fieldMetaInfoList,
-                                          String[] values, boolean sqlEscapeEnabled,
+                                          List<String> values, boolean sqlEscapeEnabled,
                                           boolean hasEscapedQuote) throws DatabaseException {
         stringBuilder.append("INSERT INTO `").append(tableName).append("` VALUES (");
         appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList, values,
