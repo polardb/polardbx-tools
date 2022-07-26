@@ -99,7 +99,7 @@ public class DeleteUtil {
     /**
      * 简单的根据主键delete一行
      */
-    public static String getDeleteSql(String tableName, List<PrimaryKey> pkList, String[] values, String where) {
+    public static String getDeleteSql(String tableName, List<PrimaryKey> pkList, List<String> values, String where) {
         if (StringUtils.isEmpty(where)) {
             return getDeleteSql(tableName, pkList, values);
         }
@@ -108,7 +108,7 @@ public class DeleteUtil {
         return String.format(sqlPattern, tableName, pkCondition, where);
     }
 
-    public static String getDeleteSql(String tableName, List<PrimaryKey> pkList, String[] values) {
+    public static String getDeleteSql(String tableName, List<PrimaryKey> pkList, List<String> values) {
         String sqlPattern = "DELETE FROM `%s` WHERE %s;";
         String pkCondition = DbUtil.formatPkConditions(pkList, values);
         return String.format(sqlPattern, tableName, pkCondition);

@@ -61,7 +61,7 @@ public class ProcessOnlyImportConsumer extends BaseWorkHandler {
                 if (line == END_OF_BATCH_LINES) {
                     break;
                 }
-                String[] values = FileUtil.split(line, consumerContext.getSeparator(),
+                List<String> values = FileUtil.split(line, consumerContext.getSeparator(),
                     consumerContext.isWithLastSep(), hasEscapedQuote);
                 stringBuilder.append("(");
                 try {

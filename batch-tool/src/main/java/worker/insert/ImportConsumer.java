@@ -41,12 +41,13 @@ public class ImportConsumer extends BaseDefaultConsumer {
     protected void initLocalVars() {
         super.initLocalVars();
         this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
+        this.estimateFieldCount = fieldMetaInfoList.size();
         this.columns = consumerContext.getUseColumns();
-        this.insertSqlBuilder = new StringBuilder(40 + fieldMetaInfoList.size() * 10);
+        this.insertSqlBuilder = new StringBuilder(64 + fieldMetaInfoList.size() * 16);
     }
 
     @Override
-    protected void fillLocalBuffer(StringBuilder stringBuilder, String[] values) {
+    protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
         stringBuilder.append("(");
         try {
             ImportUtil.appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList,

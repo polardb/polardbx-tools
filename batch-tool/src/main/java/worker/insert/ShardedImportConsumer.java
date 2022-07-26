@@ -30,7 +30,7 @@ public class ShardedImportConsumer extends BaseShardedConsumer {
 
     @Override
     protected void fillLocalBuffer(StringBuilder localBuffer,
-                                   String[] values,
+                                   List<String> values,
                                    List<FieldMetaInfo> fieldMetaInfoList) throws Throwable {
         localBuffer.append("(");
         ImportUtil.appendValuesByFieldMetaInfo(localBuffer, fieldMetaInfoList,

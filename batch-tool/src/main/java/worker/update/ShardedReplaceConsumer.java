@@ -29,7 +29,7 @@ public class ShardedReplaceConsumer extends BaseShardedConsumer {
     private static final Logger logger = LoggerFactory.getLogger(ShardedReplaceConsumer.class);
 
     @Override
-    protected void fillLocalBuffer(StringBuilder localBuffer, String[] values, List<FieldMetaInfo> fieldMetaInfoList) {
+    protected void fillLocalBuffer(StringBuilder localBuffer, List<String> values, List<FieldMetaInfo> fieldMetaInfoList) {
         localBuffer.append("(");
         localBuffer.append(UpdateUtil.getUpdatedValuesByMetaInfo(consumerContext.getTablePkIndexSet(tableName),
             values, fieldMetaInfoList));
