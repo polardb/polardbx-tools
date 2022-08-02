@@ -16,7 +16,6 @@
 
 package worker.export;
 
-import com.alibaba.druid.util.JdbcUtils;
 import com.lmax.disruptor.RingBuffer;
 import model.config.QuoteEncloseMode;
 import model.db.FieldMetaInfo;
@@ -24,24 +23,14 @@ import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.DataSourceUtil;
-import util.FileUtil;
 import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
 public class ExportProducer extends BaseExportWorker {
     private static final Logger logger = LoggerFactory.getLogger(ExportProducer.class);
@@ -98,61 +87,29 @@ public class ExportProducer extends BaseExportWorker {
         countDownLatch.countDown();
     }
 
-    public void produceData() {
-        List<FieldMetaInfo> metaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
-        String sql = ExportUtil.getDirectSql(topology, metaInfoList, whereCondition);
+    @Override
+    protected void emitBatchData() {
+        emitData(os.toByteArray());
+    }
 
-        // 字段数
-        int colNum;
-        // 已经缓存的行数
-        int bufferedRowNum = 0;
-        byte[] value;
-        // 字段数过多可考虑增加os的初始长度
-        ByteArrayOutputStream os = new ByteArrayOutputStream(metaInfoList.size() * 8);
-        Connection conn = null;
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        try {
-            conn = druid.getConnection();
-            stmt = DataSourceUtil.createStreamingStatement(conn);
-            logger.info("{} 开始执行导出", topology);
-            resultSet = stmt.executeQuery(sql);
-            colNum = resultSet.getMetaData().getColumnCount();
-            while (resultSet.next()) {
-                for (int i = 1; i < colNum; i++) {
-                    value = resultSet.getBytes(i);
-                    writeFieldValue(os, value, isStringTypeList.get(i - 1));
-                    // 附加分隔符
-                    os.write(separator);
-                }
-                value = resultSet.getBytes(colNum);
-                writeFieldValue(os, value, isStringTypeList.get(colNum - 1));
-                // 附加换行符
-                os.write(FileUtil.SYS_NEW_LINE_BYTE);
-                bufferedRowNum++;
-                if (bufferedRowNum == EMIT_BATCH_SIZE) {
-                    emitData(os.toByteArray());
-                    os.reset();
-                    bufferedRowNum = 0;
-                }
-            }
-            if (bufferedRowNum != 0) {
-                // 最后剩余的元组
-                if (collectFragmentEnabled) {
-                    emitRemainData(os.toByteArray());
-                } else {
-                    emitData(os.toByteArray());
-                }
-            }
-            logger.info("{} 发送完成", topology);
-        } catch (SQLException | IOException e) {
-            e.printStackTrace();
-            logger.error(e.getMessage());
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
+    @Override
+    protected void dealWithRemainData() {
+        if (collectFragmentEnabled) {
+            emitRemainData(os.toByteArray());
+        } else {
+            emitData(os.toByteArray());
         }
+    }
+
+    @Override
+    protected String getExportSql() {
+        List<FieldMetaInfo> metaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
+        return ExportUtil.getDirectSql(topology, metaInfoList, whereCondition);
+    }
+
+    @Override
+    protected void afterProduceData() {
+        logger.info("{} 发送完成", topology);
     }
 
     /**
