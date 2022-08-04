@@ -21,6 +21,7 @@ import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvValidationException;
 import model.ProducerExecutionContext;
 import model.config.ConfigConstant;
 import org.slf4j.Logger;
@@ -72,6 +73,8 @@ public class CsvReader extends FileBufferedBatchReader {
             logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
         } catch (IOException e) {
             logger.error(e.getMessage());
+        } catch (CsvValidationException e) {
+            throw new RuntimeException(e);
         }
     }
 

@@ -103,8 +103,8 @@ public class ExportProducer extends BaseExportWorker {
 
     @Override
     protected String getExportSql() {
-        List<FieldMetaInfo> metaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
-        return ExportUtil.getDirectSql(topology, metaInfoList, whereCondition);
+        return ExportUtil.getDirectSql(topology, tableFieldMetaInfo.getFieldMetaInfoList(),
+            whereCondition);
     }
 
     @Override

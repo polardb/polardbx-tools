@@ -39,14 +39,10 @@
 `-D sbtest -o export -s , -t "sbtest1" -sharding off`
 
 ### 进行数据脱敏
-#### 对手机号、邮箱、身份证等信息进行掩码保护
-内置默认规则的支持类型：
-- 手机号
-- 邮箱
-- 身份证
-
-`-D sbtest -o export -s , -t "customer" -mask ""`
-
+#### 对手机号进行掩码保护
+`-D sbtest -o export -s , -t "customer" -mask "{
+\"phone\": { \"type\": \"hiding\", \"show_region\" : \"0-2,8-10\" 
+}"`
 
 ## 数据库表导入
 ### 单表导入
