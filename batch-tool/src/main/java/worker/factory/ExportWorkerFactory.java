@@ -63,6 +63,7 @@ public class ExportWorkerFactory {
             throw new UnsupportedOperationException("Do not support direct export when fixed file num");
         }
         directExportWorker.setWhereCondition(config.getWhereCondition());
+        directExportWorker.putDataMaskerMap(config.getColumnMaskerConfigMap());
         return directExportWorker;
     }
 

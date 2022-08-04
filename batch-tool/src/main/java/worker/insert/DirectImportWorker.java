@@ -20,6 +20,7 @@ import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvValidationException;
 import exception.DatabaseException;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
@@ -138,6 +139,9 @@ public class DirectImportWorker implements Runnable {
             throw new RuntimeException(e.getMessage());
         } catch (IOException e) {
             e.printStackTrace();
+            throw new RuntimeException(e);
+        } catch (CsvValidationException e) {
+            logger.error("CSV format invalid {} at line: {}", e.getMessage(), curLine);
             throw new RuntimeException(e);
         }
     }

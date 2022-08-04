@@ -16,6 +16,7 @@
 
 package worker.export;
 
+import com.alibaba.fastjson2.JSONObject;
 import model.config.CompressMode;
 import model.config.FileFormat;
 import model.config.GlobalVar;
@@ -24,6 +25,8 @@ import model.db.FieldMetaInfo;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import model.mask.AbstractDataMasker;
+import model.mask.DataMaskerFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
@@ -38,6 +41,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -57,7 +61,7 @@ public abstract class BaseExportWorker implements Runnable {
 
     protected final List<Boolean> isStringTypeList;
 
-    protected Map<Integer, AbstractDataMasker> columnDataMasker;
+    protected List<AbstractDataMasker> columnDataMaskerList;
     protected ByteArrayOutputStream os;
     protected int bufferedRowNum = 0;       // 已经缓存的行数
 
@@ -158,6 +162,9 @@ public abstract class BaseExportWorker implements Runnable {
      * @param columnIdx 从 0 开始
      */
     protected void writeFieldValue(ByteArrayOutputStream os, byte[] value, int columnIdx) throws IOException {
+        if (columnDataMaskerList != null && columnDataMaskerList.get(columnIdx) != null) {
+            value = columnDataMaskerList.get(columnIdx).doMask(value);
+        }
         boolean isStringType = isStringTypeList.get(columnIdx);
         switch (quoteEncloseMode) {
         case NONE:
@@ -187,7 +194,28 @@ public abstract class BaseExportWorker implements Runnable {
         this.compressMode = compressMode;
     }
 
-    public void setColumnDataMasker(Map<Integer, AbstractDataMasker> columnDataMasker) {
-        this.columnDataMasker = columnDataMasker;
+    public void putDataMaskerMap(Map<String, JSONObject> columnMaskerMap) {
+        if (columnMaskerMap == null || columnMaskerMap.isEmpty()) {
+            return;
+        }
+        if (this.columnDataMaskerList == null) {
+            this.columnDataMaskerList = new ArrayList<>(Collections.nCopies(
+                tableFieldMetaInfo.getFieldMetaInfoList().size(), null));
+        }
+        for (Map.Entry<String, JSONObject> columnMasker : columnMaskerMap.entrySet()) {
+            AbstractDataMasker masker = DataMaskerFactory.getDataMasker(columnMasker.getValue());
+            this.putDataMasker(columnMasker.getKey(), masker);
+        }
+    }
+
+    private void putDataMasker(String columnName, AbstractDataMasker dataMasker) {
+        List<FieldMetaInfo> fieldMetaInfoList = tableFieldMetaInfo.getFieldMetaInfoList();
+        for (int i = 0; i < fieldMetaInfoList.size(); i++) {
+            if (StringUtils.equalsIgnoreCase(columnName, fieldMetaInfoList.get(i).getName())) {
+                this.columnDataMaskerList.set(i, dataMasker);
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Unknown mask column: " + columnName);
     }
 }

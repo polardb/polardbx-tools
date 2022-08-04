@@ -41,7 +41,7 @@ public class ConfigConstant {
     public static final String ARG_SHORT_TABLE = "t";
     public static final String ARG_SHORT_SEP = "s";
     public static final String ARG_SHORT_PREFIX = "pre";
-    public static final String ARG_SHORT_FROM = "f";
+    public static final String ARG_SHORT_FROM_FILE = "f";
     public static final String ARG_SHORT_LINE = "L";
     public static final String ARG_SHORT_FILE_NUM = "F";
     public static final String ARG_SHORT_HISTORY_FILE = "H";
@@ -78,6 +78,7 @@ public class ConfigConstant {
     public static final String ARG_SHORT_FILE_FORMAT = "format";
     public static final String ARG_SHORT_MAX_ERROR = "error";
     public static final String ARG_SHORT_PERF_MODE = "perf";
+    public static final String ARG_SHORT_MASK = "mask";
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**

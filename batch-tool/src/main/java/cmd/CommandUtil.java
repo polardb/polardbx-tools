@@ -16,12 +16,13 @@
 
 package cmd;
 
+import com.alibaba.fastjson2.JSONException;
+import com.alibaba.fastjson2.JSONObject;
 import com.google.common.collect.Lists;
 import datasource.DataSourceConfig;
 import datasource.DatasourceConstant;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
-import model.config.BaseConfig;
 import model.config.CompressMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
@@ -46,7 +47,9 @@ import util.Version;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static model.config.ConfigConstant.*;
@@ -229,7 +232,7 @@ public class CommandUtil {
     }
 
     private static BaseOperateCommand parseImportCommand(CommandLine result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
@@ -239,7 +242,7 @@ public class CommandUtil {
     }
 
     private static BaseOperateCommand parseDeleteCommand(CommandLine result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
@@ -250,7 +253,7 @@ public class CommandUtil {
     }
 
     private static BaseOperateCommand parseUpdateCommand(CommandLine result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
@@ -342,6 +345,7 @@ public class CommandUtil {
         setFileNum(result, exportConfig);
         setFileLine(result, exportConfig);
         setOrderBy(result, exportConfig);
+        setColumnMaskerMap(result, exportConfig);
         exportConfig.validate();
         return new ExportCommand(getDbName(result), tableNames, exportConfig);
     }
@@ -368,6 +372,24 @@ public class CommandUtil {
                 CMD_SEPARATOR));
             exportConfig.setOrderByColumnNameList(columnNameList);
             exportConfig.setParallelMerge(getParaMerge(result));
+        }
+    }
+
+    private static void setColumnMaskerMap(CommandLine result, ExportConfig exportConfig) {
+        if (result.hasOption(ARG_SHORT_MASK)) {
+            String maskConfigStr = result.getOptionValue(ARG_SHORT_MASK);
+            JSONObject maskConfig;
+            try {
+                maskConfig = JSONObject.parseObject(maskConfigStr);
+            } catch (JSONException e) {
+                throw new IllegalArgumentException("Illegal json format: " + maskConfigStr);
+            }
+            Map<String, JSONObject> columnMaskerMap = new HashMap<>();
+            for (String column : maskConfig.keySet()) {
+                JSONObject jsonConfig = maskConfig.getJSONObject(column);
+                columnMaskerMap.put(column, jsonConfig);
+            }
+            exportConfig.setColumnMaskerConfigMap(columnMaskerMap);
         }
     }
 
@@ -528,8 +550,8 @@ public class CommandUtil {
      * 并检测文件是否存在
      */
     private static List<FileLineRecord> getFileRecordList(CommandLine result) {
-        if (result.hasOption(ARG_SHORT_FROM)) {
-            String filePathListStr = result.getOptionValue(ARG_SHORT_FROM);
+        if (result.hasOption(ARG_SHORT_FROM_FILE)) {
+            String filePathListStr = result.getOptionValue(ARG_SHORT_FROM_FILE);
             return Arrays.stream(StringUtils.split(filePathListStr, CMD_SEPARATOR))
                 .filter(StringUtils::isNotBlank)
                 .map(s -> {
@@ -687,11 +709,11 @@ public class CommandUtil {
             .argName("prefix")
             .desc("Export file name prefix.")
             .build());
-        // 添加文件源选项 -f --from
-        options.addOption(Option.builder(ARG_SHORT_FROM)
-            .longOpt("from")
+        // 添加文件源选项 -f --file
+        options.addOption(Option.builder(ARG_SHORT_FROM_FILE)
+            .longOpt("file")
             .hasArg()
-            .argName("from")
+            .argName("file path")
             .desc("Source file(s), separated by ; .")
             .build());
         // 添加导出文件行数限制选项 -L --line
@@ -822,12 +844,20 @@ public class CommandUtil {
         options.addOption(Option.builder(ARG_SHORT_MAX_ERROR)
             .longOpt("max-error")
             .hasArg()
+            .argName("max error count")
             .desc("Max error count threshold.")
             .build());
         // 性能模式
         options.addOption(Option.builder(ARG_SHORT_PERF_MODE)
             .longOpt("perf")
-            .desc("perf mode")
+            .desc("Performance mode.")
+            .build());
+        // 数据脱敏
+        options.addOption(Option.builder(ARG_SHORT_MASK)
+            .longOpt("mask")
+            .hasArg()
+            .argName("json config")
+            .desc("Masking sensitive columns while exporting data.")
             .build());
     }
 
