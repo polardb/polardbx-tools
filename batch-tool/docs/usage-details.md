@@ -40,6 +40,7 @@
 
 ### 进行数据脱敏
 #### 对手机号进行掩码保护
+只展示前三位与末三位
 `-D sbtest -o export -s , -t "customer" -mask "{
 \"phone\": { \"type\": \"hiding\", \"show_region\" : \"0-2,8-10\" 
 }"`
@@ -72,5 +73,16 @@
 ### 导入Excel文件
 `-D sbtest_auto -o import -s , -t "sbtest1" -format XLSX -f "sbtest1_0.xlsx"`
 
-# 报错排查
-1. 
+# 常见问题排查
+1. 报错 **the server time zone value '' is unrecognized**
+
+   **原因**：由于数据库时区与系统时区有差异导致的报错，需要在jdbc url中手动指定时区
+
+   **解决**：加入参数：`-param "serverTimezone=Asia/Shanghai"`
+2. 报错 **Unable to get topology of table** 
+
+   **原因**：批量导出时默认以 PolarDB-X 的物理表拓扑进行分布式导出，
+如果对普通 MySQL数据库进行导出，需要关闭 sharding 参数
+
+   **解决**：加入参数：`-sharding off`
+3. 
