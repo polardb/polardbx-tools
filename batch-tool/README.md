@@ -8,7 +8,7 @@ Batch Tool工具是专为 PolarDB-X数据库提供数据导入导出服务的工
 在此基础上，还支持基于文本文件批量更新、删除等功能 (实验特性)。
 
 ## 快速上手
-常见场景可参考文档 [usage-details](docs/usage-details.md)。
+常见场景与问题排查可参考文档 [usage-details](docs/usage-details.md)。
 ### 参数介绍
 命令行用法：
 
