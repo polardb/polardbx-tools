@@ -85,6 +85,8 @@ public class BaseConfig {
 
     private FileMode fileMode = new FileMode();
 
+    private boolean isWithLastSep = false;
+
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
     }
@@ -170,6 +172,14 @@ public class BaseConfig {
         if (fileFormat != FileFormat.NONE) {
             fileMode.setFileFormat();
         }
+    }
+
+    public boolean isWithLastSep() {
+        return isWithLastSep;
+    }
+
+    public void setWithLastSep(boolean withLastSep) {
+        isWithLastSep = withLastSep;
     }
 
     /**

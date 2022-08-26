@@ -65,6 +65,8 @@ public abstract class BaseExportWorker implements Runnable {
     protected ByteArrayOutputStream os;
     protected int bufferedRowNum = 0;       // 已经缓存的行数
 
+    protected boolean isWithLastSep = false;
+
     protected BaseExportWorker(DataSource druid, TableTopology topology,
                                TableFieldMetaInfo tableFieldMetaInfo,
                                String separator, QuoteEncloseMode quoteEncloseMode) {
@@ -124,6 +126,10 @@ public abstract class BaseExportWorker implements Runnable {
                 }
                 value = resultSet.getBytes(colNum);
                 writeFieldValue(os, value, colNum - 1);
+                if (isWithLastSep) {
+                    // 附加分隔符
+                    os.write(separator);
+                }
                 // 附加换行符
                 os.write(FileUtil.SYS_NEW_LINE_BYTE);
                 bufferedRowNum++;
@@ -217,5 +223,9 @@ public abstract class BaseExportWorker implements Runnable {
             }
         }
         throw new IllegalArgumentException("Unknown mask column: " + columnName);
+    }
+
+    public void setWithLastSep(boolean withLastSep) {
+        isWithLastSep = withLastSep;
     }
 }

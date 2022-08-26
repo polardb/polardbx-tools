@@ -64,6 +64,7 @@ public class ExportWorkerFactory {
         }
         directExportWorker.setWhereCondition(config.getWhereCondition());
         directExportWorker.putDataMaskerMap(config.getColumnMaskerConfigMap());
+        directExportWorker.setWithLastSep(config.isWithLastSep());
         return directExportWorker;
     }
 
@@ -97,12 +98,14 @@ public class ExportWorkerFactory {
         }
         BaseCipher cipher = BaseCipher.getCipher(config.getEncryptionConfig(), true);
 
-        return new DirectOrderExportWorker(druid, filePathPrefix,
-                tableFieldMetaInfo,
-                tableName, config.getOrderByColumnNameList(), maxLine,
-                config.getCharset(),
-                config.getSeparator(),
-                config.isAscending(), config.isWithHeader(), config.getQuoteEncloseMode(),
-                config.getCompressMode(), config.getFileFormat(), cipher);
+        DirectOrderExportWorker directOrderExportWorker = new DirectOrderExportWorker(druid, filePathPrefix,
+            tableFieldMetaInfo,
+            tableName, config.getOrderByColumnNameList(), maxLine,
+            config.getCharset(),
+            config.getSeparator(),
+            config.isAscending(), config.isWithHeader(), config.getQuoteEncloseMode(),
+            config.getCompressMode(), config.getFileFormat(), cipher);
+        directOrderExportWorker.setWithLastSep(config.isWithLastSep());
+        return directOrderExportWorker;
     }
 }

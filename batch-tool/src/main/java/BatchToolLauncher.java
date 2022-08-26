@@ -16,8 +16,8 @@
 
 import cmd.BaseOperateCommand;
 import cmd.CommandUtil;
+import cmd.ConfigResult;
 import datasource.DataSourceConfig;
-import org.apache.commons.cli.CommandLine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,7 @@ public class BatchToolLauncher {
             return;
         }
 
-        CommandLine commandLine = CommandUtil.parseStartUpCommand(args);
+        ConfigResult commandLine = CommandUtil.parseStartUpCommand(args);
         if (commandLine == null || CommandUtil.doHelpCmd(commandLine)) {
             return;
         }
@@ -49,7 +49,7 @@ public class BatchToolLauncher {
     }
 
 
-    private static void handleCmd(CommandLine commandLine) throws SQLException {
+    private static void handleCmd(ConfigResult commandLine) throws SQLException {
         DataSourceConfig dataSourceConfig;
         try {
             dataSourceConfig = CommandUtil.getDataSourceConfigFromCmd(commandLine);
