@@ -71,3 +71,6 @@
 
 ### 导入Excel文件
 `-D sbtest_auto -o import -s , -t "sbtest1" -format XLSX -f "sbtest1_0.xlsx"`
+
+# 报错排查
+1. 

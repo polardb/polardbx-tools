@@ -25,61 +25,6 @@ public class ConfigConstant {
 
     public static final String APP_NAME = "BatchTool";
 
-    public static final String ARG_SHORT_HELP = "help";
-    public static final String ARG_SHORT_VERSION = "v";
-    public static final String ARG_SHORT_PORT = "P";
-    public static final String ARG_SHORT_USERNAME = "u";
-    public static final String ARG_SHORT_PASSWORD = "p";
-    public static final String ARG_SHORT_HOST = "h";
-    public static final String ARG_SHORT_DBNAME = "D";
-    public static final String ARG_SHORT_LOAD_BALANCE = "lb";
-
-    public static final String ARG_SHORT_OPERATION = "o";
-    public static final String ARG_SHORT_ORDER = "O";
-    public static final String ARG_SHORT_ORDER_COLUMN = "OC";
-    public static final String ARG_SHORT_COLUMNS = "col";
-    public static final String ARG_SHORT_TABLE = "t";
-    public static final String ARG_SHORT_SEP = "s";
-    public static final String ARG_SHORT_PREFIX = "pre";
-    public static final String ARG_SHORT_FROM_FILE = "f";
-    public static final String ARG_SHORT_LINE = "L";
-    public static final String ARG_SHORT_FILE_NUM = "F";
-    public static final String ARG_SHORT_HISTORY_FILE = "H";
-    public static final String ARG_SHORT_WHERE = "w";
-    public static final String ARG_SHORT_ENABLE_SHARDING = "sharding";
-    public static final String ARG_SHORT_WITH_HEADER = "header";
-    public static final String ARG_SHORT_DIRECTORY = "dir";
-    public static final String ARG_SHORT_CHARSET = "cs";
-    public static final String ARG_SHORT_IGNORE_AND_RESUME = "i";
-    public static final String ARG_SHORT_PRODUCER = "pro";
-    public static final String ARG_SHORT_CONSUMER = "con";
-    public static final String ARG_SHORT_FORCE_CONSUMER = "fcon";
-    public static final String ARG_SHORT_LOCAL_MERGE = "local";
-    public static final String ARG_SHORT_SQL_FUNC = "func";
-    public static final String ARG_SHORT_NO_ESCAPE = "noesc";
-    public static final String ARG_SHORT_MAX_CONN_NUM = "maxConn";
-    public static final String ARG_SHORT_MAX_WAIT = "maxWait";
-    public static final String ARG_SHORT_MIN_CONN_NUM = "minConn";
-    public static final String ARG_SHORT_CONN_PARAM = "param";
-    public static final String ARG_SHORT_CONN_INIT_SQL = "initSqls";
-    public static final String ARG_SHORT_BATCH_SIZE = "batchsize";
-    public static final String ARG_SHORT_READ_BLOCK_SIZE = "readsize";
-    public static final String ARG_SHORT_RING_BUFFER_SIZE = "ringsize";
-    public static final String ARG_SHORT_READ_FILE_ONLY = "rfonly";
-    public static final String ARG_SHORT_USING_IN = "in";
-    public static final String ARG_SHORT_WITH_LAST_SEP = "lastSep";
-    public static final String ARG_SHORT_PARALLEL_MERGE = "para";
-    public static final String ARG_SHORT_QUOTE_ENCLOSE_MODE = "quote";
-    public static final String ARG_SHORT_TPS_LIMIT = "tps";
-    public static final String ARG_SHORT_WITH_DDL = "DDL";
-    public static final String ARG_SHORT_COMPRESS = "comp";
-    public static final String ARG_SHORT_ENCRYPTION = "enc";
-    public static final String ARG_SHORT_KEY = "key";
-    public static final String ARG_SHORT_FILE_FORMAT = "format";
-    public static final String ARG_SHORT_MAX_ERROR = "error";
-    public static final String ARG_SHORT_PERF_MODE = "perf";
-    public static final String ARG_SHORT_MASK = "mask";
-
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**
      * 默认分隔符
