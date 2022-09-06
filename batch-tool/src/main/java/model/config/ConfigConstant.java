@@ -32,6 +32,11 @@ public class ConfigConstant {
     public static final String DEFAULT_SEPARATOR = ",";
 
     /**
+     * \x00
+     */
+    public static final String NULL_SEPARATOR = "\u0000";
+
+    /**
      * 文件名/表名分隔符
      */
     public static final String CMD_SEPARATOR = ";";
