@@ -17,22 +17,58 @@
 package cmd;
 
 import org.apache.commons.cli.CommandLine;
+import org.yaml.snakeyaml.Yaml;
+import util.FileUtil;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.Map;
 
 public class YamlConfigResult implements ConfigResult {
 
     private final CommandLine commandLine;
+    private final Map<String, Object> argMap;
 
     public YamlConfigResult(String yamlFilepath, CommandLine commandLine) {
         this.commandLine = commandLine;
+        if (!FileUtil.canRead(yamlFilepath)) {
+            throw new IllegalArgumentException("Cannot access yaml config file: " + yamlFilepath);
+        }
+        try {
+            argMap = new Yaml().load(new FileInputStream(yamlFilepath));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public boolean hasOption(ConfigArgOption option) {
-        return commandLine.hasOption(option.argShort);
+        return commandLine.hasOption(option.argShort) || hasYamlOption(option);
     }
 
     @Override
     public String getOptionValue(ConfigArgOption option) {
-        return commandLine.getOptionValue(option.argShort);
+        // commandLine优先级高于yaml配置
+        if (commandLine.hasOption(option.argShort)) {
+            return commandLine.getOptionValue(option.argShort);
+        }
+
+        return getYamlOption(option);
+    }
+
+    private String getYamlOption(ConfigArgOption option) {
+        String result = null;
+        if (argMap.containsKey(option.argShort)) {
+            result = String.valueOf(argMap.get(option.argShort));
+        }
+        if (argMap.containsKey(option.argLong)) {
+            result = String.valueOf(argMap.get(option.argLong));
+        }
+        return result;
+    }
+
+    private boolean hasYamlOption(ConfigArgOption option) {
+        return argMap.containsKey(option.argLong)
+            || argMap.containsKey(option.argShort);
     }
 }
