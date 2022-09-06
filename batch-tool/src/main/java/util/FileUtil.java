@@ -404,4 +404,12 @@ public class FileUtil {
             throw new RuntimeException(e);
         }
     }
+
+    public static boolean canRead(String filepath) {
+        File file = new File(filepath);
+        if (!file.exists() || !file.isFile() || !file.canRead()) {
+            return false;
+        }
+        return true;
+    }
 }

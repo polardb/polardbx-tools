@@ -45,6 +45,8 @@
 \"phone\": { \"type\": \"hiding\", \"show_region\" : \"0-2,8-10\" 
 }"`
 
+编写复杂格式的json文件建议参考 使用yaml配置。
+
 ## 数据库表导入
 ### 单表导入
 `-D sbtest_auto -o import -s , -t sbtest2 -dir data-backup`
@@ -72,6 +74,13 @@
 
 ### 导入Excel文件
 `-D sbtest_auto -o import -s , -t "sbtest1" -format XLSX -f "sbtest1_0.xlsx"`
+
+## 使用yaml配置
+当有很多配置项需要设置时，使用命令行参数会很不方便编辑，此时建议使用yaml格式的配置文件，示例如下：
+```yaml
+
+
+```
 
 # 常见问题排查
 1. 报错 **the server time zone value '' is unrecognized**

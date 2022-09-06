@@ -34,6 +34,8 @@
         <javax-validation.version>2.0.0.Final</javax-validation.version>
         <bouncycastle.version>1.60</bouncycastle.version>
         <easy-excel.version>3.0.5</easy-excel.version>
+        <snakeyaml.version>1.30</snakeyaml.version>
+
     </properties>
 
     <repositories>
@@ -146,6 +148,12 @@
             <groupId>com.alibaba</groupId>
             <artifactId>easyexcel</artifactId>
             <version>${easy-excel.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>${snakeyaml.version}</version>
         </dependency>
     </dependencies>
 
