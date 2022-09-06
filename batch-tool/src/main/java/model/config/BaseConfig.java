@@ -96,6 +96,9 @@ public class BaseConfig {
     }
 
     public void setSeparator(String separator) {
+        if (separator.isEmpty()) {
+            separator = ConfigConstant.NULL_SEPARATOR;
+        }
         // 分隔符不能包含特殊字符
         for (String illegalStr : ConfigConstant.ILLEGAL_SEPARATORS) {
             if (separator.contains(illegalStr)) {
