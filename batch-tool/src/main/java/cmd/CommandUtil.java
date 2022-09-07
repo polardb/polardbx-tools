@@ -120,16 +120,17 @@ public class CommandUtil {
 
     static {
         formatter.setWidth(110);
-        addCommandOptions();
+        addCommandOptions(ConfigArgOption.class);
+        addCommandOptions(FlagOption.class);
     }
 
-    private static void addCommandOptions() {
-        Field[] fields = ConfigArgOption.class.getFields();
+    private static void addCommandOptions(Class<? extends ConfigArgOption> clazz) {
+        Field[] fields = clazz.getFields();
         try {
             for (Field field : fields) {
                 if (Modifier.isStatic(field.getModifiers())
-                    && field.getType() == ConfigArgOption.class) {
-                    ConfigArgOption option = (ConfigArgOption) field.get(ConfigArgOption.class);
+                    && field.getType() == clazz) {
+                    ConfigArgOption option = (ConfigArgOption) field.get(clazz);
                     addConfigOption(option);
                 }
             }
