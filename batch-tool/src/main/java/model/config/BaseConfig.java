@@ -66,7 +66,7 @@ public class BaseConfig {
     /**
      * 第一行是否为字段名
      */
-    protected boolean isWithHeader = ConfigConstant.DEFAULT_WITH_HEADER;
+    protected boolean isWithHeader;
 
     protected boolean shardingEnabled;
 
