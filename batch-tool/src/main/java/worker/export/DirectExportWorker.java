@@ -216,7 +216,9 @@ public class DirectExportWorker extends BaseExportWorker {
     }
 
     private void afterRun() {
-        countDownLatch.countDown();
+        if (countDownLatch != null) {
+            countDownLatch.countDown();
+        }
         if (permitted != null) {
             permitted.release();
         }

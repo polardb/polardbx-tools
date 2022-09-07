@@ -36,16 +36,36 @@
 `-D sbtest_auto -o export -s , -t "sbtest1" -col "id;k;c"`
 
 ### 从单机MySQL中导出数据
-`-D sbtest -o export -s , -t "sbtest1" -sharding off`
+`-D sbtest -o export -s , -t "sbtest1" -sharding false`
 
 ### 进行数据脱敏
 #### 对手机号进行掩码保护
-只展示前三位与末三位
-`-D sbtest -o export -s , -t "customer" -mask "{
-\"phone\": { \"type\": \"hiding\", \"show_region\" : \"0-2,8-10\" 
+以 TPC-H 数据集的 cusomter 表为例，只展示手机号 c_phone 前三位与末四位
+`-D tpch_1g -o export -s , -t "customer" -mask "{
+\"c_phone\": { \"type\": \"hiding\", \"show_region\" : \"0-2\", \"show_end\": 4
 }"`
 
-编写复杂格式的json文件建议参考 使用yaml配置。
+原数据
+```text
+c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
+1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-989-741-2988|711.56|BUILDING|to the even, regular platelets. regular, ironic epitaphs nag 
+2|Customer#000000002|XSTf4,NCwDVaWNe6tEgvwfmRchLXak|13|23-768-687-3665|121.65|AUTOMOBILE|l accounts. blithely ironic theodolites integrate boldly: care
+3|Customer#000000003|MG9kdTD2WBHm|1|11-719-748-3364|7498.12|AUTOMOBILE| deposits eat slyly ironic, even instructions. express foxes detect slyly. blithely even accounts abo
+4|Customer#000000004|XxVSJsLAGtn|4|14-128-190-5944|2866.83|MACHINERY| requests. final, regular ideas sleep final acco
+5|Customer#000000005|KvpyuHCplrB84WgAiGV6sYpZq7Tj|3|13-750-942-6364|794.47|HOUSEHOLD|n accounts will have to unwind. foxes cajole acco
+```
+
+脱敏后数据
+```text
+c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
+1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-********2988|711.56|BUILDING|to the even, regular platelets. regular, ironic epitaphs nag 
+2|Customer#000000002|XSTf4,NCwDVaWNe6tEgvwfmRchLXak|13|23-********3665|121.65|AUTOMOBILE|l accounts. blithely ironic theodolites integrate boldly: care
+3|Customer#000000003|MG9kdTD2WBHm|1|11-********3364|7498.12|AUTOMOBILE| deposits eat slyly ironic, even instructions. express foxes detect slyly. blithely even accounts abo
+4|Customer#000000004|XxVSJsLAGtn|4|14-********5944|2866.83|MACHINERY| requests. final, regular ideas sleep final acco
+5|Customer#000000005|KvpyuHCplrB84WgAiGV6sYpZq7Tj|3|13-********6364|794.47|HOUSEHOLD|n accounts will have to unwind. foxes cajole acco
+```
+
+编写复杂格式的json文件建议参考 [使用yaml配置](#使用yaml配置)。
 
 ## 数据库表导入
 ### 单表导入
@@ -82,6 +102,8 @@
 
 ```
 
+如果配置值包含[yaml特殊字符](https://yaml.org/spec/1.2.2/#53-indicator-characters)的话， 需要用引号括起来。
+
 # 常见问题排查
 1. 报错 **the server time zone value '' is unrecognized**
 
@@ -93,12 +115,12 @@
    **原因**：批量导出时默认以 PolarDB-X 的物理表拓扑进行分布式导出，
 如果对普通 MySQL数据库进行导出，需要关闭 sharding 参数
 
-   **解决**：加入参数：`-sharding off`
+   **解决**：加入参数：`-sharding false`
 3. 数据文件使用的分隔符是tab缩进，需要怎么输入`-s` 参数？
 
    **解决**：直接在shell中输入tab键，即`-s "	"`
 
-5. 数据文件使用的分隔符是ascii控制字符（如`\x01`等），需要怎么输入`-s` 参数？
+4. 数据文件使用的分隔符是ascii控制字符（如`\x01`等），需要怎么输入`-s` 参数？
 
    ```text
    1^A123^A1123^A12321312                                                                                                                                                                                                            
@@ -107,4 +129,5 @@
    ```
    > ^A 为 \x01 的Caret notation
 
-   **解决**：输入`-s $'\x01'` 即可
+      **解决**：输入`-s $'\x01'` 即可。
+   > 暂时无法处理NULL字符(`\x00`)作为分隔符，可以通过修改源代码解决。

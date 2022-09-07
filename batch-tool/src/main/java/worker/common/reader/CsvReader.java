@@ -66,7 +66,7 @@ public class CsvReader extends FileBufferedBatchReader {
         try {
             for (String[] fields; (fields = reader.readNext()) != null; ) {
                 localProcessingBlockIndex++;
-                String line = String.join(ConfigConstant.MAGIC_CSV_SEP, fields);
+                String line = String.join(ConfigConstant.MAGIC_CSV_SEP1, fields);
                 appendToLineBuffer(line);
             }
             emitLineBuffer();

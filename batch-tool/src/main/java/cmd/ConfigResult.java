@@ -16,9 +16,29 @@
 
 package cmd;
 
+import org.apache.commons.lang3.StringUtils;
+
 public interface ConfigResult {
 
     boolean hasOption(ConfigArgOption option);
 
     String getOptionValue(ConfigArgOption option);
+
+    default boolean getBooleanFlag(FlagOption option) {
+        String flag = getOptionValue(option);
+        if (StringUtils.isEmpty(flag)) {
+            if (option.defaultValue == null) {
+                throw new IllegalArgumentException("Empty value of option: --" + option.argLong);
+            }
+            return option.defaultValue;
+        }
+        flag = StringUtils.strip(flag);
+        if (flag.equalsIgnoreCase("TRUE")) {
+            return true;
+        }
+        if (flag.equalsIgnoreCase("FALSE")) {
+            return false;
+        }
+        throw new IllegalArgumentException("Illegal flag string: " + flag + ". Should be TRUE or FALSE");
+    }
 }

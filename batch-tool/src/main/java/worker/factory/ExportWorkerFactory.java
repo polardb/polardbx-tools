@@ -62,9 +62,7 @@ public class ExportWorkerFactory {
         default:
             throw new UnsupportedOperationException("Do not support direct export when fixed file num");
         }
-        directExportWorker.setWhereCondition(config.getWhereCondition());
-        directExportWorker.putDataMaskerMap(config.getColumnMaskerConfigMap());
-        directExportWorker.setWithLastSep(config.isWithLastSep());
+        afterInit(directExportWorker, config);
         return directExportWorker;
     }
 
@@ -105,7 +103,13 @@ public class ExportWorkerFactory {
             config.getSeparator(),
             config.isAscending(), config.isWithHeader(), config.getQuoteEncloseMode(),
             config.getCompressMode(), config.getFileFormat(), cipher);
-        directOrderExportWorker.setWithLastSep(config.isWithLastSep());
+        afterInit(directOrderExportWorker, config);
         return directOrderExportWorker;
+    }
+
+    public static void afterInit(DirectExportWorker worker, ExportConfig config) {
+        worker.setWhereCondition(config.getWhereCondition());
+        worker.putDataMaskerMap(config.getColumnMaskerConfigMap());
+        worker.setWithLastSep(config.isWithLastSep());
     }
 }

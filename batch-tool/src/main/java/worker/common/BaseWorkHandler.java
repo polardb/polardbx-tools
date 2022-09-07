@@ -18,7 +18,6 @@ package worker.common;
 
 import com.google.common.util.concurrent.RateLimiter;
 import com.lmax.disruptor.WorkHandler;
-import jdk.nashorn.internal.objects.Global;
 import model.ConsumerExecutionContext;
 import model.config.ConfigConstant;
 import model.config.GlobalVar;
@@ -44,7 +43,7 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
             return;
         }
         if (consumerContext.isUseMagicSeparator()) {
-            this.sep = ConfigConstant.MAGIC_CSV_SEP;
+            this.sep = ConfigConstant.MAGIC_CSV_SEP1;
             hasEscapedQuote = true;
         } else {
             this.sep = consumerContext.getSeparator();
