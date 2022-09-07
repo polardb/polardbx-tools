@@ -34,8 +34,6 @@ import worker.util.UpdateUtil;
 public class UpdateExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(UpdateExecutor.class);
 
-    private UpdateCommand command;
-
     public UpdateExecutor(DataSourceConfig dataSourceConfig,
                           DruidDataSource druid,
                           BaseOperateCommand baseCommand) {
@@ -43,22 +41,17 @@ public class UpdateExecutor extends WriteDbExecutor {
     }
 
     @Override
-    protected void setCommand(BaseOperateCommand baseCommand) {
-        this.command = (UpdateCommand) baseCommand;
-    }
-
-    @Override
     public void execute() {
         configureFieldMetaInfo();
         configurePkList();
 
-        if (command.getConsumerExecutionContext().isFuncSqlForUpdateEnabled()) {
+        if (consumerExecutionContext.isFuncSqlForUpdateEnabled()) {
             // 启用函数则优先
             doUpdateWithFunc();
             logger.info("更新 {} 数据完成", tableNames);
             return;
         }
-        if (!StringUtils.isEmpty(command.getConsumerExecutionContext().getWhereCondition())) {
+        if (!StringUtils.isEmpty(consumerExecutionContext.getWhereCondition())) {
             // 有where子句用默认方法
             doDefaultUpdate(UpdateConsumer.class);
             logger.info("更新 {} 数据完成", tableNames);

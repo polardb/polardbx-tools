@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.RateLimiter;
 import com.lmax.disruptor.WorkHandler;
 import model.ConsumerExecutionContext;
 import model.config.ConfigConstant;
+import model.config.GlobalVar;
 
 /**
  * 限流代理类
@@ -36,8 +37,13 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
     protected String tableName;
 
     protected void initLocalVars() {
+        if (GlobalVar.IN_PERF_MODE) {
+            this.sep = consumerContext.getSeparator();
+            hasEscapedQuote = true;
+            return;
+        }
         if (consumerContext.isUseMagicSeparator()) {
-            this.sep = ConfigConstant.MAGIC_CSV_SEP;
+            this.sep = ConfigConstant.MAGIC_CSV_SEP1;
             hasEscapedQuote = true;
         } else {
             this.sep = consumerContext.getSeparator();

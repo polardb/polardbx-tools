@@ -16,7 +16,11 @@
 
 package model.config;
 
+import com.alibaba.fastjson2.JSONObject;
+import model.mask.AbstractDataMasker;
+
 import java.util.List;
+import java.util.Map;
 
 /**
  * 导出的设置项
@@ -58,6 +62,11 @@ public class ExportConfig extends BaseConfig {
      * 导出并发度，默认是分库分表并发级别
      */
     private int parallelism = 0;
+
+    /**
+     * 字段脱敏配置
+     */
+    private Map<String, JSONObject> columnMaskerConfigMap;
 
     private boolean isAscending = true;
     private boolean isLocalMerge = false;
@@ -202,6 +211,14 @@ public class ExportConfig extends BaseConfig {
         } else {
             return "DEFAULT";
         }
+    }
+
+    public Map<String, JSONObject> getColumnMaskerConfigMap() {
+        return columnMaskerConfigMap;
+    }
+
+    public void setColumnMaskerConfigMap(Map<String, JSONObject> columnMaskerConfigMap) {
+        this.columnMaskerConfigMap = columnMaskerConfigMap;
     }
 
     @Override

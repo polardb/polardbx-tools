@@ -46,7 +46,10 @@ public class ExportUtil {
 
     private static String getDirectSql(TableTopology topology,
                                        List<FieldMetaInfo> fieldMetaInfoList) {
-
+        if (topology.getGroupName().isEmpty()) {
+            return String.format("select %s from %s;", formatFieldWithDateType(fieldMetaInfoList),
+                topology.getTableName());
+        }
         return String.format(DIRECT_NODE_HINT + "select %s from %s;",
             topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName());

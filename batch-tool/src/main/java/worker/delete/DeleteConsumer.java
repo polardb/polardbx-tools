@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import worker.common.BaseDefaultConsumer;
 import worker.util.DeleteUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DeleteConsumer extends BaseDefaultConsumer {
@@ -35,10 +36,10 @@ public class DeleteConsumer extends BaseDefaultConsumer {
     }
 
     @Override
-    protected void fillLocalBuffer(StringBuilder stringBuilder, String[] values) {
-        String[] pkValues = new String[pkList.size()];
-        for (int i = 0; i < pkList.size(); i++) {
-            pkValues[i] = values[pkList.get(i).getOrdinalPosition() - 1];
+    protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
+        List<String> pkValues = new ArrayList<>(pkList.size());
+        for (PrimaryKey primaryKey : pkList) {
+            pkValues.add(values.get(primaryKey.getOrdinalPosition() - 1));
         }
         stringBuilder.append(DeleteUtil.getDeleteSql(tableName, pkList,
             pkValues, consumerContext.getWhereCondition()));

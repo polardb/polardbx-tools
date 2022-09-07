@@ -20,6 +20,7 @@ import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvValidationException;
 import exception.DatabaseException;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
@@ -39,10 +40,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -102,13 +106,13 @@ public class DirectImportWorker implements Runnable {
                 curFile = filePath;
                 curLine = startLine;
                 CSVReader reader = new CSVReaderBuilder(new InputStreamReader(
-                    new FileInputStream(filePath), charset))
+                    Files.newInputStream(Paths.get(filePath)), charset))
                     .withCSVParser(parser).build();
                 reader.skip(startLine - 1);
                 for (String[] values; (values = reader.readNext()) != null; ) {
                     try {
                         ImportUtil.getDirectImportSql(insertSqlBuilder, tableName,
-                            fieldMetaInfoList, values, sqlEscapeEnabled, true);
+                            fieldMetaInfoList, Arrays.asList(values), sqlEscapeEnabled, true);
 
                         stmt.execute(insertSqlBuilder.toString());
                         importedLines++;
@@ -135,6 +139,9 @@ public class DirectImportWorker implements Runnable {
             throw new RuntimeException(e.getMessage());
         } catch (IOException e) {
             e.printStackTrace();
+            throw new RuntimeException(e);
+        } catch (CsvValidationException e) {
+            logger.error("CSV format invalid {} at line: {}", e.getMessage(), curLine);
             throw new RuntimeException(e);
         }
     }

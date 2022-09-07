@@ -36,7 +36,6 @@ import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -217,66 +216,46 @@ public class DirectExportWorker extends BaseExportWorker {
     }
 
     private void afterRun() {
-        countDownLatch.countDown();
+        if (countDownLatch != null) {
+            countDownLatch.countDown();
+        }
         if (permitted != null) {
             permitted.release();
         }
         fileWriter.close();
     }
 
-    private void produceData() {
-        String sql = getExportSql();
-
-        try (Connection conn = druid.getConnection();
-            Statement stmt = DataSourceUtil.createStreamingStatement(conn);
-            ResultSet resultSet = stmt.executeQuery(sql)) {
-
-            logger.info("{} 开始导出", topology);
-            // 字段数
-            int colNum;
-            // 已经缓存的行数
-            int bufferedRowNum = 0;
-            byte[] value;
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            colNum = resultSet.getMetaData().getColumnCount();
-            while (resultSet.next()) {
-                for (int i = 1; i < colNum; i++) {
-                    value = resultSet.getBytes(i);
-                    writeFieldValue(os, value, isStringTypeList.get(i - 1));
-                    // 附加分隔符
-                    os.write(separator);
-                }
-                value = resultSet.getBytes(colNum);
-                writeFieldValue(os, value, isStringTypeList.get(colNum - 1));
-                // 附加换行符
-                os.write(FileUtil.SYS_NEW_LINE_BYTE);
-
-                bufferedRowNum++;
-                if (bufferedRowNum == GlobalVar.EMIT_BATCH_SIZE) {
-                    if (isLimitLine() && curLineNum + bufferedRowNum > maxLine) {
-                        // 超过了行数
-                        // 新建文件
-                        createNewPartFile();
-                    }
-                    writeToFile(os);
-                    curLineNum += bufferedRowNum;
-                    bufferedRowNum = 0;
-                }
-            }
-            if (bufferedRowNum != 0) {
-                // 最后剩余的元组
-                if (isLimitLine() && curLineNum + bufferedRowNum > maxLine) {
-                    // 超过了行数
-                    // 新建文件
-                    createNewPartFile();
-                }
-                writeToFile(os);
-                bufferedRowNum = 0;
-            }
-            logger.info("{} 导出完成", topology);
-        } catch (SQLException | IOException e) {
-            e.printStackTrace();
+    @Override
+    protected void emitBatchData() {
+        if (isLimitLine() && curLineNum + bufferedRowNum > maxLine) {
+            // 超过了行数
+            // 新建文件
+            createNewPartFile();
         }
+        writeToFile(os);
+        curLineNum += bufferedRowNum;
+    }
+
+    @Override
+    protected void dealWithRemainData() {
+        if (isLimitLine() && curLineNum + bufferedRowNum > maxLine) {
+            // 超过了行数
+            // 新建文件
+            createNewPartFile();
+        }
+        writeToFile(os);
+        bufferedRowNum = 0;
+    }
+
+    @Override
+    protected String getExportSql() {
+        return ExportUtil.getDirectSql(topology,
+            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
+    }
+
+    @Override
+    protected void afterProduceData() {
+        logger.info("{} 导出完成", topology);
     }
 
     private void writeToFile(ByteArrayOutputStream os) {
@@ -290,7 +269,6 @@ public class DirectExportWorker extends BaseExportWorker {
             }
         }
         fileWriter.write(data);
-        os.reset();
     }
 
     /**
@@ -318,11 +296,6 @@ public class DirectExportWorker extends BaseExportWorker {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-
-    protected String getExportSql() {
-        return ExportUtil.getDirectSql(topology,
-            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
     }
 
     private boolean isLimitLine() {

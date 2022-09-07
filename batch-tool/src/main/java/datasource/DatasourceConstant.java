@@ -18,7 +18,7 @@ package datasource;
 
 public class DatasourceConstant {
 
-    public static final int MAX_CONN_NUM = 2048;
+    public static final int MAX_CONN_NUM = 218;
 
     public static final int MIN_CONN_NUM = 32;
     /**

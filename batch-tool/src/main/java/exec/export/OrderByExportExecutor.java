@@ -54,19 +54,13 @@ import static model.config.ConfigConstant.APP_NAME;
 public class OrderByExportExecutor extends BaseExportExecutor {
     private static final Logger logger = LoggerFactory.getLogger(OrderByExportExecutor.class);
 
-    private ExportCommand command;
     private ExportConfig config;
 
     public OrderByExportExecutor(DataSourceConfig dataSourceConfig,
                                  DruidDataSource druid,
                                  BaseOperateCommand baseCommand) {
         super(dataSourceConfig, druid, baseCommand);
-    }
-
-    @Override
-    protected void setCommand(BaseOperateCommand baseCommand) {
-        this.command = (ExportCommand) baseCommand;
-        this.config = command.getExportConfig();
+        this.config = ((ExportCommand) command).getExportConfig();
     }
 
     @Override
@@ -98,7 +92,6 @@ public class OrderByExportExecutor extends BaseExportExecutor {
      */
     private void doExportWithOrderByLocal() {
         List<TableTopology> topologyList;
-        ExportConfig config = command.getExportConfig();
         List<FieldMetaInfo> orderByColumnInfoList;
         for (String tableName : command.getTableNames()) {
             String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
@@ -171,7 +164,7 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                 TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
                     getSchemaName(), tableName);
                 DirectOrderExportWorker directOrderByExportWorker = ExportWorkerFactory
-                    .buildDirectOrderExportWorker(dataSource, tableFieldMetaInfo, command, tableName);
+                    .buildDirectOrderExportWorker(dataSource, tableFieldMetaInfo, (ExportCommand) command, tableName);
                 // 就单线程地写入
                 directOrderByExportWorker.exportSerially();
                 logger.info("导出 {} 数据完成", tableName);
@@ -188,7 +181,6 @@ public class OrderByExportExecutor extends BaseExportExecutor {
     private void handleExportWithOrderByParallelMerge() {
         for (String tableName : command.getTableNames()) {
             List<TableTopology> topologyList;
-            ExportConfig config = command.getExportConfig();
             List<FieldMetaInfo> orderByColumnInfoList;
             try {
                 String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),

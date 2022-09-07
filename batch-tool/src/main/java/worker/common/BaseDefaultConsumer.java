@@ -25,6 +25,7 @@ import util.FileUtil;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 import static model.config.ConfigConstant.END_OF_BATCH_LINES;
 
@@ -33,6 +34,8 @@ import static model.config.ConfigConstant.END_OF_BATCH_LINES;
  */
 public abstract class BaseDefaultConsumer extends BaseWorkHandler {
     private static final Logger logger = LoggerFactory.getLogger(BaseDefaultConsumer.class);
+
+    protected int estimateFieldCount = 16;
 
     protected void initLocalVars() {
         super.initLocalVars();
@@ -47,7 +50,11 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
         initLocalVars();
         try {
             String[] lines = event.getBatchLines();
-            StringBuilder stringBuilder = new StringBuilder(lines.length * 10);
+            int estimateLineSize = 10;
+            if (lines.length > 0 && lines[0] != null) {
+                estimateLineSize = Math.min(estimateLineSize, lines[0].length());
+            }
+            StringBuilder stringBuilder = new StringBuilder(lines.length * estimateLineSize);
             for (String line : lines) {
                 if (StringUtils.isEmpty(line)) {
                     continue;
@@ -55,8 +62,8 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
                 if (line == END_OF_BATCH_LINES) {
                     break;
                 }
-                String[] values = FileUtil.split(line, sep,
-                    consumerContext.isWithLastSep(), hasEscapedQuote);
+                List<String> values = FileUtil.splitWithEstimateCount(line, sep,
+                    consumerContext.isWithLastSep(), estimateFieldCount, hasEscapedQuote);
                 fillLocalBuffer(stringBuilder, values);
             }
 
@@ -77,7 +84,7 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
         }
     }
 
-    protected abstract void fillLocalBuffer(StringBuilder stringBuilder, String[] values);
+    protected abstract void fillLocalBuffer(StringBuilder stringBuilder, List<String> values);
 
     protected abstract String getSql(StringBuilder data);
 

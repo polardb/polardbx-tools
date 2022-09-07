@@ -68,9 +68,9 @@ public abstract class BaseShardedConsumer extends BaseWorkHandler {
                 if (line == END_OF_BATCH_LINES) {
                     break;
                 }
-                String[] values = FileUtil.split(line, sep,
+                List<String> values = FileUtil.split(line, sep,
                     consumerContext.isWithLastSep(), hasEscapedQuote);
-                partitionFieldValue = values[partitionKey.getFieldMetaInfo().getIndex()];
+                partitionFieldValue = values.get(partitionKey.getFieldMetaInfo().getIndex());
                 partitionIndex = DbUtil.getPartitionIndex(partitionFieldValue, partitionKey);
 
                 try {
@@ -107,7 +107,7 @@ public abstract class BaseShardedConsumer extends BaseWorkHandler {
      * 根据切分出的字段值
      * 按照格式填充localBuffer
      */
-    protected abstract void fillLocalBuffer(StringBuilder localBuffer, String[] values,
+    protected abstract void fillLocalBuffer(StringBuilder localBuffer, List<String> values,
                                             List<FieldMetaInfo> fieldMetaInfoList) throws Throwable;
 
     /**

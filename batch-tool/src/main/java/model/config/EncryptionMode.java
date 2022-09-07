@@ -33,9 +33,9 @@ public enum EncryptionMode {
         switch (encryptionMode.toUpperCase()) {
         case "NONE":
             return NONE;
-        case "DEFAULT": // TODO fix default option
         case "CAESAR":
             return CAESAR;
+        case "DEFAULT":
         case "AES":
         case "AES-CBC":
             return AES_CBC;

@@ -62,7 +62,7 @@ public class ExportWorkerFactory {
         default:
             throw new UnsupportedOperationException("Do not support direct export when fixed file num");
         }
-        directExportWorker.setWhereCondition(config.getWhereCondition());
+        afterInit(directExportWorker, config);
         return directExportWorker;
     }
 
@@ -96,12 +96,20 @@ public class ExportWorkerFactory {
         }
         BaseCipher cipher = BaseCipher.getCipher(config.getEncryptionConfig(), true);
 
-        return new DirectOrderExportWorker(druid, filePathPrefix,
-                tableFieldMetaInfo,
-                tableName, config.getOrderByColumnNameList(), maxLine,
-                config.getCharset(),
-                config.getSeparator(),
-                config.isAscending(), config.isWithHeader(), config.getQuoteEncloseMode(),
-                config.getCompressMode(), config.getFileFormat(), cipher);
+        DirectOrderExportWorker directOrderExportWorker = new DirectOrderExportWorker(druid, filePathPrefix,
+            tableFieldMetaInfo,
+            tableName, config.getOrderByColumnNameList(), maxLine,
+            config.getCharset(),
+            config.getSeparator(),
+            config.isAscending(), config.isWithHeader(), config.getQuoteEncloseMode(),
+            config.getCompressMode(), config.getFileFormat(), cipher);
+        afterInit(directOrderExportWorker, config);
+        return directOrderExportWorker;
+    }
+
+    public static void afterInit(DirectExportWorker worker, ExportConfig config) {
+        worker.setWhereCondition(config.getWhereCondition());
+        worker.putDataMaskerMap(config.getColumnMaskerConfigMap());
+        worker.setWithLastSep(config.isWithLastSep());
     }
 }

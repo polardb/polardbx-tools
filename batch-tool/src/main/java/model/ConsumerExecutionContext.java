@@ -137,6 +137,11 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     private boolean useMagicSeparator = false;
 
+    /**
+     * 以逗号拼接的指定使用列
+     */
+    private String useColumns = null;
+
     private volatile Exception exception;
 
     public ConsumerExecutionContext() {
@@ -294,20 +299,15 @@ public class ConsumerExecutionContext extends BaseConfig {
     @Override
     public String toString() {
         return "ConsumerExecutionContext{" +
-            "tableName='" + tableNames + '\'' +
+            "tableNames=" + tableNames +
+            ", partitionKey=" + tablePartitionKey +
             ", pkList=" + tablePkList +
-            ", pkIndexSet=" + tablePkIndexSet +
-            ", tableFieldMetaInfo=" + tableFieldMetaInfo +
             ", insertIgnoreAndResumeEnabled=" + insertIgnoreAndResumeEnabled +
-            ", funcSqlForUpdateEnabled=" + funcSqlForUpdateEnabled +
             ", parallelism=" + parallelism +
             ", whereCondition='" + whereCondition + '\'' +
             ", toUpdateColumns='" + toUpdateColumns + '\'' +
-            ", topologyList=" + topologyList +
-            ", partitionKey=" + tablePartitionKey +
             ", updateWithFuncPattern='" + updateWithFuncPattern + '\'' +
             ", sqlEscapeEnabled=" + sqlEscapeEnabled +
-            ", readProcessFileOnly=" + readProcessFileOnly +
             '}';
     }
 
@@ -409,5 +409,21 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     public void setException(Exception exception) {
         this.exception = exception;
+    }
+
+    public String getUseColumns() {
+        return useColumns;
+    }
+
+    public void setUseColumns(String useColumns) {
+        this.useColumns = useColumns;
+    }
+
+    @Override
+    public void validate() {
+        super.validate();
+        if (tableNames.size() > 1 && useColumns != null) {
+            throw new UnsupportedOperationException("Do not support multi-table operation with specified columns");
+        }
     }
 }

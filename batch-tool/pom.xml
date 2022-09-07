@@ -18,7 +18,7 @@
         <java_target_version>1.8</java_target_version>
         <file_encoding>UTF-8</file_encoding>
         <!-- Log libs -->
-        <slf4j_version>1.7.21</slf4j_version>
+        <slf4j_version>1.7.36</slf4j_version>
         <!-- db -->
         <mysql_connector_version>8.0.16</mysql_connector_version>
         <druid.version>1.2.8</druid.version>
@@ -28,11 +28,14 @@
         <commons-lang.version>2.6</commons-lang.version>
         <commons-io.version>2.6</commons-io.version>
         <commons-cli.version>1.4</commons-cli.version>
-        <opencsv.version>4.6</opencsv.version>
+        <fastjson.version>2.0.7</fastjson.version>
+        <opencsv.version>5.6</opencsv.version>
         <guava.version>27.0.1-jre</guava.version>
         <javax-validation.version>2.0.0.Final</javax-validation.version>
         <bouncycastle.version>1.60</bouncycastle.version>
         <easy-excel.version>3.0.5</easy-excel.version>
+        <snakeyaml.version>1.30</snakeyaml.version>
+
     </properties>
 
     <repositories>
@@ -102,6 +105,12 @@
             <version>${commons-cli.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <version>${fastjson.version}</version>
+        </dependency>
+
         <!-- Guava -->
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -139,6 +148,12 @@
             <groupId>com.alibaba</groupId>
             <artifactId>easyexcel</artifactId>
             <version>${easy-excel.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>${snakeyaml.version}</version>
         </dependency>
     </dependencies>
 
