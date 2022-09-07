@@ -15,7 +15,7 @@
 -F 1 两张表将分别导出为两个单独的文件
 `-D sbtest_auto -o export -s , -t "sbtest1;sbtest2" -F 1`
 
-### 整库导出		60
+### 整库导出
 -F 1 库中每张表都分别导出为单独的一个文件
 `-D sbtest_auto -o export -s , -F 1`
 
@@ -45,7 +45,7 @@
 \"c_phone\": { \"type\": \"hiding\", \"show_region\" : \"0-2\", \"show_end\": 4
 }"`
 
-原数据
+**原数据**
 ```text
 c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-989-741-2988|711.56|BUILDING|to the even, regular platelets. regular, ironic epitaphs nag 
@@ -55,7 +55,7 @@ c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 5|Customer#000000005|KvpyuHCplrB84WgAiGV6sYpZq7Tj|3|13-750-942-6364|794.47|HOUSEHOLD|n accounts will have to unwind. foxes cajole acco
 ```
 
-脱敏后数据
+**脱敏后数据**
 ```text
 c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 1|Customer#000000001|IVhzIApeRb ot,c,E|15|25-********2988|711.56|BUILDING|to the even, regular platelets. regular, ironic epitaphs nag 
@@ -97,9 +97,31 @@ c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 
 ## 使用yaml配置
 当有很多配置项需要设置时，使用命令行参数会很不方便编辑，此时建议使用yaml格式的配置文件，示例如下：
+
+**命令行参数**：`-configFile export.yaml`
+
+**expory.yaml 文件**
 ```yaml
-
-
+host: xxxx
+port: 3306
+user: root
+password: xxxxxx
+database: tpch_1g
+operation: export
+sep: "|"
+table: customer
+filenum: 1
+orderby: asc
+orderCol: c_custkey
+header: true
+mask: >-
+   {
+     "c_phone": {
+       "type": "hiding",
+       "show_region": "0-2",
+       "show_end": 4
+     }
+   }
 ```
 
 如果配置值包含[yaml特殊字符](https://yaml.org/spec/1.2.2/#53-indicator-characters)的话， 需要用引号括起来。
