@@ -107,8 +107,6 @@ public class ConfigConstant {
      */
     public static final int DEFAULT_MAX_ERROR_COUNT = 0;
 
-    public static final boolean DEFAULT_WITH_HEADER = false;
-
     public static final String BROKEN_LINE_FILE_NAME = "err-data";
 
     public static final String ORDER_BY_TYPE_ASC = "asc";
@@ -126,7 +124,8 @@ public class ConfigConstant {
      * OpenCSV库不支持直接读取一行 需读取出字段再用该魔法值拼接
      * FIXME
      */
-    public static final String MAGIC_CSV_SEP = "|@|";
+    public static final String MAGIC_CSV_SEP1 = "|@|";
+    public static final String MAGIC_CSV_SEP2 = "^@^";
 
     /**
      * 仅导出时默认开启基于分库分表的模式
@@ -137,6 +136,6 @@ public class ConfigConstant {
     public static final List<String> ILLEGAL_SEPARATORS = new ArrayList<String>() {{
         add("\"");
         add("\\");
-        add(MAGIC_CSV_SEP);
+        add(MAGIC_CSV_SEP1);
     }};
 }

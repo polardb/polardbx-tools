@@ -22,25 +22,20 @@ public class ConfigArgOption {
     protected final String desc;
     protected final String argName;
 
-    private ConfigArgOption(String argShort, String argLong, String desc) {
-        this(argShort, argLong, desc, null);
-    }
-
-    private ConfigArgOption(String argShort, String argLong, String desc, String argName) {
+    protected ConfigArgOption(String argShort, String argLong, String desc, String argName) {
         this.argShort = argShort;
         this.argLong = argLong;
         this.desc = desc;
         this.argName = argName;
     }
-    
+
     private static ConfigArgOption of(String argShort, String argLong, String desc) {
-        return new ConfigArgOption(argShort, argLong, desc);
+        return new ConfigArgOption(argShort, argLong, desc, null);
     }
 
     private static ConfigArgOption of(String argShort, String argLong, String desc, String argName) {
         return new ConfigArgOption(argShort, argLong, desc, argName);
     }
-
 
     public static final ConfigArgOption ARG_SHORT_HELP =
         of("help", "help", "Help message.");
@@ -58,13 +53,10 @@ public class ConfigArgOption {
         of("P", "port", "Port number of database.", "port");
     public static final ConfigArgOption ARG_SHORT_DBNAME =
         of("D", "database", "Database name.", "database");
-    public static final ConfigArgOption ARG_SHORT_LOAD_BALANCE =
-        of("lb", "loadbalance",
-            "Use jdbc load balance, filling the arg in $host like 'host1:port1,host2:port2'.");
     public static final ConfigArgOption ARG_SHORT_OPERATION =
         of("o", "operation", "Batch operation type: export / import / delete / update.", "operation");
     public static final ConfigArgOption ARG_SHORT_ORDER =
-        of("O", "orderby", "Order by type: asc / desc.", "order");
+        of("O", "orderby", "Order by type: asc / desc.", "asc | desc");
     public static final ConfigArgOption ARG_SHORT_ORDER_COLUMN =
         of("OC", "orderCol", "Ordered column names.", "col1;col2;col3");
     public static final ConfigArgOption ARG_SHORT_COLUMNS =
@@ -85,29 +77,17 @@ public class ConfigArgOption {
         of("H", "historyFile", "History file name.", "filepath");
     public static final ConfigArgOption ARG_SHORT_WHERE =
         of("w", "where", "Where condition: col1>99 AND col2<100 ...", "where condition");
-    public static final ConfigArgOption ARG_SHORT_ENABLE_SHARDING =
-        of("sharding", "sharding", "Whether enable sharding mode.", "ON / OFF");
-    public static final ConfigArgOption ARG_SHORT_WITH_HEADER =
-        of("header", "header", "Whether the header line is column names (default no).");
     public static final ConfigArgOption ARG_SHORT_DIRECTORY =
         of("dir", "directory", "Directory path including files to import.", "directory path");
     public static final ConfigArgOption ARG_SHORT_CHARSET =
         of("cs", "charset", "The charset of files.", "charset");
-    public static final ConfigArgOption ARG_SHORT_IGNORE_AND_RESUME =
-        of("i", "ignore", "Flag of insert ignore and resume breakpoint.");
-    public static final ConfigArgOption ARG_SHORT_PRODUCER =
+     public static final ConfigArgOption ARG_SHORT_PRODUCER =
         of("pro", "producer", "Configure number of producer threads (export / import).", "producer count");
     public static final ConfigArgOption ARG_SHORT_CONSUMER =
         of("con", "consumer", "Configure number of consumer threads.", "consumer count");
     public static final ConfigArgOption ARG_SHORT_FORCE_CONSUMER =
         of("fcon", "forceConsumer", "Configure if allow force consumer parallelism.", "parallelism");
-    public static final ConfigArgOption ARG_SHORT_LOCAL_MERGE =
-        of("local", "localMerge", "Use local merge sort.");
-    public static final ConfigArgOption ARG_SHORT_SQL_FUNC =
-        of("func", "sqlFunc", "Use sql function to update.");
-    public static final ConfigArgOption ARG_SHORT_NO_ESCAPE =
-        of("noEsc", "noEscape", "Do not escape value for sql.");
-    public static final ConfigArgOption ARG_SHORT_MAX_CONN_NUM =
+  public static final ConfigArgOption ARG_SHORT_MAX_CONN_NUM =
         of("maxConn", "maxConnection", "Max connection count (druid).", "max connection");
     public static final ConfigArgOption ARG_SHORT_MAX_WAIT =
         of("maxWait", "connMaxWait", "Max wait time when getting a connection.", "wait time(ms)");
@@ -123,34 +103,24 @@ public class ConfigArgOption {
         of("readsize", "readSize", "Read block size.", "size(MB)");
     public static final ConfigArgOption ARG_SHORT_RING_BUFFER_SIZE =
         of("ringsize", "ringSize", "Ring buffer size.", "size (power of 2)");
-    public static final ConfigArgOption ARG_SHORT_READ_FILE_ONLY =
-        of("rfonly", "readFileOnly", "Only read and process file, no sql execution.");
-    public static final ConfigArgOption ARG_SHORT_USING_IN =
-        of("in", "whereIn", "Using where cols in (values).");
-    public static final ConfigArgOption ARG_SHORT_WITH_LAST_SEP =
-        of("lastSep", "withLastSep", "Whether line ends with separator.");
-    public static final ConfigArgOption ARG_SHORT_PARALLEL_MERGE =
-        of("para", "paraMerge", "Use parallel merge when doing order by export.");
-    public static final ConfigArgOption ARG_SHORT_QUOTE_ENCLOSE_MODE =
+   public static final ConfigArgOption ARG_SHORT_QUOTE_ENCLOSE_MODE =
         of("quote", "quoteMode",
-            "The mode of how field values are enclosed by double-quotes when exporting table.",
-            "AUTO (default) / FORCE / NONE");
+            "The mode of how field values are enclosed by double-quotes when exporting table (default AUTO).",
+            "AUTO | FORCE | NONE");
     public static final ConfigArgOption ARG_SHORT_TPS_LIMIT =
         of("tps", "tpsLimit", "Configure of tps limit (default -1: no limit).", "tps limit");
     public static final ConfigArgOption ARG_SHORT_WITH_DDL =
-        of("DDL", "DDL", "Export or import with DDL sql mode.", "NONE (default) / ONLY / WITH");
+        of("DDL", "DDL", "Export or import with DDL sql mode (default NONE).", "NONE | ONLY | WITH");
     public static final ConfigArgOption ARG_SHORT_COMPRESS =
-        of("comp", "compress", "Export or import compressed file.", "NONE (default) / GZIP");
+        of("comp", "compress", "Export or import compressed file (default NONE).", "NONE | GZIP");
     public static final ConfigArgOption ARG_SHORT_ENCRYPTION =
-        of("encrypt", "encrypt", "Export or import with encrypted file.", "NONE (default) / AES / SM4");
+        of("encrypt", "encrypt", "Export or import with encrypted file (default NONE).", "NONE | AES | SM4");
     public static final ConfigArgOption ARG_SHORT_KEY =
         of("key", "secretKey", "Secret key used during encryption.", "string-type key");
     public static final ConfigArgOption ARG_SHORT_FILE_FORMAT =
-        of("format", "fileFormat", "File format.", "NONE (default) / TXT / CSV / XLS / XLSX");
+        of("format", "fileFormat", "File format (default NONE).", "NONE | TXT | CSV | XLS | XLSX");
     public static final ConfigArgOption ARG_SHORT_MAX_ERROR =
         of("error", "maxError", "Max error count threshold, program exits when the limit is exceeded.", "max error count");
-    public static final ConfigArgOption ARG_SHORT_PERF_MODE =
-        of("perf", "perfMode", "Use performance mode (at the sacrifice of compatibility.)");
     public static final ConfigArgOption ARG_SHORT_MASK =
         of("mask", "mask", "Masking sensitive columns while exporting data.", "Json format config");
 

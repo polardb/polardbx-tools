@@ -74,7 +74,7 @@ public class XlsxReader extends FileBufferedBatchReader {
 
             private void appendData(Collection<String> values) {
                 localProcessingBlockIndex++;
-                String line = String.join(ConfigConstant.MAGIC_CSV_SEP, values);
+                String line = String.join(ConfigConstant.MAGIC_CSV_SEP1, values);
                 appendToLineBuffer(line);
             }
 

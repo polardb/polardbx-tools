@@ -54,7 +54,7 @@ public class ImportConsumer extends BaseDefaultConsumer {
                 values, consumerContext.isSqlEscapeEnabled(), hasEscapedQuote);
         } catch (DatabaseException e) {
             // 在split预处理过后仍存在的问题
-            logger.error(StringUtils.join(values, ConfigConstant.MAGIC_CSV_SEP));
+            logger.error(StringUtils.join(values, ConfigConstant.MAGIC_CSV_SEP1));
             throw new RuntimeException(e);
         }
 

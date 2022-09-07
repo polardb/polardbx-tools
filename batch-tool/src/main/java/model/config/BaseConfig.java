@@ -97,7 +97,7 @@ public class BaseConfig {
 
     public void setSeparator(String separator) {
         if (separator.isEmpty()) {
-            separator = ConfigConstant.NULL_SEPARATOR;
+            throw new IllegalArgumentException("Separator cannot be empty");
         }
         // 分隔符不能包含特殊字符
         for (String illegalStr : ConfigConstant.ILLEGAL_SEPARATORS) {

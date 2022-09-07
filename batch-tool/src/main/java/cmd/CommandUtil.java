@@ -54,8 +54,60 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static cmd.ConfigArgOption.*;
-import static model.config.ConfigConstant.*;
+import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
+import static cmd.ConfigArgOption.ARG_SHORT_CHARSET;
+import static cmd.ConfigArgOption.ARG_SHORT_COLUMNS;
+import static cmd.ConfigArgOption.ARG_SHORT_COMPRESS;
+import static cmd.ConfigArgOption.ARG_SHORT_CONFIG_FILE;
+import static cmd.ConfigArgOption.ARG_SHORT_CONN_INIT_SQL;
+import static cmd.ConfigArgOption.ARG_SHORT_CONN_PARAM;
+import static cmd.ConfigArgOption.ARG_SHORT_CONSUMER;
+import static cmd.ConfigArgOption.ARG_SHORT_DBNAME;
+import static cmd.ConfigArgOption.ARG_SHORT_DIRECTORY;
+import static cmd.ConfigArgOption.ARG_SHORT_ENCRYPTION;
+import static cmd.ConfigArgOption.ARG_SHORT_FILE_FORMAT;
+import static cmd.ConfigArgOption.ARG_SHORT_FILE_NUM;
+import static cmd.ConfigArgOption.ARG_SHORT_FORCE_CONSUMER;
+import static cmd.ConfigArgOption.ARG_SHORT_FROM_FILE;
+import static cmd.ConfigArgOption.ARG_SHORT_HELP;
+import static cmd.ConfigArgOption.ARG_SHORT_HISTORY_FILE;
+import static cmd.ConfigArgOption.ARG_SHORT_HOST;
+import static cmd.ConfigArgOption.ARG_SHORT_KEY;
+import static cmd.ConfigArgOption.ARG_SHORT_LINE;
+import static cmd.ConfigArgOption.ARG_SHORT_MASK;
+import static cmd.ConfigArgOption.ARG_SHORT_MAX_CONN_NUM;
+import static cmd.ConfigArgOption.ARG_SHORT_MAX_ERROR;
+import static cmd.ConfigArgOption.ARG_SHORT_MAX_WAIT;
+import static cmd.ConfigArgOption.ARG_SHORT_MIN_CONN_NUM;
+import static cmd.ConfigArgOption.ARG_SHORT_OPERATION;
+import static cmd.ConfigArgOption.ARG_SHORT_ORDER;
+import static cmd.ConfigArgOption.ARG_SHORT_ORDER_COLUMN;
+import static cmd.ConfigArgOption.ARG_SHORT_PASSWORD;
+import static cmd.ConfigArgOption.ARG_SHORT_PORT;
+import static cmd.ConfigArgOption.ARG_SHORT_PREFIX;
+import static cmd.ConfigArgOption.ARG_SHORT_PRODUCER;
+import static cmd.ConfigArgOption.ARG_SHORT_QUOTE_ENCLOSE_MODE;
+import static cmd.ConfigArgOption.ARG_SHORT_READ_BLOCK_SIZE;
+import static cmd.ConfigArgOption.ARG_SHORT_RING_BUFFER_SIZE;
+import static cmd.ConfigArgOption.ARG_SHORT_SEP;
+import static cmd.ConfigArgOption.ARG_SHORT_TABLE;
+import static cmd.ConfigArgOption.ARG_SHORT_TPS_LIMIT;
+import static cmd.ConfigArgOption.ARG_SHORT_USERNAME;
+import static cmd.ConfigArgOption.ARG_SHORT_VERSION;
+import static cmd.ConfigArgOption.ARG_SHORT_WHERE;
+import static cmd.ConfigArgOption.ARG_SHORT_WITH_DDL;
+import static cmd.FlagOption.ARG_SHORT_ENABLE_SHARDING;
+import static cmd.FlagOption.ARG_SHORT_IGNORE_AND_RESUME;
+import static cmd.FlagOption.ARG_SHORT_LOAD_BALANCE;
+import static cmd.FlagOption.ARG_SHORT_LOCAL_MERGE;
+import static cmd.FlagOption.ARG_SHORT_NO_ESCAPE;
+import static cmd.FlagOption.ARG_SHORT_PARALLEL_MERGE;
+import static cmd.FlagOption.ARG_SHORT_PERF_MODE;
+import static cmd.FlagOption.ARG_SHORT_READ_FILE_ONLY;
+import static cmd.FlagOption.ARG_SHORT_SQL_FUNC;
+import static cmd.FlagOption.ARG_SHORT_USING_IN;
+import static cmd.FlagOption.ARG_SHORT_WITH_HEADER;
+import static cmd.FlagOption.ARG_SHORT_WITH_LAST_SEP;
 
 /**
  * 从命令行输入解析配置
@@ -143,13 +195,17 @@ public class CommandUtil {
             .connParam(getConnParam(result))
             .initSqls(getInitSqls(result));
 
-        if (result.hasOption(ARG_SHORT_LOAD_BALANCE)) {
+        if (getLoadBalance(result)) {
             configBuilder.loadBalanceEnabled(true);
         } else {
             configBuilder.port(result.getOptionValue(ARG_SHORT_PORT))
                 .loadBalanceEnabled(false);
         }
         return configBuilder.build();
+    }
+
+    private static boolean getLoadBalance(ConfigResult result) {
+        return result.getBooleanFlag(ARG_SHORT_LOAD_BALANCE);
     }
 
     private static int getMaxWait(ConfigResult result) {
@@ -233,8 +289,7 @@ public class CommandUtil {
 
     private static void afterInitCommand(BaseOperateCommand command, ConfigResult result) {
         if (result.hasOption(ARG_SHORT_ENABLE_SHARDING)) {
-            boolean shardingEnabled = parseFlag(result.getOptionValue(ARG_SHORT_ENABLE_SHARDING));
-            command.setShardingEnabled(shardingEnabled);
+            command.setShardingEnabled(result.getBooleanFlag(ARG_SHORT_ENABLE_SHARDING));
         }
     }
 
@@ -244,7 +299,7 @@ public class CommandUtil {
         }
         String tableNameStr = result.getOptionValue(ARG_SHORT_TABLE);
         return Lists.newArrayList(
-            StringUtils.split(tableNameStr, CMD_SEPARATOR));
+            StringUtils.split(tableNameStr, ConfigConstant.CMD_SEPARATOR));
     }
 
     private static List<String> getColumnNames(ConfigResult result) {
@@ -253,7 +308,7 @@ public class CommandUtil {
         }
         String columnNameStr = result.getOptionValue(ARG_SHORT_COLUMNS);
         return Lists.newArrayList(
-            StringUtils.split(columnNameStr, CMD_SEPARATOR));
+            StringUtils.split(columnNameStr, ConfigConstant.CMD_SEPARATOR));
     }
 
     private static BaseOperateCommand parseImportCommand(ConfigResult result) {
@@ -299,21 +354,19 @@ public class CommandUtil {
         if (result.hasOption(ARG_SHORT_CHARSET)) {
             String charset = result.getOptionValue(ARG_SHORT_CHARSET);
             return Charset.forName(charset);
-        } else {
-            return ConfigConstant.DEFAULT_CHARSET;
         }
+        return ConfigConstant.DEFAULT_CHARSET;
     }
 
     private static boolean getWithHeader(ConfigResult result) {
-        return result.hasOption(ARG_SHORT_WITH_HEADER);
+        return result.getBooleanFlag(ARG_SHORT_WITH_HEADER);
     }
 
     private static CompressMode getCompressMode(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_COMPRESS)) {
             return CompressMode.fromString(result.getOptionValue(ARG_SHORT_COMPRESS));
-        } else {
-            return ConfigConstant.DEFAULT_COMPRESS_MODE;
         }
+        return ConfigConstant.DEFAULT_COMPRESS_MODE;
     }
 
     private static EncryptionConfig getEncryptionConfig(ConfigResult result) {
@@ -321,31 +374,28 @@ public class CommandUtil {
             String encryptionMode = result.getOptionValue(ARG_SHORT_ENCRYPTION);
             String key = result.getOptionValue(ARG_SHORT_KEY);
             return EncryptionConfig.parse(encryptionMode, key);
-        } else {
-            return DEFAULT_ENCRYPTION_CONFIG;
         }
+        return ConfigConstant.DEFAULT_ENCRYPTION_CONFIG;
     }
 
     private static int getReadBlockSizeInMb(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_READ_BLOCK_SIZE)) {
             return Integer.parseInt(
                 result.getOptionValue(ARG_SHORT_READ_BLOCK_SIZE));
-        } else {
-            return ConfigConstant.DEFAULT_READ_BLOCK_SIZE_IN_MB;
         }
+        return ConfigConstant.DEFAULT_READ_BLOCK_SIZE_IN_MB;
     }
 
     private static boolean getWithLastSep(ConfigResult result) {
-        return result.hasOption(ARG_SHORT_WITH_LAST_SEP);
+        return result.getBooleanFlag(ARG_SHORT_WITH_LAST_SEP);
     }
 
     private static FileFormat getFileFormat(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
             String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);
             return FileFormat.fromString(fileFormat);
-        } else {
-            return DEFAULT_FILE_FORMAT;
         }
+        return ConfigConstant.DEFAULT_FILE_FORMAT;
     }
     //endregion 读写文件相关配置
 
@@ -386,13 +436,13 @@ public class CommandUtil {
             if (!result.hasOption(ARG_SHORT_ORDER_COLUMN)) {
                 throw new IllegalArgumentException("Order column name cannot be empty");
             }
-            if (result.hasOption(ARG_SHORT_LOCAL_MERGE)) {
+            if (result.getBooleanFlag(ARG_SHORT_LOCAL_MERGE)) {
                 exportConfig.setLocalMerge(true);
             }
             exportConfig
                 .setAscending(!ConfigConstant.ORDER_BY_TYPE_DESC.equals(result.getOptionValue(ARG_SHORT_ORDER)));
             List<String> columnNameList = Arrays.asList(StringUtils.split(result.getOptionValue(ARG_SHORT_ORDER_COLUMN),
-                CMD_SEPARATOR));
+                ConfigConstant.CMD_SEPARATOR));
             exportConfig.setOrderByColumnNameList(columnNameList);
             exportConfig.setParallelMerge(getParaMerge(result));
         }
@@ -438,7 +488,7 @@ public class CommandUtil {
     }
 
     private static boolean getParaMerge(ConfigResult result) {
-        return result.hasOption(ARG_SHORT_PARALLEL_MERGE);
+        return result.getBooleanFlag(ARG_SHORT_PARALLEL_MERGE);
     }
     //endregion 导出相关设置
 
@@ -517,11 +567,11 @@ public class CommandUtil {
     }
 
     private static boolean getWhereInEnabled(ConfigResult result) {
-        return result.hasOption(ARG_SHORT_USING_IN);
+        return result.getBooleanFlag(ARG_SHORT_USING_IN);
     }
 
     private static boolean getReadAndProcessFileOnly(ConfigResult result) {
-        return result.hasOption(ARG_SHORT_READ_FILE_ONLY);
+        return result.getBooleanFlag(ARG_SHORT_READ_FILE_ONLY);
     }
 
     private static String getDbName(ConfigResult result) {
@@ -556,7 +606,7 @@ public class CommandUtil {
         if (result.hasOption(ARG_SHORT_QUOTE_ENCLOSE_MODE)) {
             return QuoteEncloseMode.parseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
         } else {
-            return DEFAULT_QUOTE_ENCLOSE_MODE;
+            return ConfigConstant.DEFAULT_QUOTE_ENCLOSE_MODE;
         }
     }
 
@@ -575,10 +625,10 @@ public class CommandUtil {
     private static List<FileLineRecord> getFileRecordList(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FROM_FILE)) {
             String filePathListStr = result.getOptionValue(ARG_SHORT_FROM_FILE);
-            return Arrays.stream(StringUtils.split(filePathListStr, CMD_SEPARATOR))
+            return Arrays.stream(StringUtils.split(filePathListStr, ConfigConstant.CMD_SEPARATOR))
                 .filter(StringUtils::isNotBlank)
                 .map(s -> {
-                    String[] strs = StringUtils.split(s, CMD_FILE_LINE_SEPARATOR);
+                    String[] strs = StringUtils.split(s, ConfigConstant.CMD_FILE_LINE_SEPARATOR);
                     if (strs.length == 1) {
                         String fileAbsPath = FileUtil.getFileAbsPath(strs[0]);
                         return new FileLineRecord(fileAbsPath);
@@ -611,7 +661,7 @@ public class CommandUtil {
     }
 
     private static boolean getInsertIgnoreAndResumeEnabled(ConfigResult result) {
-        return result.hasOption(ARG_SHORT_IGNORE_AND_RESUME);
+        return result.getBooleanFlag(ARG_SHORT_IGNORE_AND_RESUME);
     }
 
     private static DdlMode getDdlMode(ConfigResult result) {
@@ -624,17 +674,15 @@ public class CommandUtil {
     private static int getMaxErrorCount(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_MAX_ERROR)) {
             return Integer.parseInt(result.getOptionValue(ARG_SHORT_MAX_ERROR));
-        } else {
-            return DEFAULT_MAX_ERROR_COUNT;
         }
+        return ConfigConstant.DEFAULT_MAX_ERROR_COUNT;
     }
 
     private static String getHistoryFile(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_HISTORY_FILE)) {
             return result.getOptionValue(ARG_SHORT_HISTORY_FILE);
-        } else {
-            return null;
         }
+        return null;
     }
 
     private static String getWhereCondition(ConfigResult result) {
@@ -642,11 +690,11 @@ public class CommandUtil {
     }
 
     private static boolean getSqlEscapeEnabled(ConfigResult result) {
-        return !result.hasOption(ARG_SHORT_NO_ESCAPE);
+        return !result.getBooleanFlag(ARG_SHORT_NO_ESCAPE);
     }
 
     private static boolean getFuncEnabled(ConfigResult result) {
-        return result.hasOption(ARG_SHORT_SQL_FUNC);
+        return result.getBooleanFlag(ARG_SHORT_SQL_FUNC);
     }
     //endregion 写入数据库操作的设置
 
@@ -669,7 +717,7 @@ public class CommandUtil {
     }
 
     private static void setPerfMode(ConfigResult result) {
-        GlobalVar.IN_PERF_MODE = result.hasOption(ARG_SHORT_PERF_MODE);
+        GlobalVar.IN_PERF_MODE = result.getBooleanFlag(ARG_SHORT_PERF_MODE);
     }
     //endregion 全局相关设置
 
@@ -719,23 +767,6 @@ public class CommandUtil {
         throw new IllegalArgumentException("Do not support command " + commandType);
     }
 
-    /**
-     * 解析 ON | OFF | TRUE | FALSE 字符串
-     */
-    private static boolean parseFlag(String flag) {
-        if (StringUtils.isEmpty(flag)) {
-            return false;
-        }
-        flag = StringUtils.strip(flag);
-        if (flag.equalsIgnoreCase("ON") || flag.equalsIgnoreCase("TRUE")) {
-            return true;
-        }
-        if (flag.equalsIgnoreCase("OFF") || flag.equalsIgnoreCase("FALSE")) {
-            return false;
-        }
-        throw new IllegalArgumentException("Illegal flag string: " + flag + ". Should be ON or OFF");
-    }
-
     public static boolean doHelpCmd(ConfigResult ConfigResult) {
         if (CommandUtil.isShowHelp(ConfigResult)) {
             printHelp();
@@ -743,7 +774,7 @@ public class CommandUtil {
         }
 
         if (CommandUtil.isShowVersion(ConfigResult)) {
-            System.out.printf("%s: %s%n", APP_NAME, Version.getVersion());
+            System.out.printf("%s: %s%n", ConfigConstant.APP_NAME, Version.getVersion());
             return true;
         }
         return false;
