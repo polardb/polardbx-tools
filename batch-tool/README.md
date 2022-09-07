@@ -8,94 +8,89 @@ Batch Tool工具是专为 PolarDB-X数据库提供数据导入导出服务的工
 在此基础上，还支持基于文本文件批量更新、删除等功能 (实验特性)。
 
 ## 快速上手
-常见场景可参考文档 [usage-details](docs/usage-details.md)。
+常见场景与问题排查可参考文档 [usage-details](docs/usage-details.md)。
 ### 参数介绍
-命令行用法：
+命令行用法：`java -jar batch-tool.jar --help`
 
    ```
-    usage: BatchTool [-batchsize <arg>] [-con <consumer count>] [-cs
-       <charset>] [-D <database>] [-dir <directory>] [-f <from>] [-F
-       <filenum>] [-fcon <use force consumer>] [-func] [-h <host>] [-H
-       <history file name>] [-header] [-help] [-i] [-in] [-initSqls <arg>]
-       [-L <line>] [-lastSep] [-lb] [-local] [-maxConn <arg>] [-maxWait
-       <arg>] [-minConn <arg>] [-noesc] [-O <order by type>] [-o
-       <operation>] [-OC <ordered column>] [-p <password>] [-P <port>]
-       [-para] [-param <params>] [-pre <prefix>] [-pro <producer count>]
-       [-quote <auto/force/none>] [-readsize <arg>] [-rfonly] [-ringsize
-       <arg>] [-s <sep>] [-t <table>] [-tps <tps limit>] [-u <user>] [-v]
-       [-w <where>]
- -batchsize,--batchSize <arg>                  Batch size of emitted
-                                               tuples.
- -con,--consumer <consumer count>              Configure number of
-                                               consumer threads.
- -cs,--charset <charset>                       Define charset of files.
- -D,--database <database>                      Database to use.
- -dir,--dir <directory>                        Directory path including
-                                               files to import.
- -f,--from <from>                              Source file(s), separated
-                                               by ; .
- -F,--filenum <filenum>                        Fixed number of exported
-                                               files.
- -fcon,--force consumer <use force consumer>   Configure if allow force
-                                               consumer parallelism.
- -func,--sqlfunc                               Use sql function to update.
- -h,--host <host>                              Connect to host.
- -H,--historyFile <history file name>          Configure of historyfile
-                                               name.
- -header,--header                              Whether the header line is
-                                               column names.
- -help,--help                                  Help message.
- -i,--ignoreandresume                          Flag of insert ignore and
-                                               resume breakpoint.
- -in,--wherein                                 Using where ... in (...)
- -initSqls,--initSqls <arg>                    Connection init sqls.
- -L,--line <line>                              Max line limit of exported
-                                               files.
- -lastSep,--withLastSep                        Whether line ends with
-                                               separator.
- -lb,--loadbalance                             If using load balance.
- -local,--localmerge                           o local merge sort.
- -maxConn,--maxConnection <arg>                Max connection number
-                                               limit.
- -maxWait,--connMaxWait <arg>                  Max wait time(ms) when
-                                               getting a connection.
- -minConn,--minConnection <arg>                Mim connection number
-                                               limit.
- -noesc,--noescape                             Don't escape values.
- -O,--orderby <order by type>                  asc or desc.
- -o,--operation <operation>                    Batch operation type:
-                                               export / import / delete /
-                                               update.
- -OC,--orderCol <ordered column>               col1;col2;col3.
- -p,--password <password>                      Password to use when
-                                               connecting to server.
- -P,--port <port>                              Port number to use for
-                                               connection.
- -para,--paraMerge                             Using parallel merge when
-                                               doing order by export.
- -param,--connParam <params>                   Connection params
- -pre,--prefix <prefix>                        Export file name prefix.
- -pro,--producer <producer count>              Configure number of
-                                               producer threads (export /
-                                               import).
- -quote,--quoteMode <auto/force/none>          The mode of how field
-                                               values are enclosed by
-                                               double-quotes when
-                                               exporting table. Default
-                                               value is auto.
- -readsize,--readSize <arg>                    Read block size in MB.
- -rfonly,--rfonly                              Only read and process file,
-                                               no sql execution.
- -ringsize,--ringBufferSize <arg>              Ring buffer size.
- -s,--sep <sep>                                Separator between fields
-                                               (delimiter).
- -t,--table <table>                            Target table.
- -tps,--tpsLimit <tps limit>                   Configure of tps limit,
-                                               default -1: no limit.
- -u,--user <user>                              User for login.
- -v,--version                                  Show version
- -w,--where <where>                            Where condition: col1>99
-                                               AND col2<100 ...
+   usage: BatchTool [-batchsize <size>] [-col <col1;col2;col3>] [-comp <NONE | GZIP>] [-con <consumer count>]
+       [-config <filepath>] [-cs <charset>] [-D <database>] [-DDL <NONE | ONLY | WITH>] [-dir <directory
+       path>] [-encrypt <NONE | AES | SM4>] [-error <max error count>] [-f <filepath1;filepath2>] [-F <file
+       count>] [-fcon <parallelism>] [-format <NONE | TXT | CSV | XLS | XLSX>] [-func <true | false>] [-h
+       <host>] [-H <filepath>] [-header <true | false>] [-help] [-i <true | false>] [-in <true | false>]
+       [-initSqls <sqls>] [-key <string-type key>] [-L <line count>] [-lastSep <true | false>] [-lb <true |
+       false>] [-local <true | false>] [-mask <Json format config>] [-maxConn <max connection>] [-maxWait
+       <wait time(ms)>] [-minConn <min connection>] [-noEsc <true | false>] [-o <operation>] [-O <asc | desc>]
+       [-OC <col1;col2;col3>] [-p <password>] [-P <port>] [-para <true | false>] [-param
+       <key1=val1&key2=val2>] [-perf <true | false>] [-pre <prefix>] [-pro <producer count>] [-quote <AUTO |
+       FORCE | NONE>] [-readsize <size(MB)>] [-rfonly <true | false>] [-ringsize <size (power of 2)>] [-s
+       <separator char or string>] [-sharding <true | false>] [-t <tableName>] [-tps <tps limit>] [-u
+       <username>] [-v] [-w <where condition>]
+     -batchsize,--batchSize <size>                          Batch size of insert.
+     -col,--columns <col1;col2;col3>                        Target columns for export.
+     -comp,--compress <NONE | GZIP>                         Export or import compressed file (default NONE).
+     -con,--consumer <consumer count>                       Configure number of consumer threads.
+     -config,--configFile <filepath>                        Use yaml config file.
+     -cs,--charset <charset>                                The charset of files.
+     -D,--database <database>                               Database name.
+     -DDL,--DDL <NONE | ONLY | WITH>                        Export or import with DDL sql mode (default NONE).
+     -dir,--directory <directory path>                      Directory path including files to import.
+     -encrypt,--encrypt <NONE | AES | SM4>                  Export or import with encrypted file (default NONE).
+     -error,--maxError <max error count>                    Max error count threshold, program exits when the
+                                                            limit is exceeded.
+     -f,--file <filepath1;filepath2>                        Source file(s).
+     -F,--filenum <file count>                              Fixed number of exported files.
+     -fcon,--forceConsumer <parallelism>                    Configure if allow force consumer parallelism.
+     -format,--fileFormat <NONE | TXT | CSV | XLS | XLSX>   File format (default NONE).
+     -func,--sqlFunc <true | false>                         Use sql function to update (default false).
+     -h,--host <host>                                       Host of database.
+     -H,--historyFile <filepath>                            History file name.
+     -header,--header <true | false>                        Whether the header line is column names (default
+                                                            false).
+     -help,--help                                           Help message.
+     -i,--ignore <true | false>                             Flag of insert ignore and resume breakpoint (default
+                                                            false).
+     -in,--whereIn <true | false>                           Using where cols in (values).
+     -initSqls,--initSqls <sqls>                            Connection init sqls (druid).
+     -key,--secretKey <string-type key>                     Secret key used during encryption.
+     -L,--line <line count>                                 Max line limit of one single export file.
+     -lastSep,--withLastSep <true | false>                  Whether line ends with separator (default false).
+     -lb,--loadbalance <true | false>                       Use jdbc load balance, filling the arg in $host like
+                                                            'host1:port1,host2:port2' (default false).
+     -local,--localMerge <true | false>                     Use local merge sort (default false).
+     -mask,--mask <Json format config>                      Masking sensitive columns while exporting data.
+     -maxConn,--maxConnection <max connection>              Max connection count (druid).
+     -maxWait,--connMaxWait <wait time(ms)>                 Max wait time when getting a connection.
+     -minConn,--minConnection <min connection>              Min connection count (druid).
+     -noEsc,--noEscape <true | false>                       Do not escape value for sql (default false).
+     -o,--operation <operation>                             Batch operation type: export / import / delete /
+                                                            update.
+     -O,--orderby <asc | desc>                              Order by type: asc / desc.
+     -OC,--orderCol <col1;col2;col3>                        Ordered column names.
+     -p,--password <password>                               Password of user.
+     -P,--port <port>                                       Port number of database.
+     -para,--paraMerge <true | false>                       Use parallel merge when doing order by export
+                                                            (default false).
+     -param,--connParam <key1=val1&key2=val2>               Jdbc connection params.
+     -perf,--perfMode <true | false>                        Use performance mode at the sacrifice of compatibility
+                                                            (default false).
+     -pre,--prefix <prefix>                                 Export file name prefix.
+     -pro,--producer <producer count>                       Configure number of producer threads (export /
+                                                            import).
+     -quote,--quoteMode <AUTO | FORCE | NONE>               The mode of how field values are enclosed by
+                                                            double-quotes when exporting table (default AUTO).
+     -readsize,--readSize <size(MB)>                        Read block size.
+     -rfonly,--readFileOnly <true | false>                  Only read and process file, no sql execution (default
+                                                            false).
+     -ringsize,--ringSize <size (power of 2)>               Ring buffer size.
+     -s,--sep <separator char or string>                    Separator between fields (delimiter).
+     -sharding,--sharding <true | false>                    Whether enable sharding mode (default value depends on
+                                                            operation).
+     -t,--table <tableName>                                 Target table.
+     -tps,--tpsLimit <tps limit>                            Configure of tps limit (default -1: no limit).
+     -u,--user <username>                                   User for login.
+     -v,--version                                           Show batch-tool version.
+     -w,--where <where condition>                           Where condition: col1>99 AND col2<100 ...
    ```
 
 命令主要分别为两个类别：
@@ -110,6 +105,8 @@ Batch Tool工具是专为 PolarDB-X数据库提供数据导入导出服务的工
         - 文件数量、文件行数等导出配置
         - insert ingore、断点续传等导入配置
         - where、order by等sql条件
+        - 压缩算法、加密算法、脱敏算法
+        - 文件格式：csv、excel、txt等
     - 批处理性能参数
         - 生产者、消费者并行度设置
         - ringBuffer缓冲区、批数量、读取文件块等大小设置
@@ -161,8 +158,8 @@ Batch Tool工具是专为 PolarDB-X数据库提供数据导入导出服务的工
 - [x] 对接新分区表
 - [ ] 调优实践
 - [x] 指定字段（包括顺序）的导入导出
-- [ ] 简单的数据清洗，如trim尾部空格、日期时间格式等
-- [ ] 基于SQL函数的数据清洗，以及AES加解密函数调用
+- [ ] 简单的数据清洗，如：trim尾部空格、日期时间格式等
+- [x] 数据脱敏功能，如：掩码、哈希、加密、取整等
 - [ ] 可视化监控
 - [x] 错误情况下的断点记录（精确到行/块）
 - [x] 限流功能

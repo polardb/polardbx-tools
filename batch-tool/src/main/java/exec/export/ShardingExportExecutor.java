@@ -88,8 +88,8 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         try {
             topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
         } catch (DatabaseException e) {
-            logger.error("{}. Try export with -sharding off", e.getMessage());
-            throw new RuntimeException(e);
+            logger.error("Try export with '-sharding off'");
+            throw new RuntimeException(e.getMessage());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -188,6 +188,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                     countDownLatch, emittedDataCounter, false, config.getQuoteEncloseMode());
                 producer.setPermitted(permitted);
                 producer.setWhereCondition(config.getWhereCondition());
+                producer.putDataMaskerMap(config.getColumnMaskerConfigMap());
                 producerExecutor.submit(producer);
             }
             waitForFinish(countDownLatch, emittedDataCounter);
@@ -201,6 +202,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                     countDownLatch, emittedDataCounter,
                     true, config.getQuoteEncloseMode());
                 producer.setWhereCondition(config.getWhereCondition());
+                producer.putDataMaskerMap(config.getColumnMaskerConfigMap());
                 producer.setFragmentQueue(fragmentQueue);
                 producer.setPermitted(permitted);
                 producerExecutor.submit(producer);

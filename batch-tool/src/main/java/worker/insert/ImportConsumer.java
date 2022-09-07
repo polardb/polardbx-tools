@@ -31,22 +31,30 @@ public class ImportConsumer extends BaseDefaultConsumer {
     private static final Logger logger = LoggerFactory.getLogger(ImportConsumer.class);
 
     private List<FieldMetaInfo> fieldMetaInfoList;
+    /**
+     * 仅指定了列名才会设置
+     */
+    private String columns = null;
+    private StringBuilder insertSqlBuilder;
 
     @Override
     protected void initLocalVars() {
         super.initLocalVars();
         this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
+        this.estimateFieldCount = fieldMetaInfoList.size();
+        this.columns = consumerContext.getUseColumns();
+        this.insertSqlBuilder = new StringBuilder(64 + fieldMetaInfoList.size() * 16);
     }
 
     @Override
-    protected void fillLocalBuffer(StringBuilder stringBuilder, String[] values) {
+    protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
         stringBuilder.append("(");
         try {
             ImportUtil.appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList,
                 values, consumerContext.isSqlEscapeEnabled(), hasEscapedQuote);
         } catch (DatabaseException e) {
             // 在split预处理过后仍存在的问题
-            logger.error(StringUtils.join(values, ConfigConstant.MAGIC_CSV_SEP));
+            logger.error(StringUtils.join(values, ConfigConstant.MAGIC_CSV_SEP1));
             throw new RuntimeException(e);
         }
 
@@ -57,7 +65,10 @@ public class ImportConsumer extends BaseDefaultConsumer {
     protected String getSql(StringBuilder data) {
         // 去除最后一个逗号
         data.setLength(data.length() - 1);
-        return ImportUtil.getBatchInsertSql(tableName,
-            data.toString(), consumerContext.isInsertIgnoreAndResumeEnabled());
+        ImportUtil.getBatchInsertSql(insertSqlBuilder, tableName, columns,
+            data, consumerContext.isInsertIgnoreAndResumeEnabled());
+        String sql = insertSqlBuilder.toString();
+        insertSqlBuilder.setLength(0);
+        return sql;
     }
 }

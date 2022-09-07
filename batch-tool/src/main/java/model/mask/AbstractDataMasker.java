@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,25 +14,11 @@
  * limitations under the License.
  */
 
-package model.config;
+package model.mask;
 
-public class GlobalVar {
+public abstract class AbstractDataMasker {
 
-    /**
-     * 发送一批数据的元组数
-     */
-    public static int EMIT_BATCH_SIZE = 50;
+    public abstract MaskType getType();
 
-    /**
-     * RingBuffer 缓冲区大小
-     */
-    public static int DEFAULT_RING_BUFFER_SIZE = 1024;
-
-    /**
-     * 每个worker线程可分配的堆外内存
-     * 4K
-     */
-    public static int DEFAULT_DIRECT_BUFFER_SIZE_PER_WORKER = 1024 * 4;
-
-    public static boolean IN_PERF_MODE = false;
+    public abstract byte[] doMask(byte[] input);
 }

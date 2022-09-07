@@ -66,7 +66,7 @@ public class BaseConfig {
     /**
      * 第一行是否为字段名
      */
-    protected boolean isWithHeader = ConfigConstant.DEFAULT_WITH_HEADER;
+    protected boolean isWithHeader;
 
     protected boolean shardingEnabled;
 
@@ -85,6 +85,8 @@ public class BaseConfig {
 
     private FileMode fileMode = new FileMode();
 
+    private boolean isWithLastSep = false;
+
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
     }
@@ -94,6 +96,9 @@ public class BaseConfig {
     }
 
     public void setSeparator(String separator) {
+        if (separator.isEmpty()) {
+            throw new IllegalArgumentException("Separator cannot be empty");
+        }
         // 分隔符不能包含特殊字符
         for (String illegalStr : ConfigConstant.ILLEGAL_SEPARATORS) {
             if (separator.contains(illegalStr)) {
@@ -170,6 +175,14 @@ public class BaseConfig {
         if (fileFormat != FileFormat.NONE) {
             fileMode.setFileFormat();
         }
+    }
+
+    public boolean isWithLastSep() {
+        return isWithLastSep;
+    }
+
+    public void setWithLastSep(boolean withLastSep) {
+        isWithLastSep = withLastSep;
     }
 
     /**

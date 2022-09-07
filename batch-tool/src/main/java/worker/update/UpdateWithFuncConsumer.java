@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import worker.common.BaseDefaultConsumer;
 import worker.util.UpdateUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,18 +32,18 @@ public class UpdateWithFuncConsumer extends BaseDefaultConsumer {
     private static final Logger logger = LoggerFactory.getLogger(UpdateWithFuncConsumer.class);
 
     private List<PrimaryKey> pkList;
-    private String[] pkValues;
+    private List<String> pkValues;
 
     @Override
     protected void initLocalVars() {
         this.pkList = consumerContext.getTablePkList(tableName);
-        this.pkValues = new String[pkList.size()];
+        this.pkValues = new ArrayList<>(pkList.size());
     }
 
     @Override
-    protected void fillLocalBuffer(StringBuilder stringBuilder, String[] values) {
+    protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
         for (int i = 0; i < pkList.size(); i++) {
-            pkValues[i] = values[pkList.get(i).getOrdinalPosition() - 1];
+            pkValues.add(values.get(pkList.get(i).getOrdinalPosition() - 1));
         }
 
         stringBuilder.append(UpdateUtil.getUpdateWithFuncSql(consumerContext.getUpdateWithFuncPattern(),

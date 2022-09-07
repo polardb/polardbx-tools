@@ -89,14 +89,14 @@ public class UpdateUtil {
     /**
      * 根据字段类型对值进行更新
      */
-    public static String getUpdatedValuesByMetaInfo(Set<Integer> pkIndexSet, String[] values,
+    public static String getUpdatedValuesByMetaInfo(Set<Integer> pkIndexSet, List<String> values,
                                                     List<FieldMetaInfo> fieldMetaInfoList) {
         List<String> updatedValueList = new ArrayList<>(fieldMetaInfoList.size());
         String fieldValue;
         int fieldIntValue;
         float fieldFloatValue;
         for (FieldMetaInfo fieldMetaInfo : fieldMetaInfoList) {
-            fieldValue = values[fieldMetaInfo.getIndex()];
+            fieldValue = values.get(fieldMetaInfo.getIndex());
             if (pkIndexSet.contains(fieldMetaInfo.getIndex())) {
                 // 主键不变
                 if (fieldMetaInfo.getType() == FieldMetaInfo.Type.STRING) {
@@ -154,7 +154,7 @@ public class UpdateUtil {
     }
 
     public static String getUpdateSql(String tableName, List<PrimaryKey> pkList, Set<Integer> pkIndexSet,
-                                      List<FieldMetaInfo> fieldMetaInfoList, String[] values,
+                                      List<FieldMetaInfo> fieldMetaInfoList, List<String> values,
                                       String where) {
         if (StringUtils.isEmpty(where)) {
             return getUpdateSql(tableName, pkList,
@@ -168,7 +168,7 @@ public class UpdateUtil {
     }
 
     public static String getUpdateSql(String tableName, List<PrimaryKey> pkList, Set<Integer> pkIndexSet,
-                                      List<FieldMetaInfo> fieldMetaInfoList, String[] values) {
+                                      List<FieldMetaInfo> fieldMetaInfoList, List<String> values) {
         String updateSqlPattern = "UPDATE %s SET %s WHERE %s;";
         String pkCondition = DbUtil.formatPkConditions(pkList, values);
         String setUpdatedValue = formatSetUpdatedValues(pkIndexSet, fieldMetaInfoList, values);
@@ -178,13 +178,13 @@ public class UpdateUtil {
 
     public static String formatSetUpdatedValues(Set<Integer> pkIndexSet,
                                                 List<FieldMetaInfo> fieldMetaInfoList,
-                                                String[] values) {
+                                                List<String> values) {
         List<String> updatedValueList = new ArrayList<>(fieldMetaInfoList.size() - pkIndexSet.size());
         String fieldValue;
         int fieldIntValue;
         float fieldFloatValue;
         for (FieldMetaInfo fieldMetaInfo : fieldMetaInfoList) {
-            fieldValue = values[fieldMetaInfo.getIndex()];
+            fieldValue = values.get(fieldMetaInfo.getIndex());
             if (pkIndexSet.contains(fieldMetaInfo.getIndex())) {
                 // 主键不在set的值里面
                 continue;
@@ -222,7 +222,7 @@ public class UpdateUtil {
     }
 
     public static String getUpdateWithFuncSql(String updateWithFuncPattern, List<PrimaryKey> pkList,
-                                              String[] pkValues) {
+                                              List<String> pkValues) {
         String pkCondition = DbUtil.formatPkConditions(pkList, pkValues);
         return String.format(updateWithFuncPattern, pkCondition);
     }

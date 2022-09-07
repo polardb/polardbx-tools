@@ -401,10 +401,10 @@ public class DbUtil {
     /**
      * 拼接出主键的where条件
      */
-    public static String formatPkConditions(List<PrimaryKey> pkList, String[] values) {
+    public static String formatPkConditions(List<PrimaryKey> pkList, List<String> values) {
         String[] pkConditions = new String[pkList.size()];
         for (int i = 0; i < pkList.size(); i++) {
-            pkConditions[i] = pkList.get(i).getName() + "='" + values[i] + "'";
+            pkConditions[i] = pkList.get(i).getName() + "='" + values.get(i) + "'";
         }
         return StringUtils.join(pkConditions, " AND ");
     }

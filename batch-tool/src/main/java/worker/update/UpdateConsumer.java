@@ -40,9 +40,9 @@ public class UpdateConsumer extends BaseDefaultConsumer {
     }
 
     @Override
-    protected void fillLocalBuffer(StringBuilder stringBuilder, String[] values) {
+    protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
         for (int i = 0; i < pkList.size(); i++) {
-            pkValues[i] = values[pkList.get(i).getOrdinalPosition() - 1];
+            pkValues[i] = values.get(pkList.get(i).getOrdinalPosition() - 1);
         }
         stringBuilder.append(UpdateUtil.getUpdateSql(tableName,
             pkList, consumerContext.getTablePkIndexSet(tableName),

@@ -144,9 +144,13 @@ public class FileUtil {
     }
 
 
-    public static String[] split(String line, String sep, boolean withLastSep, boolean hasEscapedQuote) {
-        ArrayList<String> values = splitWithQuoteEscape(line, sep, withLastSep, 10, hasEscapedQuote);
-        return values.toArray(new String[values.size()]);
+    public static List<String> split(String line, String sep, boolean withLastSep, boolean hasEscapedQuote) {
+        return splitWithEstimateCount(line, sep, withLastSep, 16, hasEscapedQuote);
+    }
+
+    public static List<String> splitWithEstimateCount(String line, String sep, boolean withLastSep,
+                                                  int estimateCount, boolean hasEscapedQuote) {
+        return splitWithQuoteEscape(line, sep, withLastSep, estimateCount, hasEscapedQuote);
     }
 
     /**
@@ -166,7 +170,7 @@ public class FileUtil {
     }
 
     private static ArrayList<String> splitWithQuoteEscape(String line, String sep, final boolean withLastSep,
-                                                          int expectedCount, final boolean hasEscapedQuote) {
+                                                          int estimateCount, final boolean hasEscapedQuote) {
 
         char[] chars = line.toCharArray();
         int len = chars.length;
@@ -174,16 +178,18 @@ public class FileUtil {
             // 结尾有分隔符则忽略
             len -= sep.length();
         }
-        ArrayList<String> subStrings = new ArrayList<>(expectedCount);
-        StringBuilder stringBuilder = new StringBuilder(line.length() / expectedCount);
+        ArrayList<String> subStrings = new ArrayList<>(estimateCount);
+        StringBuilder stringBuilder = new StringBuilder(line.length() / estimateCount);
         char sepStart = sep.charAt(0);
         boolean enclosingByQuote = false;
         boolean endsWithSep = false;
         for (int i = 0; i < len; i++) {
             if (i == len - 1) {
                 // 最后一个字符
-                if (chars[i] == '\"' && hasEscapedQuote) {
-                    stringBuilder.append(chars[i]);
+                if (chars[i] == '\"') {
+                    if (hasEscapedQuote) {
+                        stringBuilder.append(chars[i]);
+                    }
                     subStrings.add(stringBuilder.toString());
                     stringBuilder.setLength(0);
                     break;
@@ -192,8 +198,12 @@ public class FileUtil {
                     if (!hasEscapedQuote && enclosingByQuote) {
                         badFormatException("Unclosed quote", line);
                     } else {
-                        // 说明当前为最后一个字段
-                        stringBuilder.append(chars[i]);
+                        if (sep.length() == 1 && chars[i] == sepStart) {
+                            endsWithSep = true;
+                        } else {
+                            // 说明当前为最后一个字段
+                            stringBuilder.append(chars[i]);
+                        }
                         subStrings.add(stringBuilder.toString());
                         stringBuilder.setLength(0);
                     }
@@ -393,5 +403,13 @@ public class FileUtil {
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static boolean canRead(String filepath) {
+        File file = new File(filepath);
+        if (!file.exists() || !file.isFile() || !file.canRead()) {
+            return false;
+        }
+        return true;
     }
 }

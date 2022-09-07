@@ -26,18 +26,12 @@ import worker.ddl.DdlExportWorker;
 
 public abstract class BaseExportExecutor extends BaseExecutor {
 
-    protected ExportCommand command;
     protected ExportConfig config;
 
     public BaseExportExecutor(DataSourceConfig dataSourceConfig, DruidDataSource druid,
                               BaseOperateCommand baseCommand) {
         super(dataSourceConfig, druid, baseCommand);
-    }
-
-    @Override
-    protected void setCommand(BaseOperateCommand baseCommand) {
-        this.command = (ExportCommand) baseCommand;
-        this.config = command.getExportConfig();
+        this.config = ((ExportCommand) command).getExportConfig();
     }
 
     /**
