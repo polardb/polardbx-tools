@@ -58,11 +58,12 @@ public class YamlConfigResult implements ConfigResult {
 
     private String getYamlOption(ConfigArgOption option) {
         String result = null;
-        if (argMap.containsKey(option.argShort)) {
-            result = String.valueOf(argMap.get(option.argShort));
+        Object o;
+        if ((o = argMap.get(option.argShort)) != null) {
+            result = String.valueOf(o);
         }
-        if (argMap.containsKey(option.argLong)) {
-            result = String.valueOf(argMap.get(option.argLong));
+        if ((o = argMap.get(option.argLong)) != null) {
+            result = String.valueOf(o);
         }
         return result;
     }

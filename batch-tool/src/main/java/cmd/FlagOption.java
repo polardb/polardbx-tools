@@ -21,7 +21,7 @@ public class FlagOption extends ConfigArgOption {
 
     public Boolean defaultValue = null;
 
-    private FlagOption(String argShort, String argLong, String desc, String argName, boolean defaultValue) {
+    private FlagOption(String argShort, String argLong, String desc, String argName, Boolean defaultValue) {
         super(argShort, argLong, desc, argName);
         this.defaultValue = defaultValue;
     }
