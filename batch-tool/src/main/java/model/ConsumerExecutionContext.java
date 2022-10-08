@@ -422,8 +422,13 @@ public class ConsumerExecutionContext extends BaseConfig {
     @Override
     public void validate() {
         super.validate();
-        if (tableNames.size() > 1 && useColumns != null) {
-            throw new UnsupportedOperationException("Do not support multi-table operation with specified columns");
+        if (useColumns != null) {
+            if (tableNames == null) {
+                throw new UnsupportedOperationException("Do not support db operation with specified columns");
+            }
+            if (tableNames.size() > 1) {
+                throw new UnsupportedOperationException("Do not support multi-table operation with specified columns");
+            }
         }
     }
 }
