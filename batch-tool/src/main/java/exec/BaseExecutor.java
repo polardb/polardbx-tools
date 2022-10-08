@@ -262,6 +262,10 @@ public abstract class BaseExecutor {
                     return false;
                 }
                 for (; i < fileName.length(); i++) {
+                    if (fileName.charAt(i) == '.') {
+                        // ignore suffix match after dot
+                        break;
+                    }
                     if (!Character.isDigit(fileName.charAt(i))) {
                         return false;
                     }
