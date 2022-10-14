@@ -35,4 +35,8 @@ public class GlobalVar {
     public static int DEFAULT_DIRECT_BUFFER_SIZE_PER_WORKER = 1024 * 4;
 
     public static boolean IN_PERF_MODE = false;
+
+    public static int DDL_RETRY_COUNT = 5;
+
+    public static int DDL_PARALLELISM = 10;
 }

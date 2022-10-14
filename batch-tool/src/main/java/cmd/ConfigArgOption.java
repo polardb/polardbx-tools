@@ -123,6 +123,10 @@ public class ConfigArgOption {
         of("error", "maxError", "Max error count threshold, program exits when the limit is exceeded.", "max error count");
     public static final ConfigArgOption ARG_SHORT_MASK =
         of("mask", "mask", "Masking sensitive columns while exporting data.", "Json format config");
+    public static final ConfigArgOption ARG_DDL_RETRY_COUNT =
+        of("ddlRetry", "ddlRetry", "Retry times when import ddl throws exception.", "retry times");
+    public static final ConfigArgOption ARG_DDL_PARALLELISM =
+        of("ddlParallelism", "ddlParallelism", "Parallelism of ddl statements.", "num of threads");
 
     public boolean hasArg() {
         return argName != null;

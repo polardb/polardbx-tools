@@ -37,14 +37,16 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static model.config.GlobalVar.DDL_PARALLELISM;
+import static model.config.GlobalVar.DDL_RETRY_COUNT;
+
 /**
  * 直接通过读取SQL导入库表
  */
 public class DdlImporter {
 
     private static final Logger logger = LoggerFactory.getLogger(DdlExportWorker.class);
-    private static final int DDL_RETRY_COUNT = 3;
-    private static final int DDL_PARALLELISM = 10;
+
 
     private final List<String> filepaths = new ArrayList<>();;
     private final DataSource dataSource;
@@ -74,6 +76,8 @@ public class DdlImporter {
      * 异步导入DDL建表语句
      */
     public synchronized void doImportSync() {
+        logger.info("Importing ddl with parallelism: {}, retry count: {}", DDL_PARALLELISM, DDL_RETRY_COUNT);
+
         if (ddlThreadPool.isShutdown()) {
             throw new IllegalStateException("ddl thread pool has been shutdown");
         }
@@ -155,7 +159,7 @@ public class DdlImporter {
                 }
                 stmt.execute(sql);
             } catch (SQLException e) {
-                if (e.getMessage().contains("ERR_GMS_ACCESS_TO_SYSTEM_TABLE") && stmt != null) {
+                if (stmt != null) {
                     int retryCount = 0;
                     for (; retryCount < DDL_RETRY_COUNT; retryCount++) {
                         try {
@@ -167,6 +171,7 @@ public class DdlImporter {
                         }
                     }
                     if (retryCount < DDL_RETRY_COUNT) {
+                        // 重试成功
                         return;
                     }
                 }

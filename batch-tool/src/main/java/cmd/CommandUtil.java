@@ -54,6 +54,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static cmd.ConfigArgOption.ARG_DDL_PARALLELISM;
+import static cmd.ConfigArgOption.ARG_DDL_RETRY_COUNT;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
 import static cmd.ConfigArgOption.ARG_SHORT_CHARSET;
 import static cmd.ConfigArgOption.ARG_SHORT_COLUMNS;
@@ -409,6 +411,9 @@ public class CommandUtil {
         exportConfig.setSeparator(getSep(result));
         exportConfig.setWhereCondition(getWhereCondition(result));
         exportConfig.setDdlMode(getDdlMode(result));
+        if (exportConfig.getDdlMode() != DdlMode.NO_DDL) {
+            setGlobalDdlConfig(result);
+        }
         exportConfig.setEncryptionConfig(getEncryptionConfig(result));
         exportConfig.setFileFormat(getFileFormat(result));
         exportConfig.setCompressMode(getCompressMode(result));
@@ -670,6 +675,15 @@ public class CommandUtil {
             return DdlMode.NO_DDL;
         }
         return DdlMode.fromString(result.getOptionValue(ARG_SHORT_WITH_DDL));
+    }
+
+    private static void setGlobalDdlConfig(ConfigResult result) {
+        if (result.hasOption(ARG_DDL_RETRY_COUNT)) {
+            GlobalVar.DDL_RETRY_COUNT = Integer.parseInt(result.getOptionValue(ARG_DDL_RETRY_COUNT));
+        }
+        if (result.hasOption(ARG_DDL_PARALLELISM)) {
+            GlobalVar.DDL_PARALLELISM = Integer.parseInt(result.getOptionValue(ARG_DDL_PARALLELISM));
+        }
     }
 
     private static int getMaxErrorCount(ConfigResult result) {
