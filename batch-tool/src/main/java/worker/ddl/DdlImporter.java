@@ -50,7 +50,7 @@ public class DdlImporter {
 
     private final List<String> filepaths = new ArrayList<>();;
     private final DataSource dataSource;
-    private final ExecutorService ddlThreadPool = MyThreadPool.createFixedExecutor("DDL-importer", DDL_PARALLELISM);
+    private final ExecutorService ddlThreadPool = MyThreadPool.createUnboundedFixedExecutor("DDL-importer", DDL_PARALLELISM);
     private final AtomicInteger taskCount = new AtomicInteger(0);
     private volatile String useDbSql = null;
 

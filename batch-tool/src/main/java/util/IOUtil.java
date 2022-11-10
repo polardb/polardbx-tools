@@ -49,6 +49,15 @@ public class IOUtil {
         }
     }
 
+    public static FileChannel createAppendChannel(String tmpFileName) {
+        try {
+            return FileChannel.open(Paths.get(tmpFileName), StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void writeNio(FileChannel fileChannel, byte[] data) throws IOException {
         ByteBuffer src = ByteBuffer.wrap(data);
         int length = fileChannel.write(src);
