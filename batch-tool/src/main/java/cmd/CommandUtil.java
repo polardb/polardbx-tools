@@ -110,6 +110,7 @@ import static cmd.FlagOption.ARG_SHORT_SQL_FUNC;
 import static cmd.FlagOption.ARG_SHORT_USING_IN;
 import static cmd.FlagOption.ARG_SHORT_WITH_HEADER;
 import static cmd.FlagOption.ARG_SHORT_WITH_LAST_SEP;
+import static cmd.FlagOption.ARG_TRIM_RIGHT;
 
 /**
  * 从命令行输入解析配置
@@ -538,10 +539,10 @@ public class CommandUtil {
         producerExecutionContext.setMaxErrorCount(getMaxErrorCount(result));
         producerExecutionContext.setHistoryFileAndParse(getHistoryFile(result));
         producerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
+        producerExecutionContext.setTrimRight(getTrimRight(result));
 
         producerExecutionContext.validate();
     }
-
 
     /**
      * 配置消费者
@@ -614,6 +615,10 @@ public class CommandUtil {
         } else {
             return ConfigConstant.DEFAULT_QUOTE_ENCLOSE_MODE;
         }
+    }
+
+    private static boolean getTrimRight(ConfigResult result) {
+        return !result.getBooleanFlag(ARG_TRIM_RIGHT);
     }
 
     private static boolean getForceParallelism(ConfigResult result) {
