@@ -89,7 +89,7 @@ public class NormalTableImportTest extends BaseJarTest {
 
     @Test
     public void importInDirTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
         String opStr = String.format(" -o import -t %s -s | -dir %s", TABLE, SUB_DIR_NAME);
         runCommand(dbStr + opStr, importDirPath);
@@ -102,9 +102,9 @@ public class NormalTableImportTest extends BaseJarTest {
      */
     @Test
     public void importInDirWithQuoteTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
-        String opStr = String.format(" -o import -t %s -s , -dir %s -quote force", TABLE, SUB_DIR_NAME);
+        String opStr = String.format(" -o import -t %s -s | -dir %s -quote force", TABLE, SUB_DIR_NAME);
         runCommand(dbStr + opStr, importDirPath);
         waitForExit();
     }
@@ -114,7 +114,7 @@ public class NormalTableImportTest extends BaseJarTest {
      */
     @Test
     public void importInFileWithQuoteTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
         String opStr = String.format(" -o import -t %s -s , -f %s -quote force", TABLE,
             importDirPath + "/customer-quoted.data");
@@ -124,7 +124,7 @@ public class NormalTableImportTest extends BaseJarTest {
 
     @Test
     public void importWithMediumBatchSizeTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
         String opStr = String.format(" -o import -t %s -s , -f %s -quote force -batchSize 100", TABLE,
             importDirPath + "/customer-quoted.data");
@@ -134,7 +134,7 @@ public class NormalTableImportTest extends BaseJarTest {
 
     @Test
     public void importWithLargeBatchSizeTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
         String opStr = String.format(" -o import -t %s -s , -f %s -quote force -batchSize 300", TABLE,
             importDirPath + "/customer-quoted.data");
@@ -147,7 +147,7 @@ public class NormalTableImportTest extends BaseJarTest {
      */
     @Test
     public void importXlsxTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
         String opStr = String.format(" -o import -t %s -s , -f %s -quote force -format XLSX", TABLE,
             importDirPath + "/customer_0.xlsx");
