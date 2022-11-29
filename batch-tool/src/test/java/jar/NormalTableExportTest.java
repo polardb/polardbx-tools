@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 
 /**
- * 1. 对单机MySQL 的测试用例
+ * 1. 对单机MySQL 的数据导出测试用例
  * 2. 需要手动验证导出文件的结果
  */
 public class NormalTableExportTest extends BaseJarTest {
