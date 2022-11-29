@@ -54,6 +54,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static cmd.ConfigArgOption.ARG_DDL_PARALLELISM;
+import static cmd.ConfigArgOption.ARG_DDL_RETRY_COUNT;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
 import static cmd.ConfigArgOption.ARG_SHORT_CHARSET;
 import static cmd.ConfigArgOption.ARG_SHORT_COLUMNS;
@@ -108,6 +110,7 @@ import static cmd.FlagOption.ARG_SHORT_SQL_FUNC;
 import static cmd.FlagOption.ARG_SHORT_USING_IN;
 import static cmd.FlagOption.ARG_SHORT_WITH_HEADER;
 import static cmd.FlagOption.ARG_SHORT_WITH_LAST_SEP;
+import static cmd.FlagOption.ARG_TRIM_RIGHT;
 
 /**
  * 从命令行输入解析配置
@@ -258,7 +261,6 @@ public class CommandUtil {
 
     private static void validateOperateArgs(ConfigResult result) {
         requireArg(result, ARG_SHORT_OPERATION);
-        requireArg(result, ARG_SHORT_SEP);
         requireArg(result, ARG_SHORT_DBNAME);
     }
 
@@ -348,7 +350,10 @@ public class CommandUtil {
 
     //region 读写文件相关配置
     private static String getSep(ConfigResult result) {
-        return result.getOptionValue(ARG_SHORT_SEP);
+        if (result.hasOption(ARG_SHORT_SEP)) {
+            return result.getOptionValue(ARG_SHORT_SEP);
+        }
+        return ConfigConstant.DEFAULT_SEPARATOR;
     }
 
     private static Charset getCharset(ConfigResult result) {
@@ -409,6 +414,9 @@ public class CommandUtil {
         exportConfig.setSeparator(getSep(result));
         exportConfig.setWhereCondition(getWhereCondition(result));
         exportConfig.setDdlMode(getDdlMode(result));
+        if (exportConfig.getDdlMode() != DdlMode.NO_DDL) {
+            setGlobalDdlConfig(result);
+        }
         exportConfig.setEncryptionConfig(getEncryptionConfig(result));
         exportConfig.setFileFormat(getFileFormat(result));
         exportConfig.setCompressMode(getCompressMode(result));
@@ -533,10 +541,10 @@ public class CommandUtil {
         producerExecutionContext.setMaxErrorCount(getMaxErrorCount(result));
         producerExecutionContext.setHistoryFileAndParse(getHistoryFile(result));
         producerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
+        producerExecutionContext.setTrimRight(getTrimRight(result));
 
         producerExecutionContext.validate();
     }
-
 
     /**
      * 配置消费者
@@ -611,6 +619,10 @@ public class CommandUtil {
         }
     }
 
+    private static boolean getTrimRight(ConfigResult result) {
+        return !result.getBooleanFlag(ARG_TRIM_RIGHT);
+    }
+
     private static boolean getForceParallelism(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FORCE_CONSUMER)) {
             return Boolean.parseBoolean(result.getOptionValue(ARG_SHORT_FORCE_CONSUMER));
@@ -670,6 +682,15 @@ public class CommandUtil {
             return DdlMode.NO_DDL;
         }
         return DdlMode.fromString(result.getOptionValue(ARG_SHORT_WITH_DDL));
+    }
+
+    private static void setGlobalDdlConfig(ConfigResult result) {
+        if (result.hasOption(ARG_DDL_RETRY_COUNT)) {
+            GlobalVar.DDL_RETRY_COUNT = Integer.parseInt(result.getOptionValue(ARG_DDL_RETRY_COUNT));
+        }
+        if (result.hasOption(ARG_DDL_PARALLELISM)) {
+            GlobalVar.DDL_PARALLELISM = Integer.parseInt(result.getOptionValue(ARG_DDL_PARALLELISM));
+        }
     }
 
     private static int getMaxErrorCount(ConfigResult result) {

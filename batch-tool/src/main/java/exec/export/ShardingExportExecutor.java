@@ -215,7 +215,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             // 再将碎片一次分配给每个文件
             for (int i = 0; i < consumerCount; i++) {
                 CollectFragmentWorker collectFragmentWorker = new CollectFragmentWorker(
-                    fragmentQueue, filePaths, cyclicCounter, fragmentCountLatch);
+                    fragmentQueue, filePaths, cyclicCounter, fragmentCountLatch, config.getCompressMode(), config.getCharset());
                 executor.submit(collectFragmentWorker);
             }
             try {

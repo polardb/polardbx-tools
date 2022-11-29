@@ -24,16 +24,23 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.SQLException;
+import java.util.Properties;
 
 public class BaseJarTest {
     private static final Logger logger = LoggerFactory.getLogger(BaseJarTest.class);
 
     public static final String APP_NAME = "batch-tool.jar";
     protected static final TestProperties testProperties = new TestProperties();
+    protected static final BaseDbConfig dbConfig = new BaseDbConfig(testProperties);
 
     public static String CUR_WORK_DIR;
     public static String APP_PATH = null;
@@ -117,15 +124,34 @@ public class BaseJarTest {
         return "";
     }
 
+    protected static Connection getDbConn() throws SQLException {
+        Driver driver = new com.mysql.jdbc.Driver();
+        Properties info = new Properties();
+        info.put("user", dbConfig.USER);
+        info.put("password", dbConfig.PASSWORD);
+        return driver.connect(dbConfig.DB_URL, info);
+    }
+
     public void waitForExit() {
         int status = 0;
         try {
             status = process.waitFor();
-            if (status != 0) {
-                Assert.fail("Execute jar failed unexpectedly");
+            BufferedInputStream errorStream = new BufferedInputStream(process.getErrorStream());
+            BufferedReader errorReader = new BufferedReader(
+                new InputStreamReader(errorStream, StandardCharsets.UTF_8));
+            String errorLine = null;
+            boolean error = false;
+            while ((errorLine = errorReader.readLine()) != null) {
+                error = true;
+                logger.error(errorLine);
+            }
+            if (status != 0 || error) {
+                Assert.fail("Execute batch-tool jar failed unexpectedly");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

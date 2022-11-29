@@ -92,6 +92,7 @@ public class BlockReader extends FileBufferedBatchReader {
      * 根据文本数据特征可适当调整
      */
     private static long READ_PADDING = 1024L * 4;
+    private boolean trimRight;
     private final BaseCipher cipher;
     private final FileBlockListRecord fileBlockListRecord;
 
@@ -116,6 +117,7 @@ public class BlockReader extends FileBufferedBatchReader {
         }
         this.byteBuffer = new BlockByteBuffer((int) (readBlockSize + READ_PADDING));
         this.posMarker = new BlockPosMarker();
+        this.trimRight = context.isTrimRight();
     }
 
     @Override
@@ -210,7 +212,8 @@ public class BlockReader extends FileBufferedBatchReader {
             }
         }
         // trim right
-        while ((bytesEnd >= bytesOffset) && (tmpByteBuffer[bytesEnd] <= ' ')) {
+        while (trimRight && (bytesEnd >= bytesOffset) &&
+            (tmpByteBuffer[bytesEnd] == ' ' ||  tmpByteBuffer[bytesEnd] == '\t' )) {
             bytesEnd--;
         }
         if (bytesEnd < bytesOffset) {
