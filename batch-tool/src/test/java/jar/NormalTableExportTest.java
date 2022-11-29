@@ -19,6 +19,8 @@ package jar;
 import common.BaseDbConfig;
 import common.BaseJarTest;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -26,12 +28,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
+/**
+ * 1. 对单机MySQL 的测试用例
+ * 2. 需要手动验证导出文件的结果
+ */
 public class NormalTableExportTest extends BaseJarTest {
     private static final Logger logger = LoggerFactory.getLogger(NormalTableExportTest.class);
 
     private static String exportDirPath = null;
 
     private static final BaseDbConfig dbConfig = new BaseDbConfig(testProperties);
+
     private static final String TABLE = "customer";
 
     @BeforeClass
@@ -42,30 +49,87 @@ public class NormalTableExportTest extends BaseJarTest {
         }
     }
 
-    @Test
-    public void exportShardingTest() {
+    @Before
+    public void before() {
         logger.info("start exporting {}", TABLE);
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
-            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
-        String opStr = String.format(" -o export -t %s -s |", TABLE);
-        runCommand(dbStr
-            + opStr, exportDirPath);
-        waitForExit();
+    }
 
+    @After
+    public void after() {
         logger.info("exporting {} done", TABLE);
     }
 
-
     @Test
-    public void exportShardingWithQuoteTest() {
-        logger.info("start exporting {}", TABLE);
+    public void exportWithQuoteTest() {
         String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
-        String opStr = String.format(" -o export -t %s -s , -quote force", TABLE);
-        runCommand(dbStr
-            + opStr, exportDirPath);
+        String opStr = String.format(" -o export -t %s -s , -quote force -sharding false", TABLE);
+        runCommand(dbStr + opStr, exportDirPath);
         waitForExit();
+    }
 
-        logger.info("exporting {} done", TABLE);
+    /**
+     * 导出压缩文件
+     */
+    @Test
+    public void exportGzipTest() {
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
+        String opStr = String.format(" -o export -t %s -s , -quote force -sharding false -comp GZIP", TABLE);
+        runCommand(dbStr + opStr, exportDirPath);
+        waitForExit();
+    }
+
+    /**
+     * 导出Excel xlsx文件
+     */
+    @Test
+    public void exportXlsxTest() {
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
+        String opStr = String.format(" -o export -t %s -s , -quote force -sharding false -format XLSX", TABLE);
+        runCommand(dbStr + opStr, exportDirPath);
+        waitForExit();
+    }
+
+    /**
+     * 导出Excel xls文件
+     */
+    @Test
+    public void exportXlsTest() {
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
+        String opStr = String.format(" -o export -t %s -s , -quote force -sharding false -format XLS", TABLE);
+        runCommand(dbStr + opStr, exportDirPath);
+        waitForExit();
+    }
+
+    /**
+     * 掩码脱敏导出指定列
+     */
+    @Test
+    public void exportHidingMaskTest() {
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
+        String opStr = String.format(" -o export -t %s -s , -quote force -sharding false -mask {"
+            + "\"c_phone\":{\"type\":\"hiding\",\"show_region\":\"0-2\",\"show_end\":4}"
+            + "}", TABLE);
+        runCommand(dbStr + opStr, exportDirPath);
+        waitForExit();
+    }
+
+    /**
+     * 哈希+掩码脱敏导出指定列
+     */
+    @Test
+    public void exportHashAndHidingMaskTest() {
+        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
+            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
+        String opStr = String.format(" -o export -t %s -s , -quote force -sharding false -mask {"
+            + "\"c_phone\":{\"type\":\"hiding\",\"show_region\":\"0-2\",\"show_end\":4},"
+            + "\"c_name\":{\"type\":\"hash\",\"salt\":\"asdfgh\"}"
+            + "}", TABLE);
+        runCommand(dbStr + opStr, exportDirPath);
+        waitForExit();
     }
 }

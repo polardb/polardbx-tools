@@ -17,10 +17,10 @@
 package worker.common.reader;
 
 import com.lmax.disruptor.RingBuffer;
-import com.opencsv.CSVParser;
-import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
 import com.opencsv.exceptions.CsvValidationException;
 import model.ProducerExecutionContext;
 import model.config.ConfigConstant;
@@ -50,7 +50,7 @@ public class CsvReader extends FileBufferedBatchReader {
             throw new IllegalArgumentException("CSV reader only support one-char separator");
         }
         char sepChar = sep.charAt(0);
-        CSVParser parser = new CSVParserBuilder().withSeparator(sepChar).build();
+        RFC4180Parser parser = new RFC4180ParserBuilder().withSeparator(sepChar).build();
         try {
             this.reader = new CSVReaderBuilder(new InputStreamReader(
                 new FileInputStream(fileList.get(fileIndex).getAbsolutePath()), context.getCharset()))
