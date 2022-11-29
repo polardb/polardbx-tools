@@ -17,14 +17,20 @@
 package worker.export;
 
 import model.CyclicAtomicInteger;
+import model.config.CompressMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.IOUtil;
+import worker.common.writer.IFileWriter;
+import worker.common.writer.NioFileWriter;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 
@@ -35,32 +41,45 @@ public class CollectFragmentWorker implements Runnable {
     private final String[] filePaths;
     private final CyclicAtomicInteger cyclicCounter;
     private final CountDownLatch fragmentCountLatch;
+    private final CompressMode compressMode;
+    private final Charset charset;
+
+    private final Map<String, IFileWriter> fileWriterCache = new HashMap<>();
 
     public CollectFragmentWorker(Queue<ExportEvent> fragmentQueue, String[] filePaths,
-                                 CyclicAtomicInteger cyclicCounter, CountDownLatch fragmentCountLatch) {
+                                 CyclicAtomicInteger cyclicCounter, CountDownLatch fragmentCountLatch,
+                                 CompressMode compressMode, Charset charset) {
         this.fragmentQueue = fragmentQueue;
         this.filePaths = filePaths;
         this.cyclicCounter = cyclicCounter;
         this.fragmentCountLatch = fragmentCountLatch;
+        this.compressMode = compressMode;
+        this.charset = charset;
     }
 
     @Override
     public void run() {
-        while (!fragmentQueue.isEmpty()) {
-            ExportEvent exportEvent = fragmentQueue.poll();
-            byte[] data = exportEvent.getData();
+        try {
+            while (!fragmentQueue.isEmpty()) {
+                ExportEvent exportEvent = fragmentQueue.poll();
+                byte[] data = exportEvent.getData();
 
-            String filePath = filePaths[cyclicCounter.next()];
-            try {
-                FileChannel appendChannel = FileChannel.open(Paths.get(filePath),
-                    StandardOpenOption.APPEND);
-                IOUtil.writeNio(appendChannel, data);
+                String filePath = filePaths[cyclicCounter.next()];
+
+                IFileWriter fileWriter = fileWriterCache.computeIfAbsent(filePath,
+                    (key) -> new NioFileWriter(filePath, compressMode, charset, false));
+                fileWriter.write(data);
                 logger.debug("向文件 {} 写入碎片数据 ", filePath);
-            } catch (IOException e) {
-                e.printStackTrace();
             }
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+            for (IFileWriter fileWriter : fileWriterCache.values()) {
+                IOUtil.close(fileWriter);
+            }
+            fragmentCountLatch.countDown();
         }
-        fragmentCountLatch.countDown();
     }
 
 }

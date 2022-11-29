@@ -16,7 +16,9 @@
 
 package worker.common.writer;
 
-public interface IFileWriter {
+import java.io.Closeable;
+
+public interface IFileWriter extends Closeable {
 
     void nextFile(String fileName);
 

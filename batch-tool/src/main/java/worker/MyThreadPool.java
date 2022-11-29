@@ -47,6 +47,16 @@ public class MyThreadPool {
             new NamedThreadFactory(name, false));
     }
 
+    public static ThreadPoolExecutor createUnboundedFixedExecutor(String name, int coreSize) {
+        return new ThreadPoolExecutor(
+            coreSize,
+            coreSize,
+            ALIVE_TIME,
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(),
+            new NamedThreadFactory(name, false));
+    }
+
     public static ThreadPoolExecutor createExecutorWithEnsure(String name, int coreSize) {
         return new ThreadPoolExecutor(
             coreSize + 20,

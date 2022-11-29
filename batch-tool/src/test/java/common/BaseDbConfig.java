@@ -25,7 +25,7 @@ public class BaseDbConfig {
     public final String USER;
     public final String PASSWORD;
 
-    protected final String POLARX_URL;
+    protected final String DB_URL;
 
     public BaseDbConfig(TestProperties testProperties) {
         this.HOST = testProperties.getProp("db.host");
@@ -34,7 +34,7 @@ public class BaseDbConfig {
         this.USER = testProperties.getProp("db.user");
         this.PASSWORD = testProperties.getProp("db.password");
 
-        this.POLARX_URL = String.format(DataSourceUtil.URL_PATTERN,
+        this.DB_URL = String.format(DataSourceUtil.URL_PATTERN,
             HOST, PORT, DB);
     }
 }

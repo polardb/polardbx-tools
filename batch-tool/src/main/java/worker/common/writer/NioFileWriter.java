@@ -54,15 +54,19 @@ public class NioFileWriter implements IFileWriter {
     }
 
     public NioFileWriter(String fileName, CompressMode compressMode, Charset charset) {
+        this(fileName, compressMode, charset, true);
+    }
+
+    public NioFileWriter(String fileName, CompressMode compressMode, Charset charset, boolean append) {
         this.compressMode = compressMode;
         this.charset = charset;
-        openFileChannel(fileName);
+        openFileChannel(fileName, append);
     }
 
     @Override
     public void nextFile(String fileName) {
         closeCurFile();
-        openFileChannel(fileName);
+        openFileChannel(fileName, true);
     }
 
     @Override
@@ -81,11 +85,15 @@ public class NioFileWriter implements IFileWriter {
             return;
         }
         closeCurFile();
-        this.closed = false;
+        this.closed = true;
     }
 
-    private void openFileChannel(String fileName) {
-        this.appendChannel = IOUtil.createEmptyFileAndOpenChannel(fileName);
+    private void openFileChannel(String fileName, boolean newEmptyFile) {
+        if (newEmptyFile) {
+            this.appendChannel = IOUtil.createEmptyFileAndOpenChannel(fileName);
+        } else {
+            this.appendChannel = IOUtil.createAppendChannel(fileName);
+        }
         if (compressMode == CompressMode.GZIP) {
             this.gzipOutputStream = IOUtil.createGzipOutputStream(appendChannel);
         }

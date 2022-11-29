@@ -45,6 +45,8 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private int parallelism;
 
+    private boolean trimRight = false;
+
     /**
      * in MB
      */
@@ -242,6 +244,14 @@ public class ProducerExecutionContext extends BaseConfig {
 
     public void setException(Exception exception) {
         this.exception = exception;
+    }
+
+    public boolean isTrimRight() {
+        return trimRight;
+    }
+
+    public void setTrimRight(boolean trimRight) {
+        this.trimRight = trimRight;
     }
 
     @Override
