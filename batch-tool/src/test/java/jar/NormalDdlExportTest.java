@@ -29,18 +29,15 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 
 /**
- * 1. 对 PolarDB-X 的数据导出测试用例
+ * 1. 对单机MySQL 的 DDL导出测试用例
  * 2. 需要手动验证导出文件的结果
  */
-public class ShardingTableExportTest extends BaseJarTest {
-    private static final Logger logger = LoggerFactory.getLogger(ShardingTableExportTest.class);
+public class NormalDdlExportTest extends BaseJarTest {
+    private static final Logger logger = LoggerFactory.getLogger(NormalDdlExportTest.class);
 
     private static String exportDirPath = null;
 
     private static final BaseDbConfig dbConfig = new BaseDbConfig(testProperties);
-
-    private static final String SUB_DIR_NAME = "/data";
-    private static final String TABLE = "customer";
 
     @BeforeClass
     public static void setUpNormalTableExportTest() {
@@ -52,37 +49,19 @@ public class ShardingTableExportTest extends BaseJarTest {
 
     @Before
     public void before() {
-        logger.info("start exporting {}", TABLE);
+        logger.info("start exporting DDL in {}", dbConfig.DB);
     }
 
     @After
     public void after() {
-        logger.info("exporting {} done", TABLE);
+        logger.info("exporting DDL in {} done", dbConfig.DB);
     }
 
     @Test
-    public void exportTest() {
+    public void exportAllDdlInDbTest() {
         String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
             dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
-        String opStr = String.format(" -o export -t %s -s |", TABLE);
-        runCommand(dbStr + opStr, exportDirPath + SUB_DIR_NAME);
-        waitForExit();
-    }
-
-    @Test
-    public void exportWithQuoteTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
-            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
-        String opStr = String.format(" -o export -t %s -s , -quote force", TABLE);
-        runCommand(dbStr + opStr, exportDirPath + SUB_DIR_NAME);
-        waitForExit();
-    }
-
-    @Test
-    public void exportFixedFileNumTest() {
-        String dbStr = String.format(" -h %s -P %s -u %s -p %s  -D %s", dbConfig.HOST, dbConfig.PORT,
-            dbConfig.USER, dbConfig.PASSWORD, dbConfig.DB);
-        String opStr = String.format(" -o export -t %s -s , -quote force -F 3", TABLE);
+        String opStr = " -o export -DDL only";
         runCommand(dbStr + opStr, exportDirPath);
         waitForExit();
     }

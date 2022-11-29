@@ -131,4 +131,14 @@ public class ConfigArgOption {
     public boolean hasArg() {
         return argName != null;
     }
+
+    @Override
+    public String toString() {
+        return "{" +
+            "argShort='" + argShort + '\'' +
+            ", argLong='" + argLong + '\'' +
+            ", desc='" + desc + '\'' +
+            ", argName='" + argName + '\'' +
+            '}';
+    }
 }

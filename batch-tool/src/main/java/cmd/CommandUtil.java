@@ -261,7 +261,6 @@ public class CommandUtil {
 
     private static void validateOperateArgs(ConfigResult result) {
         requireArg(result, ARG_SHORT_OPERATION);
-        requireArg(result, ARG_SHORT_SEP);
         requireArg(result, ARG_SHORT_DBNAME);
     }
 
@@ -351,7 +350,10 @@ public class CommandUtil {
 
     //region 读写文件相关配置
     private static String getSep(ConfigResult result) {
-        return result.getOptionValue(ARG_SHORT_SEP);
+        if (result.hasOption(ARG_SHORT_SEP)) {
+            return result.getOptionValue(ARG_SHORT_SEP);
+        }
+        return ConfigConstant.DEFAULT_SEPARATOR;
     }
 
     private static Charset getCharset(ConfigResult result) {
