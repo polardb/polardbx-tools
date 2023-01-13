@@ -98,6 +98,7 @@ import static cmd.ConfigArgOption.ARG_SHORT_USERNAME;
 import static cmd.ConfigArgOption.ARG_SHORT_VERSION;
 import static cmd.ConfigArgOption.ARG_SHORT_WHERE;
 import static cmd.ConfigArgOption.ARG_SHORT_WITH_DDL;
+import static cmd.FlagOption.ARG_EMPTY_AS_NULL;
 import static cmd.FlagOption.ARG_SHORT_ENABLE_SHARDING;
 import static cmd.FlagOption.ARG_SHORT_IGNORE_AND_RESUME;
 import static cmd.FlagOption.ARG_SHORT_LOAD_BALANCE;
@@ -396,6 +397,10 @@ public class CommandUtil {
         return result.getBooleanFlag(ARG_SHORT_WITH_LAST_SEP);
     }
 
+    private static boolean getEmptyAsNull(ConfigResult result) {
+        return result.getBooleanFlag(ARG_EMPTY_AS_NULL);
+    }
+
     private static FileFormat getFileFormat(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
             String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);
@@ -563,6 +568,7 @@ public class CommandUtil {
         consumerExecutionContext.setWithLastSep(getWithLastSep(result));
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
         consumerExecutionContext.setUseColumns(getUseColumns(result));
+        consumerExecutionContext.setEmptyStrAsNull(getEmptyAsNull(result));
 
         consumerExecutionContext.validate();
     }

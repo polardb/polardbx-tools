@@ -34,7 +34,7 @@ public class ShardedImportConsumer extends BaseShardedConsumer {
                                    List<FieldMetaInfo> fieldMetaInfoList) throws Throwable {
         localBuffer.append("(");
         ImportUtil.appendValuesByFieldMetaInfo(localBuffer, fieldMetaInfoList,
-            values, consumerContext.isSqlEscapeEnabled(), hasEscapedQuote);
+            values, consumerContext.isSqlEscapeEnabled(), consumerContext.isEmptyStrAsNull());
         localBuffer.append("),");
     }
 
