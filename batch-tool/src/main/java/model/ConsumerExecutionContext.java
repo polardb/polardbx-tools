@@ -129,6 +129,11 @@ public class ConsumerExecutionContext extends BaseConfig {
      */
     private int tpsLimit;
 
+    /**
+     * 字符串类型字段，空值视作NULL
+     */
+    private boolean emptyStrAsNull = false;
+
     private double batchTpsLimitPerConsumer;
 
     private List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter;
@@ -308,6 +313,7 @@ public class ConsumerExecutionContext extends BaseConfig {
             ", toUpdateColumns='" + toUpdateColumns + '\'' +
             ", updateWithFuncPattern='" + updateWithFuncPattern + '\'' +
             ", sqlEscapeEnabled=" + sqlEscapeEnabled +
+            ", tableFieldMetaInfo=" + tableFieldMetaInfo +
             '}';
     }
 
@@ -417,6 +423,14 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     public void setUseColumns(String useColumns) {
         this.useColumns = useColumns;
+    }
+
+    public boolean isEmptyStrAsNull() {
+        return emptyStrAsNull;
+    }
+
+    public void setEmptyStrAsNull(boolean emptyStrAsNull) {
+        this.emptyStrAsNull = emptyStrAsNull;
     }
 
     @Override

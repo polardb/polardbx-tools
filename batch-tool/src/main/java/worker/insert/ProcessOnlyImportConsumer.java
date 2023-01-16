@@ -66,7 +66,7 @@ public class ProcessOnlyImportConsumer extends BaseWorkHandler {
                 stringBuilder.append("(");
                 try {
                     ImportUtil.appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList,
-                        values, consumerContext.isSqlEscapeEnabled(), hasEscapedQuote);
+                        values, consumerContext.isSqlEscapeEnabled(), consumerContext.isEmptyStrAsNull());
                 } catch (DatabaseException e) {
                     logger.error("Error {} at line: {}", e.getMessage(), line);
                     // 去除括号

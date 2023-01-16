@@ -69,13 +69,19 @@ public class ImportUtil {
     }
 
     public static void appendInsertStrValue(StringBuilder sqlStringBuilder, String rawValue,
-                                            boolean sqlEscapeEnabled, boolean hasEscapedQuote) {
+                                            boolean sqlEscapeEnabled, boolean emptyStrAsNull) {
         if (rawValue.equals(FileUtil.NULL_ESC_STR)) {
             // NULL字段处理
             sqlStringBuilder.append("NULL");
             return;
         }
+        if (rawValue.isEmpty() && emptyStrAsNull) {
+            // 空字符串视作NULL
+            sqlStringBuilder.append("NULL");
+            return;
+        }
         if (GlobalVar.IN_PERF_MODE) {
+            // 预设csv文件中的值已经带上了引号
             sqlStringBuilder.append(rawValue);
             return;
         }
@@ -109,9 +115,13 @@ public class ImportUtil {
         return sqlValue;
     }
 
-    public static void appendInsertNonStrValue(StringBuilder sqlStringBuilder, String rawValue,
-                                               boolean hasEscapedQuote) {
-        if (rawValue.equals(FileUtil.NULL_ESC_STR)) {
+    /**
+     * 对于非字符串字段
+     * 空值视为NULL
+     */
+    public static void appendInsertNonStrValue(StringBuilder sqlStringBuilder, String rawValue) {
+        if (rawValue.equals(FileUtil.NULL_ESC_STR)
+            || rawValue.isEmpty()) {
             // NULL字段处理
             sqlStringBuilder.append("NULL");
         } else {
@@ -122,7 +132,7 @@ public class ImportUtil {
     public static void appendValuesByFieldMetaInfo(StringBuilder stringBuilder,
                                                    List<FieldMetaInfo> fieldMetaInfoList,
                                                    List<String> values, boolean sqlEscapeEnabled,
-                                                   boolean hasEscapedQuote) throws DatabaseException {
+                                                   boolean emptyStrAsNull) throws DatabaseException {
         if (fieldMetaInfoList.size() != values.size()) {
             throw new DatabaseException(String.format("required field size %d, "
                 + "actual size %d", fieldMetaInfoList.size(), values.size()));
@@ -131,16 +141,16 @@ public class ImportUtil {
         for (int i = 0; i < fieldLen - 1; i++) {
             if (fieldMetaInfoList.get(i).needQuote()) {
                 // 字符串和日期都需要单引号
-                ImportUtil.appendInsertStrValue(stringBuilder, values.get(i), sqlEscapeEnabled, hasEscapedQuote);
+                ImportUtil.appendInsertStrValue(stringBuilder, values.get(i), sqlEscapeEnabled, emptyStrAsNull);
             } else {
-                ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(i), hasEscapedQuote);
+                ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(i));
             }
             stringBuilder.append(",");
         }
         if (fieldMetaInfoList.get(fieldLen - 1).needQuote()) {
-            ImportUtil.appendInsertStrValue(stringBuilder, values.get(fieldLen - 1), sqlEscapeEnabled, hasEscapedQuote);
+            ImportUtil.appendInsertStrValue(stringBuilder, values.get(fieldLen - 1), sqlEscapeEnabled, emptyStrAsNull);
         } else {
-            ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(fieldLen - 1), hasEscapedQuote);
+            ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(fieldLen - 1));
         }
     }
 
@@ -148,10 +158,10 @@ public class ImportUtil {
                                           String tableName,
                                           List<FieldMetaInfo> fieldMetaInfoList,
                                           List<String> values, boolean sqlEscapeEnabled,
-                                          boolean hasEscapedQuote) throws DatabaseException {
+                                          boolean emptyStrAsNull) throws DatabaseException {
         stringBuilder.append("INSERT INTO `").append(tableName).append("` VALUES (");
         appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList, values,
-            sqlEscapeEnabled, hasEscapedQuote);
+            sqlEscapeEnabled, emptyStrAsNull);
         stringBuilder.append(");");
     }
 

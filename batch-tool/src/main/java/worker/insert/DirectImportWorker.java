@@ -24,26 +24,21 @@ import com.opencsv.exceptions.CsvValidationException;
 import exception.DatabaseException;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
-import model.config.ConfigConstant;
 import model.config.FileLineRecord;
 import model.config.GlobalVar;
 import model.db.FieldMetaInfo;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.DbUtil;
 import util.IOUtil;
 import worker.util.ImportUtil;
 
 import javax.sql.DataSource;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
@@ -67,6 +62,7 @@ public class DirectImportWorker implements Runnable {
 
     private final int reportLine;
     private final boolean sqlEscapeEnabled;
+    private final boolean emptyStrAsNull;
 
     public DirectImportWorker(DataSource dataSource,
                               String tableName,
@@ -85,6 +81,7 @@ public class DirectImportWorker implements Runnable {
         this.maxErrorCount = producerContext.getMaxErrorCount();
         this.reportLine = GlobalVar.EMIT_BATCH_SIZE * 10;
         this.sqlEscapeEnabled = consumerContext.isSqlEscapeEnabled();
+        this.emptyStrAsNull = consumerContext.isEmptyStrAsNull();
     }
 
     @Override
@@ -112,7 +109,7 @@ public class DirectImportWorker implements Runnable {
                 for (String[] values; (values = reader.readNext()) != null; ) {
                     try {
                         ImportUtil.getDirectImportSql(insertSqlBuilder, tableName,
-                            fieldMetaInfoList, Arrays.asList(values), sqlEscapeEnabled, true);
+                            fieldMetaInfoList, Arrays.asList(values), sqlEscapeEnabled, emptyStrAsNull);
 
                         stmt.execute(insertSqlBuilder.toString());
                         importedLines++;

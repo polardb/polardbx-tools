@@ -17,7 +17,6 @@
 package exec;
 
 import cmd.BaseOperateCommand;
-import cmd.ImportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
@@ -114,9 +113,13 @@ public class ImportExecutor extends WriteDbExecutor {
                 producerExecutionContext.getDdlMode());
         }
         configureFieldMetaInfo();
+
+        logger.debug(producerExecutionContext.toString());
+        logger.debug(consumerExecutionContext.toString());
+
         for (String tableName : tableNames) {
             if (producerExecutionContext.isSingleThread()
-                && consumerExecutionContext.isSingleThread())  {
+                && consumerExecutionContext.isSingleThread()) {
                 // 使用按行读取insert模式
                 doSingleThreadImport(tableName);
             } else {
