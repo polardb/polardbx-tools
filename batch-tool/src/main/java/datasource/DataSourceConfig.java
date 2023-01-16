@@ -157,6 +157,7 @@ public class DataSourceConfig {
             dataSourceConfig.maxWait = this.maxWait;
             dataSourceConfig.connParam = this.connParam;
             dataSourceConfig.initSqls = this.initSqls;
+            dataSourceConfig.loadBalanceEnabled = this.loadBalanceEnabled;
             String jdbcUrl;
             if (loadBalanceEnabled) {
                 jdbcUrl = String.format(DataSourceUtil.LOAD_BALANCE_URL_PATTERN,

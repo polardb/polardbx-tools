@@ -31,9 +31,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 public class DbUtil {
@@ -272,12 +272,16 @@ public class DbUtil {
                                                                      String schemaName,
                                                                      List<String> tableNames)
         throws DatabaseException {
-        Map<String, TableFieldMetaInfo> resultMap = new HashMap<>();
-        for (String tableName : tableNames) {
-            TableFieldMetaInfo metaInfo = new TableFieldMetaInfo();
-            metaInfo.setFieldMetaInfoList(new ArrayList<>());
-            resultMap.put(tableName, metaInfo);
-        }
+
+        Map<String, TableFieldMetaInfo> resultMap = tableNames.stream()
+            .collect(Collectors.toMap(
+                tableName -> tableName,
+                tableName -> new TableFieldMetaInfo(),
+                (u, v) -> {
+                    throw new IllegalStateException(String.format("Duplicate key %s", u));
+                },
+                () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER)));
+
         Statement stmt = null;
         ResultSet resultSet = null;
         String metaInfoSql = String.format(DB_FIELD_INFO_SQL_PATTERN, schemaName);

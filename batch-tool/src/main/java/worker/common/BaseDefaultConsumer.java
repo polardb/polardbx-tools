@@ -73,6 +73,9 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
         } catch (Exception e) {
             consumerContext.setException(e);
             logger.error("Failed in table [{}], due to {}", tableName, e.getMessage());
+            if (e.getStackTrace().length > 0) {
+                logger.error("{}", e.getStackTrace()[0]);
+            }
             // 认为无法恢复
             throw new RuntimeException(e);
         } finally {
