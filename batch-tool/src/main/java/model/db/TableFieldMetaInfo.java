@@ -16,11 +16,12 @@
 
 package model.db;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TableFieldMetaInfo {
 
-    private List<FieldMetaInfo> fieldMetaInfoList;
+    private List<FieldMetaInfo> fieldMetaInfoList = new ArrayList<>();
     /**
      * 主键
      */

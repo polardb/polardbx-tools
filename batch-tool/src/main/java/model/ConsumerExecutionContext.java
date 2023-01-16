@@ -313,6 +313,7 @@ public class ConsumerExecutionContext extends BaseConfig {
             ", toUpdateColumns='" + toUpdateColumns + '\'' +
             ", updateWithFuncPattern='" + updateWithFuncPattern + '\'' +
             ", sqlEscapeEnabled=" + sqlEscapeEnabled +
+            ", tableFieldMetaInfo=" + tableFieldMetaInfo +
             '}';
     }
 

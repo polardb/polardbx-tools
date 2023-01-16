@@ -178,6 +178,9 @@ public class FileUtil {
             // 结尾有分隔符则忽略
             len -= sep.length();
         }
+        if (estimateCount <= 0) {
+            estimateCount = 1;
+        }
         ArrayList<String> subStrings = new ArrayList<>(estimateCount);
         StringBuilder stringBuilder = new StringBuilder(line.length() / estimateCount);
         char sepStart = sep.charAt(0);
