@@ -17,7 +17,6 @@
 package exec.export;
 
 import cmd.BaseOperateCommand;
-import cmd.ExportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
@@ -29,12 +28,10 @@ import util.DbUtil;
 import util.FileUtil;
 import worker.MyThreadPool;
 import worker.export.DirectExportWorker;
-import worker.export.order.DirectOrderExportWorker;
 import worker.factory.ExportWorkerFactory;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
 import static model.config.ConfigConstant.APP_NAME;
@@ -50,31 +47,31 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
 
     @Override
     void exportData() {
-        doDefaultExport();
+        List<String> tableNames = command.getTableNames();
+        ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, tableNames.size());
+        for (String tableName : tableNames) {
+            doDefaultExport(tableName, executor);
+        }
+        executor.shutdown();
     }
 
     /**
      * 使用单条长连接导出数据
      */
-    private void doDefaultExport() {
-        List<String> tableNames = command.getTableNames();
-        ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, tableNames.size());
-        for (String tableName : tableNames) {
-            String fileName = FileUtil.getFilePathPrefix(config.getPath(),
-                config.getFilenamePrefix(), tableName) + 0;
-            try {
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
-                    getSchemaName(), tableName, command.getColumnNames());
-                DirectExportWorker directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
-                    new TableTopology("", tableName), tableFieldMetaInfo,
-                    fileName, config);
-                executor.submit(directExportWorker);
-                logger.info("开始导出表 {} 到文件 {}", tableName, fileName);
-            } catch (DatabaseException | SQLException e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
-            }
+    private void doDefaultExport(String tableName, ExecutorService executor) {
+        String fileName = FileUtil.getFilePathPrefix(config.getPath(),
+            config.getFilenamePrefix(), tableName) + 0;
+        try {
+            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
+                getSchemaName(), tableName, command.getColumnNames());
+            DirectExportWorker directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
+                new TableTopology("", tableName), tableFieldMetaInfo,
+                fileName, config);
+            executor.submit(directExportWorker);
+            logger.info("开始导出表 {} 到文件 {}", tableName, fileName);
+        } catch (DatabaseException | SQLException e) {
+            e.printStackTrace();
+            logger.error(e.getMessage());
         }
-        executor.shutdown();
     }
 }

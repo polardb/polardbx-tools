@@ -20,9 +20,15 @@ import cmd.BaseOperateCommand;
 import cmd.ExportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
+import exception.DatabaseException;
 import exec.BaseExecutor;
 import model.config.ExportConfig;
+import util.DbUtil;
 import worker.ddl.DdlExportWorker;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.List;
 
 public abstract class BaseExportExecutor extends BaseExecutor {
 
@@ -41,6 +47,14 @@ public abstract class BaseExportExecutor extends BaseExecutor {
     public void preCheck() {
         if (!command.isDbOperation()) {
             checkTableExists(command.getTableNames());
+        } else {
+            // 设置整库操作的目标表
+            try (Connection conn = dataSource.getConnection()) {
+                List<String> tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+                command.setTableNames(tableNames);
+            } catch (SQLException | DatabaseException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
