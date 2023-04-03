@@ -41,7 +41,6 @@ import worker.export.ExportEvent;
 import worker.export.ExportProducer;
 import worker.factory.ExportWorkerFactory;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Queue;
@@ -65,14 +64,6 @@ public class ShardingExportExecutor extends BaseExportExecutor {
     @Override
     void exportData() {
         List<String> tableNames = command.getTableNames();
-        if (command.isDbOperation()) {
-            try (Connection conn = dataSource.getConnection()) {
-                tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
-
-            } catch (SQLException | DatabaseException e) {
-                throw new RuntimeException(e);
-            }
-        }
         for (String tableName : tableNames) {
             doExportWithSharding(tableName);
         }
