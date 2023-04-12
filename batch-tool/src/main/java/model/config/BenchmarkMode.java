@@ -16,27 +16,25 @@
 
 package model.config;
 
-public class GlobalVar {
+import org.apache.commons.lang.StringUtils;
 
-    /**
-     * 发送一批数据的元组数
-     */
-    public static int EMIT_BATCH_SIZE = 100;
+public enum BenchmarkMode {
 
-    /**
-     * RingBuffer 缓冲区大小
-     */
-    public static int DEFAULT_RING_BUFFER_SIZE = 1024;
+    TPCH,
+    NONE;
 
-    /**
-     * 每个worker线程可分配的堆外内存
-     * 4K
-     */
-    public static int DEFAULT_DIRECT_BUFFER_SIZE_PER_WORKER = 1024 * 4;
-
-    public static boolean IN_PERF_MODE = false;
-
-    public static int DDL_RETRY_COUNT = 5;
-
-    public static int DDL_PARALLELISM = 10;
+    public static BenchmarkMode parseMode(String mode) {
+        if (StringUtils.isBlank(mode)) {
+            return NONE;
+        }
+        switch (mode.toLowerCase()) {
+        case "tpch":
+        case "tpc-h":
+            return TPCH;
+        case "none":
+            return NONE;
+        default:
+            throw new IllegalArgumentException("Unsupported benchmark mode: " + mode);
+        }
+    }
 }

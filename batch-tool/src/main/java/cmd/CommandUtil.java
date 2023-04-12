@@ -23,6 +23,7 @@ import datasource.DataSourceConfig;
 import datasource.DatasourceConstant;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
+import model.config.BenchmarkMode;
 import model.config.CompressMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
@@ -57,6 +58,7 @@ import java.util.stream.Collectors;
 import static cmd.ConfigArgOption.ARG_DDL_PARALLELISM;
 import static cmd.ConfigArgOption.ARG_DDL_RETRY_COUNT;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
+import static cmd.ConfigArgOption.ARG_SHORT_BENCHMARK;
 import static cmd.ConfigArgOption.ARG_SHORT_CHARSET;
 import static cmd.ConfigArgOption.ARG_SHORT_COLUMNS;
 import static cmd.ConfigArgOption.ARG_SHORT_COMPRESS;
@@ -91,6 +93,7 @@ import static cmd.ConfigArgOption.ARG_SHORT_PRODUCER;
 import static cmd.ConfigArgOption.ARG_SHORT_QUOTE_ENCLOSE_MODE;
 import static cmd.ConfigArgOption.ARG_SHORT_READ_BLOCK_SIZE;
 import static cmd.ConfigArgOption.ARG_SHORT_RING_BUFFER_SIZE;
+import static cmd.ConfigArgOption.ARG_SHORT_SCALE;
 import static cmd.ConfigArgOption.ARG_SHORT_SEP;
 import static cmd.ConfigArgOption.ARG_SHORT_TABLE;
 import static cmd.ConfigArgOption.ARG_SHORT_TPS_LIMIT;
@@ -316,7 +319,7 @@ public class CommandUtil {
     }
 
     private static BaseOperateCommand parseImportCommand(ConfigResult result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY, ARG_SHORT_BENCHMARK);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
@@ -547,6 +550,8 @@ public class CommandUtil {
         producerExecutionContext.setHistoryFileAndParse(getHistoryFile(result));
         producerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
         producerExecutionContext.setTrimRight(getTrimRight(result));
+        producerExecutionContext.setBenchmarkMode(getBenchmarkMode(result));
+        producerExecutionContext.setScale(getScale(result));
 
         producerExecutionContext.validate();
     }
@@ -629,6 +634,22 @@ public class CommandUtil {
         return !result.getBooleanFlag(ARG_TRIM_RIGHT);
     }
 
+    private static BenchmarkMode getBenchmarkMode(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_BENCHMARK)) {
+            return BenchmarkMode.parseMode(result.getOptionValue(ARG_SHORT_BENCHMARK));
+        } else {
+            return BenchmarkMode.NONE;
+        }
+    }
+
+    private static int getScale(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_SCALE)) {
+            return Integer.parseInt(result.getOptionValue(ARG_SHORT_SCALE));
+        } else {
+            return 0;
+        }
+    }
+
     private static boolean getForceParallelism(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FORCE_CONSUMER)) {
             return Boolean.parseBoolean(result.getOptionValue(ARG_SHORT_FORCE_CONSUMER));
@@ -663,6 +684,9 @@ public class CommandUtil {
             String dirPathStr = result.getOptionValue(ARG_SHORT_DIRECTORY);
             List<String> filePaths = FileUtil.getFilesAbsPathInDir(dirPathStr);
             return FileLineRecord.fromFilePaths(filePaths);
+        }
+        if (result.hasOption(ARG_SHORT_BENCHMARK)) {
+            return null;
         }
         throw new IllegalStateException("cannot get file path list");
     }

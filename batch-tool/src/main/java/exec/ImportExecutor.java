@@ -18,8 +18,12 @@ package exec;
 
 import cmd.BaseOperateCommand;
 import com.alibaba.druid.pool.DruidDataSource;
+import com.lmax.disruptor.EventFactory;
+import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.WorkerPool;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
+import model.config.BenchmarkMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
 import model.config.GlobalVar;
@@ -27,15 +31,23 @@ import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
+import worker.MyThreadPool;
+import worker.MyWorkerPool;
 import worker.ddl.DdlImporter;
 import worker.insert.DirectImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
 import worker.insert.ShardedImportConsumer;
+import worker.tpch.BatchInsertSqlEvent;
+import worker.tpch.TpchConsumer;
+import worker.tpch.TpchProducer;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ImportExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ImportExecutor.class);
@@ -99,6 +111,11 @@ public class ImportExecutor extends WriteDbExecutor {
 
     @Override
     public void execute() {
+        if (producerExecutionContext.getBenchmarkMode() != BenchmarkMode.NONE) {
+            handleBenchmark();
+            return;
+        }
+
         switch (producerExecutionContext.getDdlMode()) {
         case WITH_DDL:
             handleDDL();
@@ -141,6 +158,76 @@ public class ImportExecutor extends WriteDbExecutor {
                 return;
             }
             logger.info("导入数据到 {} 完成", tableName);
+        }
+    }
+
+    private void handleBenchmark() {
+        switch (producerExecutionContext.getBenchmarkMode()) {
+        case TPCH:
+            handleTpchImport();
+            break;
+        default:
+            throw new UnsupportedOperationException("Not support " + producerExecutionContext.getBenchmarkMode());
+        }
+
+    }
+
+    private void handleTpchImport() {
+        int producerParallelism = producerExecutionContext.getParallelism();
+        AtomicInteger emittedDataCounter = new AtomicInteger(0);
+
+        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(TpchProducer.class.getSimpleName(),
+            producerParallelism);
+        producerExecutionContext.setProducerExecutor(producerThreadPool);
+        producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
+
+        int consumerParallelism = getConsumerNum(consumerExecutionContext);
+        consumerExecutionContext.setParallelism(consumerParallelism);
+        consumerExecutionContext.setDataSource(dataSource);
+        consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
+        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorExact(TpchConsumer.class.getSimpleName(),
+            consumerParallelism);
+
+        EventFactory<BatchInsertSqlEvent> factory = BatchInsertSqlEvent::new;
+        RingBuffer<BatchInsertSqlEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
+
+        TpchProducer tpchProducer = new TpchProducer(producerExecutionContext, ringBuffer);
+        CountDownLatch countDownLatch = new CountDownLatch(tpchProducer.getWorkerCount());
+        producerExecutionContext.setCountDownLatch(countDownLatch);
+
+        TpchConsumer[] consumers = new TpchConsumer[consumerParallelism];
+        try {
+            for (int i = 0; i < consumerParallelism; i++) {
+                consumers[i] = new TpchConsumer(consumerExecutionContext);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        logger.debug("producer config {}", producerExecutionContext);
+        logger.debug("consumer config {}", consumerExecutionContext);
+
+        // 开启线程工作
+        WorkerPool<BatchInsertSqlEvent> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
+        workerPool.start(consumerThreadPool);
+        try {
+            tpchProducer.produce();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        waitForFinish(countDownLatch, emittedDataCounter, producerExecutionContext, consumerExecutionContext);
+        if (producerExecutionContext.getException() != null || consumerExecutionContext.getException() != null) {
+            producerThreadPool.shutdownNow();
+            consumerThreadPool.shutdownNow();
+            workerPool.halt();
+        } else {
+            workerPool.drainAndHalt();
+            consumerThreadPool.shutdown();
+            producerThreadPool.shutdown();
         }
     }
 
