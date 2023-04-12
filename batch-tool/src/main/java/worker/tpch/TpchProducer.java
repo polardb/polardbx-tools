@@ -492,7 +492,6 @@ public class TpchProducer implements Producer {
         protected abstract void appendToBuffer(T row);
 
         protected void emitLineBuffer() {
-            System.out.println("Remain buffer: " + ringBuffer.remainingCapacity());
             long sequence = ringBuffer.next();
             BatchInsertSqlEvent event;
             try {

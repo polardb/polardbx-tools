@@ -42,8 +42,8 @@ public class TpchConsumer implements WorkHandler<BatchInsertSqlEvent> {
             Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
         } catch (SQLException e) {
-            logger.error(sql + ", due to " + e.getMessage());
-//            logger.error(sql.substring(0, Math.min(32, sql.length())) + ", due to" + e.getMessage());
+//            logger.error(sql + ", due to " + e.getMessage());
+            logger.error(sql.substring(0, Math.min(32, sql.length())) + ", due to" + e.getMessage());
             consumerContext.setException(e);
             throw new RuntimeException(e);
         } finally {
