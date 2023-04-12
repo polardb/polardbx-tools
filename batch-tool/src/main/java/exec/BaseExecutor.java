@@ -225,7 +225,7 @@ public abstract class BaseExecutor {
         producerThreadPool.shutdown();
     }
 
-    private int getConsumerNum(ConsumerExecutionContext consumerExecutionContext) {
+    protected int getConsumerNum(ConsumerExecutionContext consumerExecutionContext) {
         if (!consumerExecutionContext.isForceParallelism()) {
             return Math.max(consumerExecutionContext.getParallelism(),
                 ConfigConstant.CPU_NUM);
@@ -305,9 +305,13 @@ public abstract class BaseExecutor {
                                  ConsumerExecutionContext consumerContext) {
         try {
             // 等待生产者结束
-            while (!countDownLatch.await(10, TimeUnit.SECONDS)) {
+            while (!countDownLatch.await(3, TimeUnit.SECONDS)) {
                 if (producerContext.getException() != null) {
                     logger.warn("Early exit because of producer exception");
+                    return;
+                }
+                if (consumerContext.getException() != null) {
+                    logger.warn("Early exit because of consumer exception");
                     return;
                 }
             }
