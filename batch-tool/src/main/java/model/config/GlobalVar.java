@@ -39,4 +39,6 @@ public class GlobalVar {
     public static int DDL_RETRY_COUNT = 5;
 
     public static int DDL_PARALLELISM = 10;
+
+    public static final boolean DEBUG_MODE = false;
 }
