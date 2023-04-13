@@ -112,7 +112,7 @@ public class ImportExecutor extends WriteDbExecutor {
     @Override
     public void execute() {
         if (producerExecutionContext.getBenchmarkMode() != BenchmarkMode.NONE) {
-            handleBenchmark();
+            handleBenchmark(tableNames);
             return;
         }
 
@@ -161,10 +161,10 @@ public class ImportExecutor extends WriteDbExecutor {
         }
     }
 
-    private void handleBenchmark() {
+    private void handleBenchmark(List<String> tableNames) {
         switch (producerExecutionContext.getBenchmarkMode()) {
         case TPCH:
-            handleTpchImport();
+            handleTpchImport(tableNames);
             break;
         default:
             throw new UnsupportedOperationException("Not support " + producerExecutionContext.getBenchmarkMode());
@@ -172,7 +172,7 @@ public class ImportExecutor extends WriteDbExecutor {
 
     }
 
-    private void handleTpchImport() {
+    private void handleTpchImport(List<String> tableNames) {
         int producerParallelism = producerExecutionContext.getParallelism();
         AtomicInteger emittedDataCounter = new AtomicInteger(0);
 
@@ -191,7 +191,7 @@ public class ImportExecutor extends WriteDbExecutor {
         EventFactory<BatchInsertSqlEvent> factory = BatchInsertSqlEvent::new;
         RingBuffer<BatchInsertSqlEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
 
-        TpchProducer tpchProducer = new TpchProducer(producerExecutionContext, ringBuffer);
+        TpchProducer tpchProducer = new TpchProducer(producerExecutionContext, tableNames, ringBuffer);
         CountDownLatch countDownLatch = new CountDownLatch(tpchProducer.getWorkerCount());
         producerExecutionContext.setCountDownLatch(countDownLatch);
 

@@ -29,7 +29,6 @@ import static worker.tpch.util.StringBufferUtil.appendDecimalWithFrac2;
  */
 public class PartSupplierGenerator extends TableRowGenerator {
     private static final int SUPPLIERS_PER_PART = 4;
-
     private static final int AVAILABLE_QUANTITY_MIN = 1;
     private static final int AVAILABLE_QUANTITY_MAX = 9999;
 
@@ -40,25 +39,19 @@ public class PartSupplierGenerator extends TableRowGenerator {
 
     private final double scaleFactor;
 
-    public PartSupplierGenerator(double scaleFactor, int part, int partCount) {
-        this(TextPool.getDefaultTestPool(),
-            scaleFactor,
-            calculateStartIndex(PartGenerator.SCALE_BASE, scaleFactor, part, partCount),
-            calculateRowCount(PartGenerator.SCALE_BASE, scaleFactor, part, partCount));
-    }
-
-    static long selectPartSupplier(long partKey, long supplierNumber, double scaleFactor) {
-        long supplierCount = (long) (SupplierGenerator.SCALE_BASE * scaleFactor);
-        return ((partKey + (supplierNumber * ((supplierCount / SUPPLIERS_PER_PART) + ((partKey - 1) / supplierCount))))
-            % supplierCount) + 1;
-    }
-
     private final RandomBoundedInt availableQuantityRandom;
     private final RandomBoundedInt supplyCostRandom;
     private final RandomText commentRandom;
 
     private long index;
     private int partSupplierNumber;
+
+    public PartSupplierGenerator(double scaleFactor, int part, int partCount) {
+        this(TextPool.getDefaultTestPool(),
+            scaleFactor,
+            calculateStartIndex(PartGenerator.SCALE_BASE, scaleFactor, part, partCount),
+            calculateRowCount(PartGenerator.SCALE_BASE, scaleFactor, part, partCount));
+    }
 
     public PartSupplierGenerator(TextPool textPool, double scaleFactor, long startIndex, long rowCount) {
         super(null, textPool, startIndex, rowCount);
@@ -99,4 +92,11 @@ public class PartSupplierGenerator extends TableRowGenerator {
             partSupplierNumber = 0;
         }
     }
+
+    static long selectPartSupplier(long partKey, long supplierNumber, double scaleFactor) {
+        long supplierCount = (long) (SupplierGenerator.SCALE_BASE * scaleFactor);
+        return ((partKey + (supplierNumber * ((supplierCount / SUPPLIERS_PER_PART) + ((partKey - 1) / supplierCount))))
+            % supplierCount) + 1;
+    }
+
 }

@@ -36,7 +36,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
@@ -52,7 +54,8 @@ public class TpchProducer implements Producer {
 
     private Map<TpchTableModel, List<TableRowGenerator>> tableGeneratorsMap;
 
-    public TpchProducer(ProducerExecutionContext context, RingBuffer<BatchInsertSqlEvent> ringBuffer) {
+    public TpchProducer(ProducerExecutionContext context, List<String> tableNames,
+                        RingBuffer<BatchInsertSqlEvent> ringBuffer) {
         this.context = context;
         this.ringBuffer = ringBuffer;
 
@@ -63,19 +66,55 @@ public class TpchProducer implements Producer {
         this.executor = context.getProducerExecutor();
 
         this.tableGeneratorsMap = new HashMap<>();
-        initIterators();
+        initGenerators(tableNames);
         initWorkerCount();
     }
 
-    private void initIterators() {
-        addRegionIterator();
-        addNationIterator();
-        addCustomerIterator();
-        addPartIterator();
-        addSupplierIterator();
-        addPartSuppIterator();
-        addOrdersIterator();
-        addLineitemIterator();
+    private void initGenerators(List<String> tableNames) {
+        if (tableNames == null || tableNames.isEmpty()) {
+            addRegionGenerator();
+            addNationGenerator();
+            addCustomerGenerator();
+            addPartGenerator();
+            addSupplierGenerator();
+            addPartSuppGenerator();
+            addOrdersGenerator();
+            addLineitemGenerator();
+            return;
+        }
+        Set<TpchTableModel> tables = tableNames.stream().map(TpchTableModel::parse)
+            .collect(Collectors.toSet());
+
+        for (TpchTableModel table : tables) {
+            switch (table) {
+            case LINEITEM:
+                addLineitemGenerator();
+                break;
+            case CUSTOMER:
+                addCustomerGenerator();
+                break;
+            case ORDERS:
+                addOrdersGenerator();
+                break;
+            case PART:
+                addPartGenerator();
+                break;
+            case SUPPLIER:
+                addSupplierGenerator();
+                break;
+            case PART_SUPP:
+                addPartSuppGenerator();
+                break;
+            case NATION:
+                addNationGenerator();
+                break;
+            case REGION:
+                addRegionGenerator();
+                break;
+            default:
+                throw new UnsupportedOperationException(table.getName());
+            }
+        }
     }
 
     private void initWorkerCount() {
@@ -87,19 +126,19 @@ public class TpchProducer implements Producer {
         return this.workerCount;
     }
 
-    private void addRegionIterator() {
-        List<TableRowGenerator> regionIters = new ArrayList<>(1);
-        regionIters.add(new RegionGenerator());
-        this.tableGeneratorsMap.put(TpchTableModel.REGION, regionIters);
+    private void addRegionGenerator() {
+        List<TableRowGenerator> regions = new ArrayList<>(1);
+        regions.add(new RegionGenerator());
+        this.tableGeneratorsMap.put(TpchTableModel.REGION, regions);
     }
 
-    private void addNationIterator() {
-        List<TableRowGenerator> nationIters = new ArrayList<>(1);
-        nationIters.add(new NationGenerator());
-        this.tableGeneratorsMap.put(TpchTableModel.NATION, nationIters);
+    private void addNationGenerator() {
+        List<TableRowGenerator> nations = new ArrayList<>(1);
+        nations.add(new NationGenerator());
+        this.tableGeneratorsMap.put(TpchTableModel.NATION, nations);
     }
 
-    private void addCustomerIterator() {
+    private void addCustomerGenerator() {
         int customerPart;
         if (scale < 10) {
             customerPart = 1;
@@ -107,14 +146,14 @@ public class TpchProducer implements Producer {
             customerPart = 4;
         }
 
-        List<TableRowGenerator> customerIters = new ArrayList<>(customerPart);
+        List<TableRowGenerator> customers = new ArrayList<>(customerPart);
         for (int i = 1; i <= customerPart; i++) {
-            customerIters.add(new CustomerGenerator(scale, i, customerPart));
-            this.tableGeneratorsMap.put(TpchTableModel.CUSTOMER, customerIters);
+            customers.add(new CustomerGenerator(scale, i, customerPart));
+            this.tableGeneratorsMap.put(TpchTableModel.CUSTOMER, customers);
         }
     }
 
-    private void addPartIterator() {
+    private void addPartGenerator() {
         int partPart;
         if (scale < 10) {
             partPart = 1;
@@ -122,27 +161,27 @@ public class TpchProducer implements Producer {
             partPart = 5;
         }
 
-        List<TableRowGenerator> partIters = new ArrayList<>(partPart);
+        List<TableRowGenerator> parts = new ArrayList<>(partPart);
         for (int i = 1; i <= partPart; i++) {
-            partIters.add(new PartGenerator(scale, i, partPart));
-            this.tableGeneratorsMap.put(TpchTableModel.PART, partIters);
+            parts.add(new PartGenerator(scale, i, partPart));
+            this.tableGeneratorsMap.put(TpchTableModel.PART, parts);
         }
     }
 
-    private void addSupplierIterator() {
+    private void addSupplierGenerator() {
         final int supplierPart = 1;
 
-        List<TableRowGenerator> supplierIters = new ArrayList<>(supplierPart);
+        List<TableRowGenerator> suppliers = new ArrayList<>(supplierPart);
         for (int i = 1; i <= supplierPart; i++) {
-            supplierIters.add(new SupplierGenerator(scale, i, supplierPart));
-            this.tableGeneratorsMap.put(TpchTableModel.SUPPLIER, supplierIters);
+            suppliers.add(new SupplierGenerator(scale, i, supplierPart));
+            this.tableGeneratorsMap.put(TpchTableModel.SUPPLIER, suppliers);
         }
     }
 
     /**
      * 第三大表
      */
-    private void addPartSuppIterator() {
+    private void addPartSuppGenerator() {
         int partSuppPart;
         if (scale < 10) {
             partSuppPart = 4;
@@ -150,17 +189,17 @@ public class TpchProducer implements Producer {
             partSuppPart = 10;
         }
 
-        List<TableRowGenerator> partSuppIters = new ArrayList<>(partSuppPart);
+        List<TableRowGenerator> partSupps = new ArrayList<>(partSuppPart);
         for (int i = 1; i <= partSuppPart; i++) {
-            partSuppIters.add(new PartSupplierGenerator(scale, i, partSuppPart));
-            this.tableGeneratorsMap.put(TpchTableModel.PART_SUPP, partSuppIters);
+            partSupps.add(new PartSupplierGenerator(scale, i, partSuppPart));
+            this.tableGeneratorsMap.put(TpchTableModel.PART_SUPP, partSupps);
         }
     }
 
     /**
      * 第二大表
      */
-    private void addOrdersIterator() {
+    private void addOrdersGenerator() {
         int ordersPart;
         if (scale < 10) {
             ordersPart = 8;
@@ -168,10 +207,10 @@ public class TpchProducer implements Producer {
             ordersPart = 30;
         }
 
-        List<TableRowGenerator> ordersIters = new ArrayList<>(ordersPart);
+        List<TableRowGenerator> orders = new ArrayList<>(ordersPart);
         for (int i = 1; i <= ordersPart; i++) {
-            ordersIters.add(new OrderGenerator(scale, i, ordersPart));
-            this.tableGeneratorsMap.put(TpchTableModel.ORDERS, ordersIters);
+            orders.add(new OrderGenerator(scale, i, ordersPart));
+            this.tableGeneratorsMap.put(TpchTableModel.ORDERS, orders);
         }
     }
 
@@ -179,7 +218,7 @@ public class TpchProducer implements Producer {
      * 第一大表
      * 此处暂不考虑生产者线程池太大导致生产者空闲
      */
-    private void addLineitemIterator() {
+    private void addLineitemGenerator() {
         int lineitemPart;
         if (scale < 10) {
             lineitemPart = 16;
@@ -187,10 +226,10 @@ public class TpchProducer implements Producer {
             lineitemPart = 60;
         }
 
-        List<TableRowGenerator> lineitemIters = new ArrayList<>(lineitemPart);
+        List<TableRowGenerator> lineitems = new ArrayList<>(lineitemPart);
         for (int i = 1; i <= lineitemPart; i++) {
-            lineitemIters.add(new LineItemGenerator(scale, i, lineitemPart));
-            this.tableGeneratorsMap.put(TpchTableModel.LINEITEM, lineitemIters);
+            lineitems.add(new LineItemGenerator(scale, i, lineitemPart));
+            this.tableGeneratorsMap.put(TpchTableModel.LINEITEM, lineitems);
         }
     }
 
@@ -210,14 +249,15 @@ public class TpchProducer implements Producer {
             for (Map.Entry<TpchTableModel, Iterator<TableRowGenerator>> entry : iteratorMap.entrySet()) {
                 if (entry.getValue().hasNext()) {
                     hasNext = true;
-                    int part = partMap.getOrDefault(entry.getKey(), 1);
+                    TpchTableModel table = entry.getKey();
+                    int part = partMap.getOrDefault(table, 1);
 
                     TableRowGenerator nextGenerator = entry.getValue().next();
                     TpchTableWorker producer = new TpchTableWorker(ringBuffer,
-                        nextGenerator, entry.getKey().getName(), part);
+                        nextGenerator, table.getName(), table.getRowStrLen(), part);
                     executor.submit(producer);
 
-                    partMap.put(entry.getKey(), part + 1);
+                    partMap.put(table, part + 1);
                 }
             }
         }
@@ -282,6 +322,7 @@ public class TpchProducer implements Producer {
                 event = ringBuffer.get(sequence);
                 sqlBuffer.setCharAt(sqlBuffer.length() - 1, ';');   // 最后一个逗号替换为分号
                 String sql = sqlBuffer.toString();
+//                System.out.println(sql);
                 event.setSql(sql);
                 refreshBuffer();
             } finally {
