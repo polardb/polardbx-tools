@@ -18,6 +18,7 @@ package worker.tpch;
 
 import com.lmax.disruptor.WorkHandler;
 import model.ConsumerExecutionContext;
+import model.config.GlobalVar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +42,12 @@ public class TpchConsumer implements WorkHandler<BatchInsertSqlEvent> {
         try (Connection conn = consumerContext.getDataSource().getConnection();
             Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-//            System.out.println(sql);
         } catch (SQLException e) {
-            logger.error(sql + ", due to " + e.getMessage());
-//            logger.error(sql.substring(0, Math.min(32, sql.length())) + ", due to" + e.getMessage());
+            if (GlobalVar.DEBUG_MODE) {
+                logger.error(sql + ", due to " + e.getMessage());
+            } else {
+                logger.error(sql.substring(0, Math.min(32, sql.length())) + ", due to" + e.getMessage());
+            }
             consumerContext.setException(e);
             throw new RuntimeException(e);
         } finally {

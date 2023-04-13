@@ -185,7 +185,7 @@ public class OrderGenerator extends TableRowGenerator {
         sqlBuffer.append(",\"");
         formatDateByDays(sqlBuffer, orderDate);
 
-        sqlBuffer.append("\",\"").append(orderPriorityRandom.nextValue());
+        sqlBuffer.append("\",\"").append(orderPriorityRandom.nextValue()).append("\",\"");
         appendClerk(sqlBuffer, clerkRandom.nextValue());
         sqlBuffer.append("\",").append(0)
             .append(",\"").append(commentRandom.nextValue()).append("\"),");
