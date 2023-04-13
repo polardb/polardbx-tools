@@ -29,7 +29,6 @@ public class NationGenerator extends TableRowGenerator {
 
     private final Distribution nations;
     private final RandomText commentRandom;
-    private int index;
 
     public NationGenerator() {
         this(Distributions.getDefaultDistributions(),
@@ -45,8 +44,8 @@ public class NationGenerator extends TableRowGenerator {
     @Override
     public void appendNextRow(StringBuilder sqlBuffer) {
         sqlBuffer.append('(').append(index)
-            .append(",\"").append(nations.getValue(index))
-            .append("\",").append(nations.getWeight(index))
+            .append(",\"").append(nations.getValue((int) index))
+            .append("\",").append(nations.getWeight((int) index))
             .append(",\"").append(commentRandom.nextValue()).append("\"),");
 
         commentRandom.rowFinished();

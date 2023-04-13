@@ -43,7 +43,6 @@ public class PartSupplierGenerator extends TableRowGenerator {
     private final RandomBoundedInt supplyCostRandom;
     private final RandomText commentRandom;
 
-    private long index;
     private int partSupplierNumber;
 
     public PartSupplierGenerator(double scaleFactor, int part, int partCount) {

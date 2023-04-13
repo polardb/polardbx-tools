@@ -277,11 +277,6 @@ public class TpchProducer implements Producer {
         protected int bufferedLineCount = 0;
 
         TpchTableWorker(RingBuffer<BatchInsertSqlEvent> ringBuffer, TableRowGenerator rowGenerator,
-                        String tableName, int estimateRowLen) {
-            this(ringBuffer, rowGenerator, tableName, estimateRowLen, 0);
-        }
-
-        TpchTableWorker(RingBuffer<BatchInsertSqlEvent> ringBuffer, TableRowGenerator rowGenerator,
                         String tableName, int estimateRowLen, int part) {
             this.ringBuffer = ringBuffer;
             this.rowGenerator = rowGenerator;

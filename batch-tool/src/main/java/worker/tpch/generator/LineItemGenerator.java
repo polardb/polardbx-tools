@@ -83,7 +83,6 @@ public class LineItemGenerator extends TableRowGenerator {
 
     private final double scaleFactor;
 
-    private long index;
     private int orderDate;
     private int lineCount;
     private int lineNumber;
