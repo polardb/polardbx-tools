@@ -17,6 +17,7 @@
 package worker.tpch;
 
 public enum TpchTableModel {
+
     LINEITEM("lineitem", 16, 160),
     CUSTOMER("customer", 8, 176),
     ORDERS("orders", 9, 128),
@@ -39,6 +40,19 @@ public enum TpchTableModel {
         this.name = name;
         this.fieldCount = fieldCount;
         this.rowStrLen = rowStrLen;
+    }
+
+    public static TpchTableModel parse(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("Empty table name");
+        }
+        name = name.toLowerCase();
+        for (TpchTableModel value : TpchTableModel.values()) {
+            if (value.name.equals(name)) {
+                return value;
+            }
+        }
+        throw new IllegalArgumentException("Unsupported table name: " + name);
     }
 
     public String getName() {
