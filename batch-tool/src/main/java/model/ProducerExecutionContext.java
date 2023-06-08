@@ -17,6 +17,7 @@
 package model;
 
 import model.config.BaseConfig;
+import model.config.BenchmarkMode;
 import model.config.ConfigConstant;
 import model.config.FileLineRecord;
 import model.config.QuoteEncloseMode;
@@ -68,6 +69,13 @@ public class ProducerExecutionContext extends BaseConfig {
     private CountDownLatch countDownLatch;
 
     private volatile Exception exception;
+
+    protected BenchmarkMode benchmarkMode;
+
+    /**
+     * Benchmark 数据集的规模
+     */
+    protected int scale;
 
     public ProducerExecutionContext() {
         super(ConfigConstant.DEFAULT_IMPORT_SHARDING_ENABLED);
@@ -244,6 +252,22 @@ public class ProducerExecutionContext extends BaseConfig {
 
     public void setException(Exception exception) {
         this.exception = exception;
+    }
+
+    public BenchmarkMode getBenchmarkMode() {
+        return benchmarkMode;
+    }
+
+    public void setBenchmarkMode(BenchmarkMode benchmarkMode) {
+        this.benchmarkMode = benchmarkMode;
+    }
+
+    public int getScale() {
+        return scale;
+    }
+
+    public void setScale(int scale) {
+        this.scale = scale;
     }
 
     public boolean isTrimRight() {

@@ -66,5 +66,15 @@ public class MyThreadPool {
             new LinkedBlockingQueue<>(QUEUE_SIZE),
             new NamedThreadFactory(name, false));
     }
+
+    public static ThreadPoolExecutor createExecutorExact(String name, int coreSize) {
+        return new ThreadPoolExecutor(
+            coreSize,
+            coreSize,
+            ALIVE_TIME,
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(QUEUE_SIZE),
+            new NamedThreadFactory(name, false));
+    }
 }
 
