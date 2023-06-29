@@ -122,10 +122,8 @@ public class ConfigConstant {
 
     /**
      * OpenCSV库不支持直接读取一行 需读取出字段再用该魔法值拼接
-     * FIXME
      */
-    public static final String MAGIC_CSV_SEP1 = "|@|";
-    public static final String MAGIC_CSV_SEP2 = "^@^";
+    public static final String MAGIC_CSV_SEP1 = "\uFFFF";
 
     /**
      * 仅导出时默认开启基于分库分表的模式
