@@ -25,6 +25,7 @@ import worker.util.UpdateUtil;
 
 import java.util.List;
 
+@Deprecated
 public class ShardedReplaceConsumer extends BaseShardedConsumer {
     private static final Logger logger = LoggerFactory.getLogger(ShardedReplaceConsumer.class);
 

@@ -31,6 +31,7 @@ public class ReplaceConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
+        super.initLocalVars();
         this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList();
     }
 
