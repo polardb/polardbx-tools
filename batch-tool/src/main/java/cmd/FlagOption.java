@@ -55,7 +55,7 @@ public class FlagOption extends ConfigArgOption {
     public static final FlagOption ARG_SHORT_READ_FILE_ONLY =
         of("rfonly", "readFileOnly", "Only read and process file, no sql execution (default false).", false);
     public static final FlagOption ARG_SHORT_USING_IN =
-        of("in", "whereIn", "Using where cols `in [values]` (default false).", false);
+        of("in", "whereIn", "Using where cols `in [values]` (default true).", true);
     public static final FlagOption ARG_SHORT_WITH_LAST_SEP =
         of("lastSep", "withLastSep", "Whether line ends with separator (default false).", false);
     public static final FlagOption ARG_SHORT_PARALLEL_MERGE =
