@@ -3,13 +3,22 @@
 [![Language](https://img.shields.io/badge/Language-Java-blue.svg)](https://www.java.com/)
 
 ## Batch-Tool 介绍
+
 Batch Tool工具是专为 PolarDB-X数据库提供数据导入导出服务的工具。
-其结合分布式数据库特点实现一站式且高效地从文件导入、导出到文件以及跨库的离线数据迁移(MySQL / PolarDB-X 1.0 / PolarDB-X 2.0)等功能，
+其结合分布式数据库特点实现一站式且高效地从文件导入、导出到文件以及跨库的离线数据迁移(MySQL / PolarDB-X 1.0 / PolarDB-X
+2.0)等功能，
 在此基础上，还支持基于文本文件批量更新、删除等功能 (实验特性)。
 
 ## 快速上手
+
 常见场景与问题排查可参考文档 [usage-details](docs/usage-details.md)。
+
+### 源码打包
+
+`mvn clean package -DskipTests`
+
 ### 参数介绍
+
 命令行用法：`java -jar batch-tool.jar --help`
 
    ```
