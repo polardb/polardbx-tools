@@ -17,7 +17,6 @@
 package model.config;
 
 import com.alibaba.fastjson2.JSONObject;
-import model.mask.AbstractDataMasker;
 
 import java.util.List;
 import java.util.Map;
@@ -166,7 +165,7 @@ public class ExportConfig extends BaseConfig {
         if (path == null) {
             return "";
         }
-        return path;
+        return path + "/";
     }
 
     public void setPath(String path) {

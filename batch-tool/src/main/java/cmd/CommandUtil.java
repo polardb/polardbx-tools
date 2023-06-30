@@ -46,6 +46,8 @@ import org.slf4j.LoggerFactory;
 import util.FileUtil;
 import util.Version;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
@@ -431,6 +433,7 @@ public class CommandUtil {
         exportConfig.setParallelism(getProducerParallelism(result));
         exportConfig.setQuoteEncloseMode(getQuoteEncloseMode(result));
         exportConfig.setWithLastSep(getWithLastSep(result));
+        setDir(result, exportConfig);
         setFilenamePrefix(result, exportConfig);
         setFileNum(result, exportConfig);
         setFileLine(result, exportConfig);
@@ -438,6 +441,19 @@ public class CommandUtil {
         setColumnMaskerMap(result, exportConfig);
         exportConfig.validate();
         return new ExportCommand(getDbName(result), tableNames, exportConfig);
+    }
+
+    private static void setDir(ConfigResult result, ExportConfig exportConfig) {
+        if (result.hasOption(ARG_SHORT_DIRECTORY)) {
+            String dirPath = result.getOptionValue(ARG_SHORT_DIRECTORY);
+            File file = new File(dirPath);
+            FileUtil.checkWritableDir(file);
+            try {
+                exportConfig.setPath(file.getCanonicalPath());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static void setFilenamePrefix(ConfigResult result, ExportConfig exportConfig) {
