@@ -188,6 +188,9 @@ public class ConsumerExecutionContext extends BaseConfig {
                 pkSet.add(primaryKey.getOrdinalPosition() - 1);
                 stringBuilder.append(primaryKey.getName()).append(",");
             }
+            if (stringBuilder.length() > 0) {
+                stringBuilder.setLength(stringBuilder.length() - 1);
+            }
             this.tablePkIndexSet.put(tablePk.getKey(), pkSet);
             this.tablePkName.put(tablePk.getKey(), stringBuilder.toString());
         }

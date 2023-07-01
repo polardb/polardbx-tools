@@ -70,7 +70,7 @@ public class ImportUtil {
 
     public static void appendInsertStrValue(StringBuilder sqlStringBuilder, String rawValue,
                                             boolean sqlEscapeEnabled, boolean emptyStrAsNull) {
-        if (rawValue.equals(FileUtil.NULL_ESC_STR)) {
+        if (rawValue.equals(FileUtil.NULL_ESC_STR_IN_QUOTE)) {
             // NULL字段处理
             sqlStringBuilder.append("NULL");
             return;
@@ -120,7 +120,7 @@ public class ImportUtil {
      * 空值视为NULL
      */
     public static void appendInsertNonStrValue(StringBuilder sqlStringBuilder, String rawValue) {
-        if (rawValue.equals(FileUtil.NULL_ESC_STR)
+        if (rawValue.equals(FileUtil.NULL_ESC_STR_IN_QUOTE)
             || rawValue.isEmpty()) {
             // NULL字段处理
             sqlStringBuilder.append("NULL");

@@ -32,6 +32,7 @@ public class DeleteConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void initLocalVars() {
+        super.initLocalVars();
         this.pkList = consumerContext.getTablePkList(tableName);
     }
 
