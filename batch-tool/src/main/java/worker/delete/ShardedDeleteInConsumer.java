@@ -26,6 +26,7 @@ import worker.util.DeleteUtil;
 
 import java.util.List;
 
+@Deprecated
 public class ShardedDeleteInConsumer extends BaseShardedConsumer {
     private static final Logger logger = LoggerFactory.getLogger(ShardedDeleteInConsumer.class);
 
@@ -34,6 +35,7 @@ public class ShardedDeleteInConsumer extends BaseShardedConsumer {
 
     @Override
     protected void initLocalVars() {
+        super.initLocalVars();
         pkList = consumerContext.getTablePkList(tableName);
         pkValues = new String[pkList.size()];
     }

@@ -79,7 +79,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         try {
             topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
         } catch (DatabaseException e) {
-            logger.error("Try export with '-sharding off'");
+            logger.error("Try export with '-sharding false'");
             throw new RuntimeException(e.getMessage());
         } catch (SQLException e) {
             throw new RuntimeException(e);

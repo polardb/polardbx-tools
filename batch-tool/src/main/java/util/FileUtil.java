@@ -415,4 +415,19 @@ public class FileUtil {
         }
         return true;
     }
+
+    public static void checkWritableDir(File dir) {
+        String dirPath = dir.getAbsolutePath();
+        if (!dir.exists()) {
+            throw new IllegalArgumentException("Directory " + dirPath + " does not exist");
+        }
+
+        if (!dir.isDirectory()) {
+            throw new IllegalArgumentException(dirPath + " is not a directory");
+        }
+
+        if (!dir.canWrite()) {
+            throw new IllegalArgumentException("Cannot write to directory " + dirPath);
+        }
+    }
 }
