@@ -24,6 +24,7 @@ import io.airlift.tpch.RandomString;
 import io.airlift.tpch.RandomText;
 import io.airlift.tpch.TextPool;
 
+import static io.airlift.tpch.GenerateUtils.GENERATED_DATE_EPOCH_OFFSET;
 import static io.airlift.tpch.GenerateUtils.MIN_GENERATE_DATE;
 import static io.airlift.tpch.GenerateUtils.TOTAL_DATE_RANGE;
 import static io.airlift.tpch.GenerateUtils.calculateRowCount;
@@ -183,7 +184,7 @@ public class OrderGenerator extends TableRowGenerator {
         appendDecimalWithFrac2(sqlBuffer, totalPrice);
 
         sqlBuffer.append(",\"");
-        formatDateByDays(sqlBuffer, orderDate);
+        formatDateByDays(sqlBuffer, orderDate - GENERATED_DATE_EPOCH_OFFSET);
 
         sqlBuffer.append("\",\"").append(orderPriorityRandom.nextValue()).append("\",\"");
         appendClerk(sqlBuffer, clerkRandom.nextValue());

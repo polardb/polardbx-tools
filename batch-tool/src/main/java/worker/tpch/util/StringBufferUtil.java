@@ -22,13 +22,21 @@ public class StringBufferUtil {
     private static final long DAYS_0000_TO_1970 = (DAYS_PER_CYCLE * 5L) - (30L * 365L + 7L);
 
     /**
-     * 转为两位小数的字符串表示
-     * 并append
+     * 转为两位小数的字符串表示并append
      */
     public static void appendDecimalWithFrac2(StringBuilder sqlBuffer, long l) {
+        boolean neg = l < 0;
+        if (neg) {
+            l = -l;
+            sqlBuffer.append('-');
+        }
         long intPart = l / 100;
         long fracPart = l % 100;
-        sqlBuffer.append(intPart).append('.').append(fracPart);
+        if (fracPart < 10) {
+            sqlBuffer.append(intPart).append(".0").append(fracPart);
+        } else {
+            sqlBuffer.append(intPart).append('.').append(fracPart);
+        }
     }
 
     /**

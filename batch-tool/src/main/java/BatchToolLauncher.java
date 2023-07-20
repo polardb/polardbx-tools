@@ -20,6 +20,7 @@ import cmd.ConfigResult;
 import datasource.DataSourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.Version;
 
 import java.sql.SQLException;
 
@@ -39,6 +40,7 @@ public class BatchToolLauncher {
             return;
         }
 
+        logger.info("BatchTool version: {}", Version.getVersion());
         try {
             handleCmd(commandLine);
         } catch (Throwable e) {
