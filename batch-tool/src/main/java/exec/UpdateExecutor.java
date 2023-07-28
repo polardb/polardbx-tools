@@ -17,7 +17,6 @@
 package exec;
 
 import cmd.BaseOperateCommand;
-import cmd.UpdateCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import org.apache.commons.lang.StringUtils;
@@ -74,7 +73,7 @@ public class UpdateExecutor extends WriteDbExecutor {
             String toUpdateColumns = UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
             consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
             configureCommonContextAndRun(ShardedReplaceConsumer.class, producerExecutionContext,
-                consumerExecutionContext, tableName);
+                consumerExecutionContext, tableName, useBlockReader());
         }
     }
 
@@ -90,10 +89,10 @@ public class UpdateExecutor extends WriteDbExecutor {
 
             if (consumerExecutionContext.isWhereInEnabled()) {
                 configureCommonContextAndRun(UpdateWithFuncInConsumer.class, producerExecutionContext,
-                    consumerExecutionContext, tableName);
+                    consumerExecutionContext, tableName, useBlockReader());
             } else {
                 configureCommonContextAndRun(UpdateWithFuncConsumer.class, producerExecutionContext,
-                    consumerExecutionContext, tableName);
+                    consumerExecutionContext, tableName, useBlockReader());
             }
         }
     }
@@ -109,7 +108,7 @@ public class UpdateExecutor extends WriteDbExecutor {
             consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
 
             configureCommonContextAndRun(clazz, producerExecutionContext,
-                consumerExecutionContext, tableName);
+                consumerExecutionContext, tableName, useBlockReader());
         }
     }
 }
