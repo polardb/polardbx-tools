@@ -86,7 +86,7 @@ public class PartGenerator extends TableRowGenerator {
         sqlBuffer.append('(').append(partKey)
             .append(",\"").append(nameRandom.nextValue())
             .append("\",\"Manufacturer#").append(manufacturer)
-            .append("\",\"Brand").append(brand)
+            .append("\",\"Brand#").append(brand)
             .append("\",\"").append(typeRandom.nextValue())
             .append("\",").append(sizeRandom.nextValue())
             .append(",\"").append(containerRandom.nextValue())

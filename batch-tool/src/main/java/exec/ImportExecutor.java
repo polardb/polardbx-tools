@@ -26,8 +26,6 @@ import exception.DatabaseException;
 import model.config.BenchmarkMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
-import model.config.GlobalVar;
-import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -264,7 +262,7 @@ public class ImportExecutor extends WriteDbExecutor {
         if (consumerExecutionContext.isReadProcessFileOnly()) {
             // 测试读取文件的性能
             configureCommonContextAndRun(ProcessOnlyImportConsumer.class,
-                producerExecutionContext, consumerExecutionContext, tableName);
+                producerExecutionContext, consumerExecutionContext, tableName, false);
         } else {
             configureCommonContextAndRun(ImportConsumer.class,
                 producerExecutionContext, consumerExecutionContext, tableName,
@@ -281,19 +279,4 @@ public class ImportExecutor extends WriteDbExecutor {
             useBlockReader());
     }
 
-    private boolean useBlockReader() {
-        if (GlobalVar.IN_PERF_MODE) {
-            return true;
-        }
-        if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
-            return false;
-        }
-        if (!producerExecutionContext.getEncryptionConfig().getEncryptionMode().isSupportStreamingBit()) {
-            return false;
-        }
-        if (!producerExecutionContext.getFileFormat().isSupportBlock()) {
-            return false;
-        }
-        return true;
-    }
 }

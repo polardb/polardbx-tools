@@ -23,6 +23,8 @@ import datasource.DataSourceConfig;
 import exception.DatabaseException;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
+import model.config.GlobalVar;
+import model.config.QuoteEncloseMode;
 import model.db.PartitionKey;
 import model.db.PrimaryKey;
 import model.db.TableFieldMetaInfo;
@@ -191,4 +193,19 @@ public abstract class WriteDbExecutor extends BaseExecutor {
         producerExecutionContext.saveToHistoryFile(true);
     }
 
+    protected boolean useBlockReader() {
+        if (GlobalVar.IN_PERF_MODE) {
+            return true;
+        }
+        if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
+            return false;
+        }
+        if (!producerExecutionContext.getEncryptionConfig().getEncryptionMode().isSupportStreamingBit()) {
+            return false;
+        }
+        if (!producerExecutionContext.getFileFormat().isSupportBlock()) {
+            return false;
+        }
+        return true;
+    }
 }
