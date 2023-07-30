@@ -24,6 +24,7 @@ import io.airlift.tpch.RandomString;
 import io.airlift.tpch.RandomText;
 import io.airlift.tpch.TextPool;
 
+import static io.airlift.tpch.GenerateUtils.GENERATED_DATE_EPOCH_OFFSET;
 import static io.airlift.tpch.GenerateUtils.calculateRowCount;
 import static io.airlift.tpch.GenerateUtils.calculateStartIndex;
 import static io.airlift.tpch.GenerateUtils.toEpochDate;
@@ -182,14 +183,14 @@ public class LineItemGenerator extends TableRowGenerator {
         receiptDate = toEpochDate(receiptDate);
 
         String returnedFlag;
-        if (GenerateUtils.isInPast(receiptDate)) {
+        if (GenerateUtils.isInPast(receiptDate + GENERATED_DATE_EPOCH_OFFSET)) {
             returnedFlag = returnedFlagRandom.nextValue();
         } else {
             returnedFlag = "N";
         }
 
         String status;
-        if (GenerateUtils.isInPast(shipDate)) {
+        if (GenerateUtils.isInPast(shipDate + GENERATED_DATE_EPOCH_OFFSET)) {
             status = "F";
         } else {
             status = "O";
