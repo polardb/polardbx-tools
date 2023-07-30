@@ -17,7 +17,6 @@
 package exec;
 
 import cmd.BaseOperateCommand;
-import cmd.DeleteCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import org.slf4j.Logger;
@@ -53,11 +52,11 @@ public class DeleteExecutor extends WriteDbExecutor {
             // 使用delete ... in (...)
             configureFieldMetaInfo();
             configureCommonContextAndRun(DeleteInConsumer.class,
-                producerExecutionContext, consumerExecutionContext, tableName);
+                producerExecutionContext, consumerExecutionContext, tableName, useBlockReader());
         } else {
             configurePkList();
             configureCommonContextAndRun(DeleteConsumer.class,
-                producerExecutionContext, consumerExecutionContext, tableName);
+                producerExecutionContext, consumerExecutionContext, tableName, useBlockReader());
         }
     }
 
@@ -66,6 +65,6 @@ public class DeleteExecutor extends WriteDbExecutor {
         configureTopology();
         configurePartitionKey();
         configureCommonContextAndRun(ShardedDeleteInConsumer.class,
-            producerExecutionContext, consumerExecutionContext, tableName);
+            producerExecutionContext, consumerExecutionContext, tableName, useBlockReader());
     }
 }

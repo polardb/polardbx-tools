@@ -122,13 +122,6 @@ public abstract class BaseExecutor {
         return new SingleThreadExportExecutor(dataSourceConfig, druid, command);
     }
 
-    protected void configureCommonContextAndRun(Class<? extends BaseWorkHandler> clazz,
-                                                ProducerExecutionContext producerExecutionContext,
-                                                ConsumerExecutionContext consumerExecutionContext,
-                                                String tableName) {
-        configureCommonContextAndRun(clazz, producerExecutionContext, consumerExecutionContext, tableName, true);
-    }
-
     /**
      * 对生产者、消费者的上下文进行通用配置
      * 并开始执行任务 等待结束
