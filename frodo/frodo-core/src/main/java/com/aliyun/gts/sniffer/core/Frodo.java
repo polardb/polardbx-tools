@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Created by junliang.zkk on 22/06/01.
- * author:zhaojunliang.zkk
+ * author:junliang.zkk
  * email:junliang.zkk@alibaba-inc.com
  * 流量回放工具
  */
