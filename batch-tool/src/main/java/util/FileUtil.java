@@ -92,21 +92,17 @@ public class FileUtil {
     }
 
     /**
-     * 如果value中包含`"` `\`
-     * 则用`""` `\\`进行转义
+     * 如果value中包含`"`
+     * 则用`""`进行转义
      */
-    private static void writeWithQuoteEscapeInQuote(ByteArrayOutputStream os, byte[] value) {
+    public static void writeWithQuoteEscapeInQuote(ByteArrayOutputStream os, byte[] value) {
         // ascii字符为一字节
         byte quoteByte = DOUBLE_QUOTE_BYTE[0];
-        byte backSlashByte = BACK_SLASH_BYTE[0];
 
         for (byte b : value) {
             if (b == quoteByte) {
                 os.write(quoteByte);
                 os.write(quoteByte);
-            } else if (b == backSlashByte) {
-                os.write(backSlashByte);
-                os.write(backSlashByte);
             } else {
                 os.write(b);
             }
