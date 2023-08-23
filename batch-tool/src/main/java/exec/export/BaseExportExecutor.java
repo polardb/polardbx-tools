@@ -85,9 +85,9 @@ public abstract class BaseExportExecutor extends BaseExecutor {
     private Thread exportDDL() {
         DdlExportWorker ddlExportWorker;
         if (command.isDbOperation()) {
-            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName());
+            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), config);
         } else {
-            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), command.getTableNames());
+            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), command.getTableNames(), config);
         }
         Thread ddlThread = new Thread(ddlExportWorker);
         ddlThread.start();

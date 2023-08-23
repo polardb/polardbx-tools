@@ -103,6 +103,7 @@ import static cmd.ConfigArgOption.ARG_SHORT_USERNAME;
 import static cmd.ConfigArgOption.ARG_SHORT_VERSION;
 import static cmd.ConfigArgOption.ARG_SHORT_WHERE;
 import static cmd.ConfigArgOption.ARG_SHORT_WITH_DDL;
+import static cmd.FlagOption.ARG_DROP_TABLE_IF_EXISTS;
 import static cmd.FlagOption.ARG_EMPTY_AS_NULL;
 import static cmd.FlagOption.ARG_SHORT_ENABLE_SHARDING;
 import static cmd.FlagOption.ARG_SHORT_IGNORE_AND_RESUME;
@@ -406,6 +407,10 @@ public class CommandUtil {
         return result.getBooleanFlag(ARG_EMPTY_AS_NULL);
     }
 
+    private static boolean getDropTableIfExist(ConfigResult result) {
+        return result.getBooleanFlag(ARG_DROP_TABLE_IF_EXISTS);
+    }
+
     private static FileFormat getFileFormat(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
             String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);
@@ -427,6 +432,7 @@ public class CommandUtil {
         if (exportConfig.getDdlMode() != DdlMode.NO_DDL) {
             setGlobalDdlConfig(result);
         }
+        exportConfig.setDropTableIfExists(getDropTableIfExist(result));
         exportConfig.setEncryptionConfig(getEncryptionConfig(result));
         exportConfig.setFileFormat(getFileFormat(result));
         exportConfig.setCompressMode(getCompressMode(result));
