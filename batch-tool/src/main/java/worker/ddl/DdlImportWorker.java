@@ -18,6 +18,7 @@ package worker.ddl;
 
 import com.alibaba.druid.util.JdbcUtils;
 import model.config.ConfigConstant;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.FileUtil;
@@ -43,18 +44,18 @@ import static model.config.GlobalVar.DDL_RETRY_COUNT;
 /**
  * 直接通过读取SQL导入库表
  */
-public class DdlImporter {
+public class DdlImportWorker {
 
     private static final Logger logger = LoggerFactory.getLogger(DdlExportWorker.class);
 
-
-    private final List<String> filepaths = new ArrayList<>();;
+    private final List<String> filepaths = new ArrayList<>();
     private final DataSource dataSource;
-    private final ExecutorService ddlThreadPool = MyThreadPool.createUnboundedFixedExecutor("DDL-importer", DDL_PARALLELISM);
+    private final ExecutorService ddlThreadPool =
+        MyThreadPool.createUnboundedFixedExecutor("DDL-importer", DDL_PARALLELISM);
     private final AtomicInteger taskCount = new AtomicInteger(0);
     private volatile String useDbSql = null;
 
-    public DdlImporter(String filename, DataSource dataSource) {
+    public DdlImportWorker(String filename, DataSource dataSource) {
         this.dataSource = dataSource;
         File file = new File(filename);
         if (!file.exists() || !file.isFile()) {
@@ -63,7 +64,7 @@ public class DdlImporter {
         this.filepaths.add(file.getAbsolutePath());
     }
 
-    public DdlImporter(List<String> tableNames, DataSource dataSource) {
+    public DdlImportWorker(List<String> tableNames, DataSource dataSource) {
         this.dataSource = dataSource;
         for (String name : tableNames) {
             String filename = name + ConfigConstant.DDL_FILE_SUFFIX;
@@ -159,7 +160,8 @@ public class DdlImporter {
                 }
                 stmt.execute(sql);
             } catch (SQLException e) {
-                if (stmt != null) {
+                String msg = e.getMessage();
+                if (stmt != null && !StringUtils.containsIgnoreCase(msg, "already exists")) {
                     int retryCount = 0;
                     for (; retryCount < DDL_RETRY_COUNT; retryCount++) {
                         try {
@@ -175,7 +177,7 @@ public class DdlImporter {
                         return;
                     }
                 }
-                logger.error("Failed to import DDL: [{}] due to [{}]", sql, e.getMessage());
+                logger.error("Failed to import DDL: [{}] due to [{}]", sql, msg);
             } finally {
                 taskCount.decrementAndGet();
                 JdbcUtils.close(conn);
