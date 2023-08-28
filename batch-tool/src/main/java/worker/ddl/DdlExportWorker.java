@@ -17,6 +17,7 @@
 package worker.ddl;
 
 import exception.DatabaseException;
+import model.config.ExportConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -47,14 +48,16 @@ public class DdlExportWorker implements Runnable {
      * 是否导出整个数据库与其中的所有表
      */
     private final boolean isExportWholeDb;
+    private final ExportConfig config;
 
     private static final Pattern DB_MODE_PATTERN = Pattern.compile("/\\* MODE = '(.*)' \\*/$");
 
-    public DdlExportWorker(DataSource druid, String dbName) {
+    public DdlExportWorker(DataSource druid, String dbName, ExportConfig config) {
         this.druid = druid;
         this.dbName = dbName;
+        this.config = config;
         try (Connection conn = druid.getConnection()) {
-            this.tableNames = DbUtil.getAllTablesInDb(conn, dbName);;
+            this.tableNames = DbUtil.getAllTablesInDb(conn, dbName);
         } catch (SQLException | DatabaseException e) {
             throw new RuntimeException(e);
         }
@@ -62,9 +65,10 @@ public class DdlExportWorker implements Runnable {
         this.filename = dbName + DDL_FILE_SUFFIX;
     }
 
-    public DdlExportWorker(DataSource druid, String dbName, List<String> tableNames) {
+    public DdlExportWorker(DataSource druid, String dbName, List<String> tableNames, ExportConfig config) {
         this.druid = druid;
         this.dbName = dbName;
+        this.config = config;
         this.tableNames = tableNames;
         this.isExportWholeDb = false;
         this.filename = dbName + DDL_FILE_SUFFIX;
@@ -112,10 +116,15 @@ public class DdlExportWorker implements Runnable {
     private void exportTableStructure(Connection conn, String tableName) throws IOException, DatabaseException {
         logger.info("表：{} 开始导出表结构", tableName);
 
-        writeCommentForTable(tableName);
+        beforeCreateTable(tableName);
         String tableDdl = DbUtil.getShowCreateTable(conn, tableName);
         writeLine(tableDdl + ";");
         writeLine("");
+    }
+
+    private void beforeCreateTable(String tableName) throws IOException {
+        writeCommentForTable(tableName);
+        writeDropTableIfExists(tableName);
     }
 
     private void writeCommentForDatabase(String dbName) throws IOException {
@@ -130,13 +139,24 @@ public class DdlExportWorker implements Runnable {
         writeLine("--");
     }
 
+    private void writeDropTableIfExists(String tableName) throws IOException {
+        if (!config.isDropTableIfExists()) {
+            return;
+        }
+        writeLine(String.format("DROP TABLE IF EXISTS `" + tableName + "`;"));
+    }
+
     private void writeLine(String line) throws IOException {
         bufferedWriter.write(line);
         bufferedWriter.newLine();
     }
 
     private void beforeRun() throws Exception {
-        bufferedWriter = new BufferedWriter(new FileWriter(filename));
+        bufferedWriter = new BufferedWriter(new FileWriter(getFilepath()));
+    }
+
+    private String getFilepath() {
+        return config.getPath() + filename;
     }
 
     private void afterRun() {

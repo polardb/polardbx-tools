@@ -72,6 +72,8 @@ public class BaseConfig {
 
     protected DdlMode ddlMode = DdlMode.NO_DDL;
 
+    protected boolean dropTableIfExists = false;
+
     protected CompressMode compressMode = CompressMode.NONE;
 
     protected EncryptionConfig encryptionConfig = EncryptionConfig.NONE;
@@ -194,6 +196,14 @@ public class BaseConfig {
                 "Please check compression/encryption/file-format config: %s/%s/%s",
                 compressMode, encryptionConfig, fileFormat));
         }
+    }
+
+    public boolean isDropTableIfExists() {
+        return dropTableIfExists;
+    }
+
+    public void setDropTableIfExists(boolean dropTableIfExists) {
+        this.dropTableIfExists = dropTableIfExists;
     }
 
     @Override

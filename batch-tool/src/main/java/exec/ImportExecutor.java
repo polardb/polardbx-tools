@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
-import worker.ddl.DdlImporter;
+import worker.ddl.DdlImportWorker;
 import worker.insert.DirectImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
@@ -58,13 +58,7 @@ public class ImportExecutor extends WriteDbExecutor {
 
     @Override
     public void preCheck() {
-        if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
-            if (command.isDbOperation()) {
-                checkDbNotExist(command.getDbName());
-            } else {
-                checkTableNotExist(command.getTableNames());
-            }
-        } else {
+        if (producerExecutionContext.getDdlMode() == DdlMode.NO_DDL) {
             if (command.isDbOperation()) {
                 try (Connection conn = dataSource.getConnection()) {
                     this.tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
@@ -233,17 +227,17 @@ public class ImportExecutor extends WriteDbExecutor {
      * 同步导入建库建表语句
      */
     private void handleDDL() {
-        DdlImporter ddlImporter;
+        DdlImportWorker ddlImportWorker;
         if (command.isDbOperation()) {
             if (producerExecutionContext.getFileLineRecordList().size() != 1) {
                 throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
             }
-            ddlImporter = new DdlImporter(producerExecutionContext.getFileLineRecordList()
+            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFileLineRecordList()
                 .get(0).getFilePath(), dataSource);
         } else {
-            ddlImporter = new DdlImporter(command.getTableNames(), dataSource);
+            ddlImportWorker = new DdlImportWorker(command.getTableNames(), dataSource);
         }
-        ddlImporter.doImportSync();
+        ddlImportWorker.doImportSync();
     }
 
     private void doSingleThreadImport(String tableName) {
