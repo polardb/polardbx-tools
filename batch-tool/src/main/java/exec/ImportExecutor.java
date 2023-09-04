@@ -70,6 +70,7 @@ public class ImportExecutor extends WriteDbExecutor {
                 this.tableNames = command.getTableNames();
             }
         }
+        logger.info("目标导入表：{}", tableNames);
     }
 
     private void checkDbNotExist(String dbName) {
@@ -127,6 +128,7 @@ public class ImportExecutor extends WriteDbExecutor {
         logger.debug(consumerExecutionContext.toString());
 
         for (String tableName : tableNames) {
+            logger.info("开始导入表：{}", tableName);
             if (producerExecutionContext.isSingleThread()
                 && consumerExecutionContext.isSingleThread()) {
                 // 使用按行读取insert模式
