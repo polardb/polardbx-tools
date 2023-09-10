@@ -23,6 +23,7 @@ import model.encrypt.BaseCipher;
 import util.FileUtil;
 import worker.common.writer.IFileWriter;
 import worker.common.writer.NioFileWriter;
+import worker.util.ExportUtil;
 
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,18 +46,11 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
         this.emittedDataCounter = emittedDataCounter;
         this.separator = separator;
         this.tableFieldMetaInfo = tableFieldMetaInfo;
-        filename = getFilename(filename, compressMode);
+        filename = ExportUtil.getFilename(filename, compressMode);
         this.fileWriter = new NioFileWriter(filename, compressMode, charset);
         if (isWithHeader) {
             appendHeader();
         }
-    }
-
-    private String getFilename(String filename, CompressMode compressMode) {
-        if (compressMode == CompressMode.GZIP) {
-            return filename + ".gz";
-        }
-        return filename;
     }
 
     private void appendHeader() {

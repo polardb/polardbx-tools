@@ -171,7 +171,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
 
         ExecutorService producerExecutor = MyThreadPool.createExecutorWithEnsure("producer", producerCount);
         // 每一个生产者最后的碎片数据处理
-        if (producerCount >= consumerCount * 2) {
+        if (producerCount >= consumerCount * 2 || consumerCount <= 4) {
             // 当生产者数量略大于消费者时 没必要轮询分配碎片
             for (TableTopology topology : topologyList) {
                 ExportProducer producer = new ExportProducer(dataSource, topology,
