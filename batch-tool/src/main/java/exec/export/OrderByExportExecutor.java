@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import util.FileUtil;
 import worker.MyThreadPool;
-import worker.export.DirectExportWorker;
 import worker.export.order.DirectOrderExportWorker;
 import worker.export.order.LocalOrderByExportProducer;
 import worker.export.order.OrderByExportEvent;
@@ -41,6 +40,7 @@ import worker.export.order.ParallelMergeExportConsumer;
 import worker.export.order.ParallelOrderByExportEvent;
 import worker.factory.ExportWorkerFactory;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
@@ -96,11 +96,11 @@ public class OrderByExportExecutor extends BaseExportExecutor {
         for (String tableName : command.getTableNames()) {
             String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
                 config.getFilenamePrefix(), tableName);
-            try {
-                topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
+            try (Connection connection = dataSource.getConnection()) {
+                topologyList = DbUtil.getTopology(connection, tableName);
+                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
                     getSchemaName(), tableName);
-                orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(dataSource.getConnection(), getSchemaName(),
+                orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(connection, getSchemaName(),
                     tableName, config.getOrderByColumnNameList());
                 // 分片数
                 final int shardSize = topologyList.size();
@@ -124,7 +124,7 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                     break;
                 case FIXED_FILE_NUM:
                     // 固定文件数的情况 先拿到全部的行数
-                    double totalRowCount = DbUtil.getTableRowCount(dataSource.getConnection(), tableName);
+                    double totalRowCount = DbUtil.getTableRowCount(connection, tableName);
                     int fileNum = config.getLimitNum();
                     int singleLineLimit = (int) Math.ceil(totalRowCount / fileNum);
                     // 再转为限制单文件行数的形式
@@ -160,8 +160,8 @@ public class OrderByExportExecutor extends BaseExportExecutor {
      */
     private void handleExportWithOrderByFromDb() {
         for (String tableName : command.getTableNames()) {
-            try {
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
+            try (Connection connection = dataSource.getConnection()) {
+                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
                     getSchemaName(), tableName);
                 DirectOrderExportWorker directOrderByExportWorker = ExportWorkerFactory
                     .buildDirectOrderExportWorker(dataSource, tableFieldMetaInfo, (ExportCommand) command, tableName);
@@ -182,13 +182,13 @@ public class OrderByExportExecutor extends BaseExportExecutor {
         for (String tableName : command.getTableNames()) {
             List<TableTopology> topologyList;
             List<FieldMetaInfo> orderByColumnInfoList;
-            try {
+            try (Connection connection = dataSource.getConnection()) {
                 String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
                     config.getFilenamePrefix(), tableName);
-                topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
-                    getSchemaName(),tableName);
-                orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(dataSource.getConnection(), getSchemaName(),
+                topologyList = DbUtil.getTopology(connection, tableName);
+                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
+                    getSchemaName(), tableName);
+                orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(connection, getSchemaName(),
                     tableName, config.getOrderByColumnNameList());
                 // 分片数
                 final int shardSize = topologyList.size();
@@ -211,7 +211,7 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                     break;
                 case FIXED_FILE_NUM:
                     // 固定文件数的情况 先拿到全部的行数
-                    double totalRowCount = DbUtil.getTableRowCount(dataSource.getConnection(), tableName);
+                    double totalRowCount = DbUtil.getTableRowCount(connection, tableName);
                     int fileNum = config.getLimitNum();
                     int singleLineLimit = (int) Math.ceil(totalRowCount / fileNum);
                     // 再转为限制单文件行数的形式

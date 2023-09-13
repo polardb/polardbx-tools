@@ -30,6 +30,7 @@ import worker.MyThreadPool;
 import worker.export.DirectExportWorker;
 import worker.factory.ExportWorkerFactory;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -61,8 +62,8 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
     private void doDefaultExport(String tableName, ExecutorService executor) {
         String fileName = FileUtil.getFilePathPrefix(config.getPath(),
             config.getFilenamePrefix(), tableName) + 0;
-        try {
-            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
+        try (Connection connection = dataSource.getConnection()) {
+            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
                 getSchemaName(), tableName, command.getColumnNames());
             DirectExportWorker directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
                 new TableTopology("", tableName), tableFieldMetaInfo,
