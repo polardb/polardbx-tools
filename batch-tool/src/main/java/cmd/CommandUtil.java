@@ -560,11 +560,17 @@ public class CommandUtil {
                                                  ProducerExecutionContext producerExecutionContext) {
         producerExecutionContext.setCharset(getCharset(result));
         producerExecutionContext.setSeparator(getSep(result));
-        producerExecutionContext.setFileLineRecordList(getFileRecordList(result));
+        producerExecutionContext.setDdlMode(getDdlMode(result));
+
+        if (producerExecutionContext.getDdlMode() != DdlMode.DDL_ONLY) {
+            producerExecutionContext.setDataFileLineRecordList(getDataFileRecordList(result));
+        }
+        if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
+            producerExecutionContext.setDdlFileLineRecordList(getDdlFileRecordList(result));
+        }
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
         producerExecutionContext.setWithHeader(getWithHeader(result));
-        producerExecutionContext.setDdlMode(getDdlMode(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
         producerExecutionContext.setFileFormat(getFileFormat(result));
@@ -681,14 +687,15 @@ public class CommandUtil {
     }
 
     /**
-     * 解析文件路径与行号
+     * 解析数据文件路径与行号
      * 并检测文件是否存在
      */
-    private static List<FileLineRecord> getFileRecordList(ConfigResult result) {
+    private static List<FileLineRecord> getDataFileRecordList(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FROM_FILE)) {
+            // 检查DDL文件后缀
             String filePathListStr = result.getOptionValue(ARG_SHORT_FROM_FILE);
             return Arrays.stream(StringUtils.split(filePathListStr, ConfigConstant.CMD_SEPARATOR))
-                .filter(StringUtils::isNotBlank)
+                .filter(s -> StringUtils.isNotBlank(s) && !StringUtils.endsWith(s, ConfigConstant.DDL_FILE_SUFFIX))
                 .map(s -> {
                     String[] strs = StringUtils.split(s, ConfigConstant.CMD_FILE_LINE_SEPARATOR);
                     if (strs.length == 1) {
@@ -704,13 +711,35 @@ public class CommandUtil {
                 }).collect(Collectors.toList());
         } else if (result.hasOption(ARG_SHORT_DIRECTORY)) {
             String dirPathStr = result.getOptionValue(ARG_SHORT_DIRECTORY);
-            List<String> filePaths = FileUtil.getFilesAbsPathInDir(dirPathStr);
+            List<String> filePaths = FileUtil.getDataFilesAbsPathInDir(dirPathStr);
             return FileLineRecord.fromFilePaths(filePaths);
         }
         if (result.hasOption(ARG_SHORT_BENCHMARK)) {
             return null;
         }
-        throw new IllegalStateException("cannot get file path list");
+        throw new IllegalStateException("cannot get data file path list");
+    }
+
+    /**
+     * 解析数据DDL文件路径与行号
+     * 并检测文件是否存在
+     */
+    private static List<FileLineRecord> getDdlFileRecordList(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_FROM_FILE)) {
+            // 检查DDL文件后缀
+            String filePathListStr = result.getOptionValue(ARG_SHORT_FROM_FILE);
+            return Arrays.stream(StringUtils.split(filePathListStr, ConfigConstant.CMD_SEPARATOR))
+                .filter(s -> StringUtils.isNotBlank(s) && StringUtils.endsWith(s, ConfigConstant.DDL_FILE_SUFFIX))
+                .map(FileLineRecord::new).collect(Collectors.toList());
+        } else if (result.hasOption(ARG_SHORT_DIRECTORY)) {
+            String dirPathStr = result.getOptionValue(ARG_SHORT_DIRECTORY);
+            List<String> filePaths = FileUtil.getDdlFilesAbsPathInDir(dirPathStr);
+            return FileLineRecord.fromFilePaths(filePaths);
+        }
+        if (result.hasOption(ARG_SHORT_BENCHMARK)) {
+            return null;
+        }
+        throw new IllegalStateException("cannot get ddl file path list");
     }
 
     private static int getTpsLimit(ConfigResult result) {

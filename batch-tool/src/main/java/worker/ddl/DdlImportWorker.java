@@ -16,13 +16,12 @@
 
 package worker.ddl;
 
-import com.alibaba.druid.util.JdbcUtils;
 import model.config.ConfigConstant;
+import model.config.FileLineRecord;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.FileUtil;
-import util.IOUtil;
 import worker.MyThreadPool;
 
 import javax.sql.DataSource;
@@ -47,6 +46,7 @@ import static model.config.GlobalVar.DDL_RETRY_COUNT;
 public class DdlImportWorker {
 
     private static final Logger logger = LoggerFactory.getLogger(DdlExportWorker.class);
+    private static final int MAX_SQL_SAMPLE_LEN = 50;
 
     private final List<String> filepaths = new ArrayList<>();
     private final DataSource dataSource;
@@ -55,22 +55,31 @@ public class DdlImportWorker {
     private final AtomicInteger taskCount = new AtomicInteger(0);
     private volatile String useDbSql = null;
 
-    public DdlImportWorker(String filename, DataSource dataSource) {
-        this.dataSource = dataSource;
-        File file = new File(filename);
-        if (!file.exists() || !file.isFile()) {
-            throw new IllegalStateException("File " + filename + " does not exist");
+    public static DdlImportWorker fromFiles(List<FileLineRecord> fileRecords, DataSource dataSource) {
+        DdlImportWorker worker = new DdlImportWorker(dataSource);
+        for (FileLineRecord fileRecord : fileRecords) {
+            String filePath = fileRecord.getFilePath();
+            File file = new File(fileRecord.getFilePath());
+            if (!file.exists() || !file.isFile()) {
+                throw new IllegalStateException("File " + filePath + " does not exist");
+            }
+            worker.filepaths.add(file.getAbsolutePath());
         }
-        this.filepaths.add(file.getAbsolutePath());
+        return worker;
     }
 
-    public DdlImportWorker(List<String> tableNames, DataSource dataSource) {
-        this.dataSource = dataSource;
+    public static DdlImportWorker fromTables(List<String> tableNames, DataSource dataSource) {
+        DdlImportWorker worker = new DdlImportWorker(dataSource);
         for (String name : tableNames) {
             String filename = name + ConfigConstant.DDL_FILE_SUFFIX;
             String fileAbsPath = FileUtil.getFileAbsPath(filename);
-            this.filepaths.add(fileAbsPath);
+            worker.filepaths.add(fileAbsPath);
         }
+        return worker;
+    }
+
+    DdlImportWorker(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     /**
@@ -82,41 +91,19 @@ public class DdlImportWorker {
         if (ddlThreadPool.isShutdown()) {
             throw new IllegalStateException("ddl thread pool has been shutdown");
         }
-        BufferedReader reader = null;
         StringBuilder sqlStringBuilder = new StringBuilder(100);
-        String line = null;
-        boolean firstLine = true;
+
         try {
             for (String filepath : filepaths) {
-                reader = new BufferedReader(new FileReader(filepath));
-                while ((line = reader.readLine()) != null) {
-                    if (line.startsWith("--") || line.isEmpty()) {
-                        continue;
-                    }
-                    if (!line.endsWith(";")) {
-                        sqlStringBuilder.append(line).append("\n");
-                    } else {
-                        sqlStringBuilder.append(line);
-                        String sql = sqlStringBuilder.toString();
-                        if (firstLine && (sql.contains("DATABASE") || sql.contains("database"))) {
-                            importDDL(sql);
-                        } else if (useDbSql == null && (sql.startsWith("use"))) {
-                            useDbSql = sql;
-                        } else {
-                            submitDDL(sql);
-                        }
-                        firstLine = false;
-                        sqlStringBuilder.setLength(0);
-                    }
+                try (BufferedReader reader = new BufferedReader(new FileReader(filepath))) {
+                    processLines(reader, sqlStringBuilder);
+                    sqlStringBuilder.setLength(0);
                 }
             }
             sqlStringBuilder.setLength(0);
-            IOUtil.close(reader);
         } catch (IOException e) {
             logger.error(e.getMessage());
             throw new RuntimeException(e);
-        } finally {
-            IOUtil.close(reader);
         }
 
         ddlThreadPool.shutdown();
@@ -133,6 +120,44 @@ public class DdlImportWorker {
         logger.info("DDL语句导入完毕");
     }
 
+    private void processLines(BufferedReader reader, StringBuilder sqlStringBuilder) throws IOException {
+        String line = null;
+        String lastSql = null;
+        boolean firstLine = true;
+
+        while ((line = reader.readLine()) != null) {
+            if (line.startsWith("--") || line.isEmpty()) {
+                continue;
+            }
+            if (!line.endsWith(";")) {
+                sqlStringBuilder.append(line).append("\n");
+            } else {
+                // 拼接完整sql
+                sqlStringBuilder.append(line);
+                String sql = sqlStringBuilder.toString();
+
+                if (firstLine && (sql.contains("DATABASE") || sql.contains("database"))) {
+                    importDDL(sql);
+                } else if (useDbSql == null && (sql.startsWith("use"))) {
+                    useDbSql = sql;
+                } else if (StringUtils.startsWithIgnoreCase(sql, "drop ") && lastSql == null) {
+                    // drop 语句放在 create 语句之前执行
+                    lastSql = sql;
+                } else {
+                    if (lastSql != null) {
+                        submitDDL(lastSql, sql);
+                        lastSql = null;
+                    } else {
+                        submitDDL(sql);
+                    }
+                }
+                firstLine = false;
+                sqlStringBuilder.setLength(0);
+            }
+        }
+
+    }
+
     private void importDDL(String sql) {
         try (Connection conn = dataSource.getConnection();
             Statement stmt = conn.createStatement()) {
@@ -144,44 +169,47 @@ public class DdlImportWorker {
         }
     }
 
-    private void submitDDL(String sql) {
+    private void submitDDL(String... sqls) {
         taskCount.incrementAndGet();
         ddlThreadPool.submit(() -> {
-            Connection conn = null;
-            Statement stmt = null;
-            String ddlSample = null;
-            try {
-                ddlSample = sql.substring(0, Math.min(50, sql.length()));
-                conn = dataSource.getConnection();
-                stmt = conn.createStatement();
-                logger.info("正在执行 DDL 语句: {} ...", ddlSample);
-                if (useDbSql != null) {
-                    stmt.execute(useDbSql);
+            String sql = null, ddlSample = null;
+            try (Connection conn = dataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+                for (String s : sqls) {
+                    sql = s;
+                    ddlSample = sql.substring(0, Math.min(MAX_SQL_SAMPLE_LEN, sql.length()));
+                    logger.info("正在执行 DDL 语句: {} ...", ddlSample);
+                    if (useDbSql != null) {
+                        stmt.execute(useDbSql);
+                    }
+                    stmt.execute(sql);
                 }
-                stmt.execute(sql);
             } catch (SQLException e) {
                 String msg = e.getMessage();
-                if (stmt != null && !StringUtils.containsIgnoreCase(msg, "already exists")) {
-                    int retryCount = 0;
-                    for (; retryCount < DDL_RETRY_COUNT; retryCount++) {
-                        try {
-                            logger.info("正在重试 DDL 语句: {} ...", ddlSample);
-                            stmt.execute(sql);
-                            break;
-                        } catch (SQLException e2) {
-                            e2.printStackTrace();
+                try (Connection conn = dataSource.getConnection();
+                    Statement stmt = conn.createStatement()) {
+                    if (!StringUtils.containsIgnoreCase(msg, "already exists")) {
+                        int retryCount = 0;
+                        for (; retryCount < DDL_RETRY_COUNT; retryCount++) {
+                            try {
+                                logger.info("正在重试 DDL 语句: {} ...", ddlSample);
+                                stmt.execute(sql);
+                                break;
+                            } catch (SQLException e2) {
+                                e2.printStackTrace();
+                            }
+                        }
+                        if (retryCount < DDL_RETRY_COUNT) {
+                            // 重试成功
+                            return;
                         }
                     }
-                    if (retryCount < DDL_RETRY_COUNT) {
-                        // 重试成功
-                        return;
-                    }
+                } catch (Exception e1) {
+                    logger.error("Failed to retry due to [{}]", e1.getMessage());
                 }
                 logger.error("Failed to import DDL: [{}] due to [{}]", sql, msg);
             } finally {
                 taskCount.decrementAndGet();
-                JdbcUtils.close(conn);
-                JdbcUtils.close(stmt);
             }
         });
     }

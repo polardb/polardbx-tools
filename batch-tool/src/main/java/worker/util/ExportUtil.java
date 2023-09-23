@@ -16,6 +16,7 @@
 
 package worker.util;
 
+import model.config.CompressMode;
 import model.db.FieldMetaInfo;
 import model.db.TableTopology;
 import org.apache.commons.lang.StringUtils;
@@ -232,5 +233,12 @@ public class ExportUtil {
             return 0;
         };
         return comparator;
+    }
+
+    public static String getFilename(String filename, CompressMode compressMode) {
+        if (compressMode == CompressMode.GZIP) {
+            return filename + ".gz";
+        }
+        return filename;
     }
 }

@@ -85,7 +85,7 @@ public class BaseConfig {
      */
     protected QuoteEncloseMode quoteEncloseMode;
 
-    private FileMode fileMode = new FileMode();
+    private final FileMode fileMode = new FileMode();
 
     private boolean isWithLastSep = false;
 
@@ -212,7 +212,11 @@ public class BaseConfig {
             "separator='" + separator + '\'' +
             ", charset='" + charset + '\'' +
             ", isWithHeader='" + isWithHeader + '\'' +
+            ", isWithLastSep='" + isWithLastSep + '\'' +
+            ", quoteEncloseMode='" + quoteEncloseMode + '\'' +
             ", compressMode='" + compressMode + '\'' +
+            ", ddlMode='" + ddlMode + '\'' +
+            ", dropTableIfExists='" + dropTableIfExists + '\'' +
             ", encryptionConfig='" + encryptionConfig + '\'' +
             '}';
     }

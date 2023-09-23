@@ -23,12 +23,9 @@ import org.slf4j.LoggerFactory;
 import util.IOUtil;
 import worker.common.writer.IFileWriter;
 import worker.common.writer.NioFileWriter;
+import worker.util.ExportUtil;
 
-import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -38,7 +35,7 @@ public class CollectFragmentWorker implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(CollectFragmentWorker.class);
 
     private final Queue<ExportEvent> fragmentQueue;
-    private final String[] filePaths;
+    private final String[] filenames;
     private final CyclicAtomicInteger cyclicCounter;
     private final CountDownLatch fragmentCountLatch;
     private final CompressMode compressMode;
@@ -46,11 +43,11 @@ public class CollectFragmentWorker implements Runnable {
 
     private final Map<String, IFileWriter> fileWriterCache = new HashMap<>();
 
-    public CollectFragmentWorker(Queue<ExportEvent> fragmentQueue, String[] filePaths,
+    public CollectFragmentWorker(Queue<ExportEvent> fragmentQueue, String[] filenames,
                                  CyclicAtomicInteger cyclicCounter, CountDownLatch fragmentCountLatch,
                                  CompressMode compressMode, Charset charset) {
         this.fragmentQueue = fragmentQueue;
-        this.filePaths = filePaths;
+        this.filenames = filenames;
         this.cyclicCounter = cyclicCounter;
         this.fragmentCountLatch = fragmentCountLatch;
         this.compressMode = compressMode;
@@ -64,12 +61,13 @@ public class CollectFragmentWorker implements Runnable {
                 ExportEvent exportEvent = fragmentQueue.poll();
                 byte[] data = exportEvent.getData();
 
-                String filePath = filePaths[cyclicCounter.next()];
+                final String filename = ExportUtil.getFilename(filenames[cyclicCounter.next()], compressMode);
+                ;
 
-                IFileWriter fileWriter = fileWriterCache.computeIfAbsent(filePath,
-                    (key) -> new NioFileWriter(filePath, compressMode, charset, false));
+                IFileWriter fileWriter = fileWriterCache.computeIfAbsent(filename,
+                    (key) -> new NioFileWriter(filename, compressMode, charset));
                 fileWriter.write(data);
-                logger.debug("向文件 {} 写入碎片数据 ", filePath);
+                logger.debug("向文件 {} 写入碎片数据 ", filename);
             }
         } catch (Exception e) {
             logger.error(e.getMessage());

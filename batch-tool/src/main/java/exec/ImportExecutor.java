@@ -26,6 +26,7 @@ import exception.DatabaseException;
 import model.config.BenchmarkMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -70,6 +71,9 @@ public class ImportExecutor extends WriteDbExecutor {
                 this.tableNames = command.getTableNames();
             }
         }
+        if (CollectionUtils.isNotEmpty(tableNames)) {
+            logger.info("目标导入表：{}", tableNames);
+        }
     }
 
     private void checkDbNotExist(String dbName) {
@@ -111,6 +115,16 @@ public class ImportExecutor extends WriteDbExecutor {
         switch (producerExecutionContext.getDdlMode()) {
         case WITH_DDL:
             handleDDL();
+            if (command.isDbOperation()) {
+                // 库级别导入模式下更新导入的目标表
+                try (Connection conn = dataSource.getConnection()) {
+                    this.tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+                } catch (SQLException | DatabaseException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                throw new IllegalStateException("Do not support importing to table with DDL");
+            }
             break;
         case DDL_ONLY:
             handleDDL();
@@ -121,12 +135,16 @@ public class ImportExecutor extends WriteDbExecutor {
             throw new UnsupportedOperationException("DDL mode is not supported: " +
                 producerExecutionContext.getDdlMode());
         }
+
+        if (CollectionUtils.isEmpty(tableNames)) {
+            logger.warn("目标表未设置");
+            return;
+        }
+
         configureFieldMetaInfo();
 
-        logger.debug(producerExecutionContext.toString());
-        logger.debug(consumerExecutionContext.toString());
-
         for (String tableName : tableNames) {
+            logger.info("开始导入表：{}", tableName);
             if (producerExecutionContext.isSingleThread()
                 && consumerExecutionContext.isSingleThread()) {
                 // 使用按行读取insert模式
@@ -229,13 +247,10 @@ public class ImportExecutor extends WriteDbExecutor {
     private void handleDDL() {
         DdlImportWorker ddlImportWorker;
         if (command.isDbOperation()) {
-            if (producerExecutionContext.getFileLineRecordList().size() != 1) {
-                throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
-            }
-            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFileLineRecordList()
-                .get(0).getFilePath(), dataSource);
+            ddlImportWorker =
+                DdlImportWorker.fromFiles(producerExecutionContext.getDdlFileLineRecordList(), dataSource);
         } else {
-            ddlImportWorker = new DdlImportWorker(command.getTableNames(), dataSource);
+            ddlImportWorker = DdlImportWorker.fromTables(command.getTableNames(), dataSource);
         }
         ddlImportWorker.doImportSync();
     }
