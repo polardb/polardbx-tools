@@ -96,7 +96,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -129,7 +128,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -180,7 +178,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -228,7 +225,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -264,7 +260,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -309,7 +304,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -382,7 +376,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -468,7 +461,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -489,7 +481,6 @@ public class DbUtil {
         } finally {
             JdbcUtils.close(resultSet);
             JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -595,8 +586,6 @@ public class DbUtil {
             return rs.getBoolean("BROADCAST");
         } catch (SQLException e) {
             throw new DatabaseException("Unable to get rule of table " + tableName, e);
-        } finally {
-            JdbcUtils.close(conn);
         }
     }
 }
