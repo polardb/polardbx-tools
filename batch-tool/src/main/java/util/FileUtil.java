@@ -377,14 +377,28 @@ public class FileUtil {
     /**
      * 筛选出非ddl的数据文件
      */
-    public static List<String> getFilesAbsPathInDir(String dirPathStr) {
+    public static List<String> getDataFilesAbsPathInDir(String dirPathStr) {
         File dir = new File(dirPathStr);
-        if (!dir.exists()|| !dir.isDirectory()) {
+        if (!dir.exists() || !dir.isDirectory()) {
             throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
         }
         return FileUtils.listFiles(dir, null, false).stream()
             .filter(file -> file.isFile() && file.canRead() &&
                 !file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
+            .map(File::getAbsolutePath).collect(Collectors.toList());
+    }
+
+    /**
+     * 筛选出ddl文件
+     */
+    public static List<String> getDdlFilesAbsPathInDir(String dirPathStr) {
+        File dir = new File(dirPathStr);
+        if (!dir.exists() || !dir.isDirectory()) {
+            throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
+        }
+        return FileUtils.listFiles(dir, null, false).stream()
+            .filter(file -> file.isFile() && file.canRead() &&
+                file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
             .map(File::getAbsolutePath).collect(Collectors.toList());
     }
 

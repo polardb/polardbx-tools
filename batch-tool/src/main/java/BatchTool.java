@@ -52,6 +52,7 @@ public class BatchTool {
         logger.info("开始批量操作...");
         BaseExecutor commandExecutor = BaseExecutor.getExecutor(command, dataSourceConfig, druid);
         commandExecutor.preCheck();
+        logger.info(command.toString());
         try {
             long startTime = System.currentTimeMillis();
             commandExecutor.execute();

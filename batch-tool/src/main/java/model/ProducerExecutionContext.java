@@ -42,7 +42,9 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private ThreadPoolExecutor producerExecutor;
 
-    private List<FileLineRecord> fileRecordList;
+    private List<FileLineRecord> dataFileRecordList;
+
+    private List<FileLineRecord> ddlFileRecordList;
 
     private int parallelism;
 
@@ -89,12 +91,20 @@ public class ProducerExecutionContext extends BaseConfig {
         this.producerExecutor = producerExecutor;
     }
 
-    public List<FileLineRecord> getFileLineRecordList() {
-        return fileRecordList;
+    public List<FileLineRecord> getDataFileLineRecordList() {
+        return dataFileRecordList;
     }
 
-    public void setFileLineRecordList(List<FileLineRecord> fileRecordList) {
-        this.fileRecordList = fileRecordList;
+    public void setDataFileLineRecordList(List<FileLineRecord> fileRecordList) {
+        this.dataFileRecordList = fileRecordList;
+    }
+
+    public List<FileLineRecord> getDdlFileLineRecordList() {
+        return ddlFileRecordList;
+    }
+
+    public void setDdlFileLineRecordList(List<FileLineRecord> fileRecordList) {
+        this.ddlFileRecordList = fileRecordList;
     }
 
     public int getParallelism() {
@@ -204,7 +214,7 @@ public class ProducerExecutionContext extends BaseConfig {
             FileWriter fileWriter = new FileWriter(historyFile, false);
             BufferedWriter out = new BufferedWriter(fileWriter);
             if (isFinished) {
-                nextFileIndex = fileRecordList.size();
+                nextFileIndex = dataFileRecordList.size();
                 nextBlockIndex = 0;
             }
             out.write(contextString);
@@ -281,7 +291,8 @@ public class ProducerExecutionContext extends BaseConfig {
     @Override
     public String toString() {
         return "ProducerExecutionContext{" +
-            "filePathList=" + fileRecordList +
+            "dataFilePathList=" + dataFileRecordList +
+            ", ddlFilePathList=" + ddlFileRecordList +
             ", parallelism=" + parallelism +
             ", readBlockSizeInMb=" + readBlockSizeInMb +
             ", " + super.toString() +
@@ -293,7 +304,7 @@ public class ProducerExecutionContext extends BaseConfig {
         super.validate();
         if (this.quoteEncloseMode == QuoteEncloseMode.FORCE) {
             // 指定引号转义模式则采用安全的方式执行
-            this.parallelism = fileRecordList.size();
+            this.parallelism = dataFileRecordList.size();
         }
     }
 }

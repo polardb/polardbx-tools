@@ -18,11 +18,11 @@ package worker.ddl;
 
 import com.alibaba.druid.util.JdbcUtils;
 import model.config.ConfigConstant;
+import model.config.FileLineRecord;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.FileUtil;
-import util.IOUtil;
 import worker.MyThreadPool;
 
 import javax.sql.DataSource;
@@ -55,22 +55,31 @@ public class DdlImportWorker {
     private final AtomicInteger taskCount = new AtomicInteger(0);
     private volatile String useDbSql = null;
 
-    public DdlImportWorker(String filename, DataSource dataSource) {
-        this.dataSource = dataSource;
-        File file = new File(filename);
-        if (!file.exists() || !file.isFile()) {
-            throw new IllegalStateException("File " + filename + " does not exist");
+    public static DdlImportWorker fromFiles(List<FileLineRecord> fileRecords, DataSource dataSource) {
+        DdlImportWorker worker = new DdlImportWorker(dataSource);
+        for (FileLineRecord fileRecord : fileRecords) {
+            String filePath = fileRecord.getFilePath();
+            File file = new File(fileRecord.getFilePath());
+            if (!file.exists() || !file.isFile()) {
+                throw new IllegalStateException("File " + filePath + " does not exist");
+            }
+            worker.filepaths.add(file.getAbsolutePath());
         }
-        this.filepaths.add(file.getAbsolutePath());
+        return worker;
     }
 
-    public DdlImportWorker(List<String> tableNames, DataSource dataSource) {
-        this.dataSource = dataSource;
+    public static DdlImportWorker fromTables(List<String> tableNames, DataSource dataSource) {
+        DdlImportWorker worker = new DdlImportWorker(dataSource);
         for (String name : tableNames) {
             String filename = name + ConfigConstant.DDL_FILE_SUFFIX;
             String fileAbsPath = FileUtil.getFileAbsPath(filename);
-            this.filepaths.add(fileAbsPath);
+            worker.filepaths.add(fileAbsPath);
         }
+        return worker;
+    }
+
+    DdlImportWorker(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     /**
@@ -82,41 +91,38 @@ public class DdlImportWorker {
         if (ddlThreadPool.isShutdown()) {
             throw new IllegalStateException("ddl thread pool has been shutdown");
         }
-        BufferedReader reader = null;
         StringBuilder sqlStringBuilder = new StringBuilder(100);
         String line = null;
         boolean firstLine = true;
         try {
             for (String filepath : filepaths) {
-                reader = new BufferedReader(new FileReader(filepath));
-                while ((line = reader.readLine()) != null) {
-                    if (line.startsWith("--") || line.isEmpty()) {
-                        continue;
-                    }
-                    if (!line.endsWith(";")) {
-                        sqlStringBuilder.append(line).append("\n");
-                    } else {
-                        sqlStringBuilder.append(line);
-                        String sql = sqlStringBuilder.toString();
-                        if (firstLine && (sql.contains("DATABASE") || sql.contains("database"))) {
-                            importDDL(sql);
-                        } else if (useDbSql == null && (sql.startsWith("use"))) {
-                            useDbSql = sql;
-                        } else {
-                            submitDDL(sql);
+                try (BufferedReader reader = new BufferedReader(new FileReader(filepath))) {
+                    while ((line = reader.readLine()) != null) {
+                        if (line.startsWith("--") || line.isEmpty()) {
+                            continue;
                         }
-                        firstLine = false;
-                        sqlStringBuilder.setLength(0);
+                        if (!line.endsWith(";")) {
+                            sqlStringBuilder.append(line).append("\n");
+                        } else {
+                            sqlStringBuilder.append(line);
+                            String sql = sqlStringBuilder.toString();
+                            if (firstLine && (sql.contains("DATABASE") || sql.contains("database"))) {
+                                importDDL(sql);
+                            } else if (useDbSql == null && (sql.startsWith("use"))) {
+                                useDbSql = sql;
+                            } else {
+                                submitDDL(sql);
+                            }
+                            firstLine = false;
+                            sqlStringBuilder.setLength(0);
+                        }
                     }
                 }
             }
             sqlStringBuilder.setLength(0);
-            IOUtil.close(reader);
         } catch (IOException e) {
             logger.error(e.getMessage());
             throw new RuntimeException(e);
-        } finally {
-            IOUtil.close(reader);
         }
 
         ddlThreadPool.shutdown();

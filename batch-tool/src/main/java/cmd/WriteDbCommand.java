@@ -51,8 +51,7 @@ public class WriteDbCommand extends BaseOperateCommand {
     @Override
     public String toString() {
         return "WriteDbCommand{" +
-            "producerExecutionContext=" + producerExecutionContext +
-            ", consumerExecutionContext=" + consumerExecutionContext +
+            producerExecutionContext + ", " + consumerExecutionContext +
             '}';
     }
 }
