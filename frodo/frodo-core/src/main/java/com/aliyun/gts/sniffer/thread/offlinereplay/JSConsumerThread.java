@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.aliyun.gts.sniffer.common.entity.BaseSQLType;
 import com.aliyun.gts.sniffer.common.utils.MysqlWrapper;
-import com.aliyun.gts.sniffer.common.utils.PolarOWrapper;
 import com.aliyun.gts.sniffer.common.utils.Util;
 import com.aliyun.gts.sniffer.core.Config;
 import com.aliyun.gts.sniffer.thread.ConsumerThread;
@@ -46,8 +45,7 @@ public class JSConsumerThread extends ConsumerThread {
             String url="jdbc:mysql://"+ Config.host+":"+Config.port;
             jdbcWrapper=new MysqlWrapper(url,Config.username, Config.password,Config.database);
         } else{
-            String url="jdbc:polardb://"+ Config.host+":"+Config.port+"/"+Config.database;
-            jdbcWrapper=new PolarOWrapper(url,Config.username, Config.password,Config.database);
+            throw new RuntimeException("db type not support:"+Config.replayTo);
         }
     }
 

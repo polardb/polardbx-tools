@@ -383,8 +383,9 @@ public class Frodo {
             String url = "jdbc:mysql://" + Config.host + ":" + Config.port;
             jdbcWrapper = new MysqlWrapper(url, Config.username, Config.password, Config.database);
         } else {
-            String url = "jdbc:polardb://" + Config.host + ":" + Config.port + "/" + Config.database;
-            jdbcWrapper = new PolarOWrapper(url, Config.username, Config.password, Config.database);
+//            String url = "jdbc:polardb://" + Config.host + ":" + Config.port + "/" + Config.database;
+//            jdbcWrapper = new PolarOWrapper(url, Config.username, Config.password, Config.database);
+            throw new RuntimeException("db type not support:"+Config.replayTo);
         }
         Long dstNetworkRoundMicrosecond = jdbcWrapper.getNetworkRoundMicrosecond();
         jdbcWrapper.close();
