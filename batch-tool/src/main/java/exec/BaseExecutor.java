@@ -36,6 +36,7 @@ import model.config.ConfigConstant;
 import model.config.ExportConfig;
 import model.config.FileLineRecord;
 import model.config.GlobalVar;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -132,7 +133,14 @@ public abstract class BaseExecutor {
                                                 String tableName,
                                                 boolean usingBlockReader) {
         List<FileLineRecord> fileLineRecordList =
-            getFileRecordList(producerExecutionContext.getFileLineRecordList(), tableName);
+            getFileRecordList(producerExecutionContext.getDataFileLineRecordList(), tableName);
+        if (CollectionUtils.isEmpty(fileLineRecordList)) {
+            if (command.isDbOperation()) {
+                logger.warn("Skip table {} operation since no filename matches", tableName);
+                return;
+            }
+            throw new IllegalArgumentException("No filename with suffix starts with table name: " + tableName);
+        }
         if (!usingBlockReader) {
             producerExecutionContext.setParallelism(fileLineRecordList.size());
         }
@@ -142,7 +150,7 @@ public abstract class BaseExecutor {
         CountDownLatch countDownLatch = new CountDownLatch(producerExecutionContext.getParallelism());
         AtomicInteger emittedDataCounter = new AtomicInteger(0);
         List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter = new ArrayList<>();
-        for (int i = 0; i < producerExecutionContext.getFileLineRecordList().size(); i++) {
+        for (int i = 0; i < producerExecutionContext.getDataFileLineRecordList().size(); i++) {
             eventCounter.add(new ConcurrentHashMap<>(16));
         }
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
@@ -266,9 +274,6 @@ public abstract class BaseExecutor {
                 return true;
             })
             .collect(Collectors.toList());
-        if (fileRecordList.isEmpty()) {
-            throw new IllegalArgumentException("No filename with suffix starts with table name: " + tableName);
-        }
         return fileRecordList;
     }
 

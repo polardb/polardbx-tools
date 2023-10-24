@@ -35,6 +35,7 @@ import util.DbUtil;
 import worker.common.BaseWorkHandler;
 import worker.common.ReadFileWithBlockProducer;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -71,8 +72,8 @@ public abstract class WriteDbExecutor extends BaseExecutor {
         Map<String, List<PrimaryKey>> tablePkList = new HashMap<>();
         for (String tableName : tableNames) {
             List<PrimaryKey> pkList = null;
-            try {
-                pkList = DbUtil.getPkList(dataSource.getConnection(), getSchemaName(), tableName);
+            try (Connection connection = dataSource.getConnection()) {
+                pkList = DbUtil.getPkList(connection, getSchemaName(), tableName);
                 tablePkList.put(tableName, pkList);
             } catch (DatabaseException | SQLException e) {
                 logger.error(e.getMessage());
@@ -88,15 +89,15 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     protected void configureFieldMetaInfo() {
         logger.info("正在获取所有表的元信息...");
         Map<String, TableFieldMetaInfo> tableFieldMetaInfoMap = null;
-        try {
+        try (Connection connection = dataSource.getConnection()) {
             if (command.getColumnNames() != null) {
                 assert tableNames.size() == 1;
                 tableFieldMetaInfoMap = new HashMap<>();
-                TableFieldMetaInfo fieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(), getSchemaName(),
+                TableFieldMetaInfo fieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection, getSchemaName(),
                     tableNames.get(0), command.getColumnNames());
                 tableFieldMetaInfoMap.put(tableNames.get(0), fieldMetaInfo);
             } else {
-                tableFieldMetaInfoMap = DbUtil.getDbFieldMetaInfo(dataSource.getConnection(),
+                tableFieldMetaInfoMap = DbUtil.getDbFieldMetaInfo(connection,
                     getSchemaName(), tableNames);
             }
         } catch (DatabaseException | SQLException e) {
@@ -115,8 +116,8 @@ public abstract class WriteDbExecutor extends BaseExecutor {
         Map<String, List<TableTopology>> tableTopologyMap = new HashMap<>();
         for (String tableName : tableNames) {
             List<TableTopology> topologyList = null;
-            try {
-                topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
+            try (Connection connection = dataSource.getConnection()) {
+                topologyList = DbUtil.getTopology(connection, tableName);
                 tableTopologyMap.put(tableName, topologyList);
             } catch (DatabaseException | SQLException e) {
                 logger.error(e.getMessage());
@@ -129,9 +130,9 @@ public abstract class WriteDbExecutor extends BaseExecutor {
     protected void configurePartitionKey() {
         Map<String, PartitionKey> tablePartitionKey = new HashMap<>();
         for (String tableName : tableNames) {
-            PartitionKey partitionKey = null;
-            try {
-                partitionKey = DbUtil.getPartitionKey(dataSource.getConnection(),
+            PartitionKey partitionKey;
+            try (Connection connection = dataSource.getConnection()) {
+                partitionKey = DbUtil.getPartitionKey(connection,
                     getSchemaName(), tableName);
                 logger.info("表 {} 使用分片键 {}", tableName, partitionKey);
                 tablePartitionKey.put(tableName, partitionKey);

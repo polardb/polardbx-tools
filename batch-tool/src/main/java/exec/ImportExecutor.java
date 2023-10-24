@@ -26,12 +26,13 @@ import exception.DatabaseException;
 import model.config.BenchmarkMode;
 import model.config.ConfigConstant;
 import model.config.DdlMode;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
-import worker.ddl.DdlImporter;
+import worker.ddl.DdlImportWorker;
 import worker.insert.DirectImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
@@ -58,13 +59,7 @@ public class ImportExecutor extends WriteDbExecutor {
 
     @Override
     public void preCheck() {
-        if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
-            if (command.isDbOperation()) {
-                checkDbNotExist(command.getDbName());
-            } else {
-                checkTableNotExist(command.getTableNames());
-            }
-        } else {
+        if (producerExecutionContext.getDdlMode() == DdlMode.NO_DDL) {
             if (command.isDbOperation()) {
                 try (Connection conn = dataSource.getConnection()) {
                     this.tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
@@ -75,6 +70,9 @@ public class ImportExecutor extends WriteDbExecutor {
                 checkTableExists(command.getTableNames());
                 this.tableNames = command.getTableNames();
             }
+        }
+        if (CollectionUtils.isNotEmpty(tableNames)) {
+            logger.info("目标导入表：{}", tableNames);
         }
     }
 
@@ -117,6 +115,16 @@ public class ImportExecutor extends WriteDbExecutor {
         switch (producerExecutionContext.getDdlMode()) {
         case WITH_DDL:
             handleDDL();
+            if (command.isDbOperation()) {
+                // 库级别导入模式下更新导入的目标表
+                try (Connection conn = dataSource.getConnection()) {
+                    this.tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+                } catch (SQLException | DatabaseException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                throw new IllegalStateException("Do not support importing to table with DDL");
+            }
             break;
         case DDL_ONLY:
             handleDDL();
@@ -127,12 +135,16 @@ public class ImportExecutor extends WriteDbExecutor {
             throw new UnsupportedOperationException("DDL mode is not supported: " +
                 producerExecutionContext.getDdlMode());
         }
+
+        if (CollectionUtils.isEmpty(tableNames)) {
+            logger.warn("目标表未设置");
+            return;
+        }
+
         configureFieldMetaInfo();
 
-        logger.debug(producerExecutionContext.toString());
-        logger.debug(consumerExecutionContext.toString());
-
         for (String tableName : tableNames) {
+            logger.info("开始导入表：{}", tableName);
             if (producerExecutionContext.isSingleThread()
                 && consumerExecutionContext.isSingleThread()) {
                 // 使用按行读取insert模式
@@ -233,17 +245,14 @@ public class ImportExecutor extends WriteDbExecutor {
      * 同步导入建库建表语句
      */
     private void handleDDL() {
-        DdlImporter ddlImporter;
+        DdlImportWorker ddlImportWorker;
         if (command.isDbOperation()) {
-            if (producerExecutionContext.getFileLineRecordList().size() != 1) {
-                throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
-            }
-            ddlImporter = new DdlImporter(producerExecutionContext.getFileLineRecordList()
-                .get(0).getFilePath(), dataSource);
+            ddlImportWorker =
+                DdlImportWorker.fromFiles(producerExecutionContext.getDdlFileLineRecordList(), dataSource);
         } else {
-            ddlImporter = new DdlImporter(command.getTableNames(), dataSource);
+            ddlImportWorker = DdlImportWorker.fromTables(command.getTableNames(), dataSource);
         }
-        ddlImporter.doImportSync();
+        ddlImportWorker.doImportSync();
     }
 
     private void doSingleThreadImport(String tableName) {

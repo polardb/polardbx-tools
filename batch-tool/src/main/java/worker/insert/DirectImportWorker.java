@@ -74,7 +74,7 @@ public class DirectImportWorker implements Runnable {
         this.sep = producerContext.getSeparator().charAt(0);
         this.dataSource = dataSource;
         this.tableName = tableName;
-        this.fileRecords = producerContext.getFileLineRecordList();
+        this.fileRecords = producerContext.getDataFileLineRecordList();
         this.charset = producerContext.getCharset();
         this.fieldMetaInfoList = consumerContext.getTableFieldMetaInfo(tableName)
             .getFieldMetaInfoList();

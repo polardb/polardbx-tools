@@ -308,15 +308,12 @@ public class ConsumerExecutionContext extends BaseConfig {
     public String toString() {
         return "ConsumerExecutionContext{" +
             "tableNames=" + tableNames +
-            ", partitionKey=" + tablePartitionKey +
-            ", pkList=" + tablePkList +
-            ", insertIgnoreAndResumeEnabled=" + insertIgnoreAndResumeEnabled +
+//            ", insertIgnoreAndResumeEnabled=" + insertIgnoreAndResumeEnabled +
             ", parallelism=" + parallelism +
             ", whereCondition='" + whereCondition + '\'' +
-            ", toUpdateColumns='" + toUpdateColumns + '\'' +
-            ", updateWithFuncPattern='" + updateWithFuncPattern + '\'' +
+//            ", toUpdateColumns='" + toUpdateColumns + '\'' +
+//            ", updateWithFuncPattern='" + updateWithFuncPattern + '\'' +
             ", sqlEscapeEnabled=" + sqlEscapeEnabled +
-            ", tableFieldMetaInfo=" + tableFieldMetaInfo +
             '}';
     }
 

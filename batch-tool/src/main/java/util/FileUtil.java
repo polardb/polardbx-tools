@@ -92,21 +92,17 @@ public class FileUtil {
     }
 
     /**
-     * 如果value中包含`"` `\`
-     * 则用`""` `\\`进行转义
+     * 如果value中包含`"`
+     * 则用`""`进行转义
      */
-    private static void writeWithQuoteEscapeInQuote(ByteArrayOutputStream os, byte[] value) {
+    public static void writeWithQuoteEscapeInQuote(ByteArrayOutputStream os, byte[] value) {
         // ascii字符为一字节
         byte quoteByte = DOUBLE_QUOTE_BYTE[0];
-        byte backSlashByte = BACK_SLASH_BYTE[0];
 
         for (byte b : value) {
             if (b == quoteByte) {
                 os.write(quoteByte);
                 os.write(quoteByte);
-            } else if (b == backSlashByte) {
-                os.write(backSlashByte);
-                os.write(backSlashByte);
             } else {
                 os.write(b);
             }
@@ -381,14 +377,28 @@ public class FileUtil {
     /**
      * 筛选出非ddl的数据文件
      */
-    public static List<String> getFilesAbsPathInDir(String dirPathStr) {
+    public static List<String> getDataFilesAbsPathInDir(String dirPathStr) {
         File dir = new File(dirPathStr);
-        if (!dir.exists()|| !dir.isDirectory()) {
+        if (!dir.exists() || !dir.isDirectory()) {
             throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
         }
         return FileUtils.listFiles(dir, null, false).stream()
             .filter(file -> file.isFile() && file.canRead() &&
                 !file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
+            .map(File::getAbsolutePath).collect(Collectors.toList());
+    }
+
+    /**
+     * 筛选出ddl文件
+     */
+    public static List<String> getDdlFilesAbsPathInDir(String dirPathStr) {
+        File dir = new File(dirPathStr);
+        if (!dir.exists() || !dir.isDirectory()) {
+            throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
+        }
+        return FileUtils.listFiles(dir, null, false).stream()
+            .filter(file -> file.isFile() && file.canRead() &&
+                file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
             .map(File::getAbsolutePath).collect(Collectors.toList());
     }
 

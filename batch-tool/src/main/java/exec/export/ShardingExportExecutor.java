@@ -41,6 +41,7 @@ import worker.export.ExportEvent;
 import worker.export.ExportProducer;
 import worker.factory.ExportWorkerFactory;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Queue;
@@ -76,8 +77,8 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
             config.getFilenamePrefix(), tableName);
         List<TableTopology> topologyList = null;
-        try {
-            topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
+        try (Connection connection = dataSource.getConnection()) {
+            topologyList = DbUtil.getTopology(connection, tableName);
         } catch (DatabaseException e) {
             logger.error("Try export with '-sharding false'");
             throw new RuntimeException(e.getMessage());
@@ -85,14 +86,14 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             throw new RuntimeException(e);
         }
 
-        try {
-            boolean isBroadCast = DbUtil.isBroadCast(dataSource.getConnection(), tableName);
+        try (Connection connection = dataSource.getConnection()) {
+            boolean isBroadCast = DbUtil.isBroadCast(connection, tableName);
             if (isBroadCast) {
                 TableTopology firstTopology = topologyList.get(0);
                 topologyList.clear();
                 topologyList.add(firstTopology);
             }
-            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
+            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
                 getSchemaName(), tableName, command.getColumnNames());
             // 分片数
             final int shardSize = topologyList.size();
@@ -171,7 +172,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
 
         ExecutorService producerExecutor = MyThreadPool.createExecutorWithEnsure("producer", producerCount);
         // 每一个生产者最后的碎片数据处理
-        if (producerCount >= consumerCount * 2) {
+        if (producerCount >= consumerCount * 2 || consumerCount <= 4) {
             // 当生产者数量略大于消费者时 没必要轮询分配碎片
             for (TableTopology topology : topologyList) {
                 ExportProducer producer = new ExportProducer(dataSource, topology,

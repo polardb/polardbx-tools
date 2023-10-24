@@ -72,6 +72,8 @@ public class BaseConfig {
 
     protected DdlMode ddlMode = DdlMode.NO_DDL;
 
+    protected boolean dropTableIfExists = false;
+
     protected CompressMode compressMode = CompressMode.NONE;
 
     protected EncryptionConfig encryptionConfig = EncryptionConfig.NONE;
@@ -83,7 +85,7 @@ public class BaseConfig {
      */
     protected QuoteEncloseMode quoteEncloseMode;
 
-    private FileMode fileMode = new FileMode();
+    private final FileMode fileMode = new FileMode();
 
     private boolean isWithLastSep = false;
 
@@ -196,13 +198,25 @@ public class BaseConfig {
         }
     }
 
+    public boolean isDropTableIfExists() {
+        return dropTableIfExists;
+    }
+
+    public void setDropTableIfExists(boolean dropTableIfExists) {
+        this.dropTableIfExists = dropTableIfExists;
+    }
+
     @Override
     public String toString() {
         return "BaseConfig{" +
             "separator='" + separator + '\'' +
             ", charset='" + charset + '\'' +
             ", isWithHeader='" + isWithHeader + '\'' +
+            ", isWithLastSep='" + isWithLastSep + '\'' +
+            ", quoteEncloseMode='" + quoteEncloseMode + '\'' +
             ", compressMode='" + compressMode + '\'' +
+            ", ddlMode='" + ddlMode + '\'' +
+            ", dropTableIfExists='" + dropTableIfExists + '\'' +
             ", encryptionConfig='" + encryptionConfig + '\'' +
             '}';
     }
