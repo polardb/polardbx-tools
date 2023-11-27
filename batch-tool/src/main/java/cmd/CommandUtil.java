@@ -292,7 +292,7 @@ public class CommandUtil {
         default:
             throw new IllegalArgumentException("Unsupported command: " + commandTypeStr);
         }
-        command.setTableNames(getTableNames(result));
+        command.setTableNamesInCmd(getTableNames(result));
         command.setColumnNames(getColumnNames(result));
         return command;
     }
