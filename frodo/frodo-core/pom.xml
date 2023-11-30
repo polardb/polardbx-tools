@@ -95,11 +95,11 @@
             <version>1.12</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.aliyun</groupId>
-            <artifactId>polardb-jdbc18</artifactId>
-            <version>1.1.2</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.aliyun</groupId>-->
+<!--            <artifactId>polardb-jdbc18</artifactId>-->
+<!--            <version>1.1.2</version>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>org.postgresql</groupId>
