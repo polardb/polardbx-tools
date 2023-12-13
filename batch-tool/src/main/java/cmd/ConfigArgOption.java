@@ -105,7 +105,7 @@ public class ConfigArgOption {
         of("ringsize", "ringSize", "Ring buffer size.", "size (power of 2)");
    public static final ConfigArgOption ARG_SHORT_QUOTE_ENCLOSE_MODE =
         of("quote", "quoteMode",
-            "The mode of how field values are enclosed by double-quotes when exporting table (default AUTO).",
+            "The mode of how field values are enclosed by double-quotes when exporting table (default FORCE).",
             "AUTO | FORCE | NONE");
     public static final ConfigArgOption ARG_SHORT_TPS_LIMIT =
         of("tps", "tpsLimit", "Configure of tps limit (default -1: no limit).", "tps limit");

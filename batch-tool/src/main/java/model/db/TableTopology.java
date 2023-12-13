@@ -16,6 +16,8 @@
 
 package model.db;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class TableTopology {
     /**
      * 分库名
@@ -42,6 +44,10 @@ public class TableTopology {
 
     public String getTableName() {
         return tableName;
+    }
+
+    public boolean hasGroup() {
+        return StringUtils.isNotEmpty(groupName);
     }
 
     @Override

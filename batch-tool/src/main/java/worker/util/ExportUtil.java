@@ -40,19 +40,24 @@ public class ExportUtil {
             return getDirectSql(topology, fieldMetaInfoList);
         }
 
-        return String.format(DIRECT_NODE_HINT + "select %s from %s where %s;",
-            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+        if (topology.hasGroup()) {
+            return String.format(DIRECT_NODE_HINT + "select %s from %s where %s;",
+                topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+                topology.getTableName(), whereCondition);
+        }
+        return String.format("select %s from %s where %s;",
+            formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), whereCondition);
     }
 
     private static String getDirectSql(TableTopology topology,
                                        List<FieldMetaInfo> fieldMetaInfoList) {
-        if (topology.getGroupName().isEmpty()) {
-            return String.format("select %s from %s;", formatFieldWithDateType(fieldMetaInfoList),
+        if (topology.hasGroup()) {
+            return String.format(DIRECT_NODE_HINT + "select %s from %s;",
+                topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
                 topology.getTableName());
         }
-        return String.format(DIRECT_NODE_HINT + "select %s from %s;",
-            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+        return String.format("select %s from %s;", formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName());
     }
 
@@ -89,8 +94,13 @@ public class ExportUtil {
                                        List<FieldMetaInfo> fieldMetaInfoList,
                                        String columnName, boolean isAscending) {
         String orderType = isAscending ? "asc" : "desc";
-        return String.format(DIRECT_NODE_HINT + "select %s from %s order by %s " + orderType,
-            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+        if (topology.hasGroup()) {
+            return String.format(DIRECT_NODE_HINT + "select %s from %s order by %s " + orderType,
+                topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+                topology.getTableName(), columnName);
+        }
+        return String.format("select %s from %s order by %s " + orderType,
+            formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), columnName);
     }
 
@@ -98,23 +108,16 @@ public class ExportUtil {
                                        List<FieldMetaInfo> fieldMetaInfoList,
                                        List<String> columnNameList, boolean isAscending) {
         String orderType = isAscending ? "asc" : "desc";
-        return String.format(DIRECT_NODE_HINT + "select %s from %s order by %s " + orderType,
-            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+        if (topology.hasGroup()) {
+            return String.format(DIRECT_NODE_HINT + "select %s from %s order by %s " + orderType,
+                topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+                topology.getTableName(),
+                StringUtils.join(columnNameList, ","));
+        }
+        return String.format("select %s from %s order by %s " + orderType,
+            formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(),
             StringUtils.join(columnNameList, ","));
-    }
-
-    public static String getOrderBySql(TableTopology topology,
-                                       List<FieldMetaInfo> fieldMetaInfoList,
-                                       String columnName,
-                                       String whereCondition, boolean isAscending) {
-        if (StringUtils.isEmpty(whereCondition)) {
-            return getOrderBySql(topology, fieldMetaInfoList, columnName, isAscending);
-        }
-        String orderType = isAscending ? "asc" : "desc";
-        return String.format(DIRECT_NODE_HINT + "select %s from %s where %s order by %s " + orderType,
-            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
-            topology.getTableName(), whereCondition, columnName);
     }
 
     public static String getOrderBySql(TableTopology topology,
@@ -125,8 +128,14 @@ public class ExportUtil {
             return getOrderBySql(topology, fieldMetaInfoList, columnNameList, isAscending);
         }
         String orderType = isAscending ? "asc" : "desc";
-        return String.format(DIRECT_NODE_HINT + "select %s from %s where %s order by %s " + orderType,
-            topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+        if (topology.hasGroup()) {
+            return String.format(DIRECT_NODE_HINT + "select %s from %s where %s order by %s " + orderType,
+                topology.getGroupName(), formatFieldWithDateType(fieldMetaInfoList),
+                topology.getTableName(), whereCondition,
+                StringUtils.join(columnNameList, ","));
+        }
+        return String.format("select %s from %s where %s order by %s " + orderType,
+            formatFieldWithDateType(fieldMetaInfoList),
             topology.getTableName(), whereCondition,
             StringUtils.join(columnNameList, ","));
     }

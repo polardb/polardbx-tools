@@ -90,8 +90,7 @@ public abstract class BaseShardedConsumer extends BaseWorkHandler {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
             // 认为无法恢复
             System.exit(1);
         } finally {
@@ -123,8 +122,7 @@ public abstract class BaseShardedConsumer extends BaseWorkHandler {
             String sql = getSqlWithHint(topology, data);
             stmt.execute(sql);
         } catch (SQLException e) {
-            e.printStackTrace();
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
             System.exit(1);
         } finally {
             JdbcUtils.close(stmt);

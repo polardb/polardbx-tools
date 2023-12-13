@@ -66,7 +66,7 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
             TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
                 getSchemaName(), tableName, command.getColumnNames());
             DirectExportWorker directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
-                new TableTopology("", tableName), tableFieldMetaInfo,
+                new TableTopology(tableName), tableFieldMetaInfo,
                 fileName, config);
             executor.submit(directExportWorker);
             logger.info("开始导出表 {} 到文件 {}", tableName, fileName);
