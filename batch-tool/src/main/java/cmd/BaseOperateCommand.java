@@ -16,6 +16,8 @@
 
 package cmd;
 
+import org.apache.commons.collections4.CollectionUtils;
+
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
@@ -25,6 +27,8 @@ import java.util.List;
 public class BaseOperateCommand {
 
     private final String dbName;
+
+    private boolean isDbOperation;
 
     /**
      * 支持同一个库下的多张表
@@ -44,16 +48,23 @@ public class BaseOperateCommand {
     public BaseOperateCommand(@NotNull String dbName, boolean shardingEnabled) {
         this.dbName = dbName;
         this.shardingEnabled = shardingEnabled;
+        this.isDbOperation = true;
     }
 
-    public BaseOperateCommand(@NotNull String dbName, List<String> tableName, boolean shardingEnabled) {
+    public BaseOperateCommand(@NotNull String dbName, List<String> tableNames, boolean shardingEnabled) {
         this.dbName = dbName;
-        this.tableNames = tableName;
+        this.tableNames = tableNames;
         this.shardingEnabled = shardingEnabled;
+        this.isDbOperation = CollectionUtils.isEmpty(tableNames);
     }
 
     public List<String> getTableNames() {
         return tableNames;
+    }
+
+    public void setTableNamesInCmd(List<String> tableNames) {
+        this.tableNames = tableNames;
+        this.isDbOperation = CollectionUtils.isEmpty(tableNames);
     }
 
     public void setTableNames(List<String> tableNames) {
@@ -77,7 +88,7 @@ public class BaseOperateCommand {
     }
 
     public boolean isDbOperation() {
-        return this.tableNames == null;
+        return isDbOperation;
     }
 
     public List<String> getColumnNames() {

@@ -49,7 +49,7 @@ public class ConfigConstant {
     /**
      * 默认引号转义模式
      */
-    public static final QuoteEncloseMode DEFAULT_QUOTE_ENCLOSE_MODE = QuoteEncloseMode.AUTO;
+    public static final QuoteEncloseMode DEFAULT_QUOTE_ENCLOSE_MODE = QuoteEncloseMode.FORCE;
 
     public static final int DEFAULT_READ_BLOCK_SIZE_IN_MB = 2;
 
