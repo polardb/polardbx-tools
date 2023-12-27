@@ -141,10 +141,14 @@ public abstract class BaseExecutor {
             }
             throw new IllegalArgumentException("No filename with suffix starts with table name: " + tableName);
         }
+        String producerType;
         if (!usingBlockReader) {
+            producerType = "Line";
             producerExecutionContext.setParallelism(fileLineRecordList.size());
+        } else {
+            producerType = "Block";
         }
-        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getName() + "-producer",
+        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorWithEnsure(producerType + "-producer",
             producerExecutionContext.getParallelism());
         producerExecutionContext.setProducerExecutor(producerThreadPool);
         CountDownLatch countDownLatch = new CountDownLatch(producerExecutionContext.getParallelism());
@@ -168,7 +172,7 @@ public abstract class BaseExecutor {
             / (consumerNum * GlobalVar.EMIT_BATCH_SIZE));
 
 
-        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getName() + "-consumer",
+        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getSimpleName() + "-consumer",
             consumerNum);
         EventFactory<BatchLineEvent> factory = BatchLineEvent::new;
         RingBuffer<BatchLineEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
