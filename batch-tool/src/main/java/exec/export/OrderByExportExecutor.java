@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import util.FileUtil;
+import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.export.order.DirectOrderExportWorker;
 import worker.export.order.LocalOrderByExportProducer;
@@ -141,13 +142,12 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                 try {
                     consumer.consume();
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    logger.error("Interrupted when waiting for finish", e);
                 }
                 executor.shutdown();
                 logger.info("导出 {} 数据完成", tableName);
             } catch (DatabaseException | SQLException e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -169,8 +169,7 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                 directOrderByExportWorker.exportSerially();
                 logger.info("导出 {} 数据完成", tableName);
             } catch (DatabaseException | SQLException e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
             }
         }
     }
@@ -195,7 +194,7 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                 ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
                 LocalOrderByExportProducer orderByExportProducer;
                 LinkedList[] orderedLists = new LinkedList[shardSize];
-                CountDownLatch countDownLatch = new CountDownLatch(shardSize);
+                CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(shardSize);
                 for (int i = 0; i < shardSize; i++) {
                     orderedLists[i] = new LinkedList<ParallelOrderByExportEvent>();
                     orderByExportProducer = new LocalOrderByExportProducer(dataSource, topologyList.get(i),
@@ -230,13 +229,12 @@ public class OrderByExportExecutor extends BaseExportExecutor {
                     countDownLatch.await();
                     consumer.consume();
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    logger.error("Interrupted when waiting for finish", e);
                 }
                 executor.shutdown();
                 logger.info("导出 {} 数据完成", tableName);
             } catch (DatabaseException | SQLException e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
             }
         }
     }

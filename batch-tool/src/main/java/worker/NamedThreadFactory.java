@@ -31,16 +31,8 @@ public class NamedThreadFactory implements ThreadFactory {
     private final String namePrefix;
     private final boolean isDaemon;
     private final Thread.UncaughtExceptionHandler handler = (t, e) -> {
-        logger.error("{}", e);
+        logger.error(e.getMessage(), e);
     };
-
-    public NamedThreadFactory() {
-        this("pool");
-    }
-
-    public NamedThreadFactory(String prefix) {
-        this(prefix, false);
-    }
 
     public NamedThreadFactory(String prefix, boolean daemon) {
         SecurityManager s = System.getSecurityManager();

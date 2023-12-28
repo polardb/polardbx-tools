@@ -21,8 +21,8 @@ import java.util.concurrent.locks.LockSupport;
 
 public class CyclicAtomicInteger {
     private final static long PARK_TIME = 1000 * 1000L;
-    private AtomicInteger counter;
-    private int range;
+    private final AtomicInteger counter;
+    private final int range;
 
     public CyclicAtomicInteger(int range) {
         this.counter = new AtomicInteger(0);

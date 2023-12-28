@@ -16,12 +16,14 @@
 
 package model.config;
 
+import model.stat.DebugInfo;
+
 public class GlobalVar {
 
     /**
      * 发送一批数据的元组数
      */
-    public static int EMIT_BATCH_SIZE = 5;
+    public static int EMIT_BATCH_SIZE = 200;
 
     /**
      * RingBuffer 缓冲区大小
@@ -41,4 +43,6 @@ public class GlobalVar {
     public static int DDL_PARALLELISM = 4;
 
     public static final boolean DEBUG_MODE = false;
+
+    public static final DebugInfo DEBUG_INFO = new DebugInfo();
 }

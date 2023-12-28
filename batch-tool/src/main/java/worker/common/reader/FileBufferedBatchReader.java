@@ -20,6 +20,8 @@ import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
 import model.config.CompressMode;
 import model.config.ConfigConstant;
+import model.config.GlobalVar;
+import model.stat.FileReaderStat;
 import worker.common.BatchLineEvent;
 
 import java.io.File;
@@ -31,6 +33,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
 
     protected final RingBuffer<BatchLineEvent> ringBuffer;
     protected int bufferedLineCount = 0;
+    protected final FileReaderStat fileReaderStat = new FileReaderStat();
     protected String[] lineBuffer;
     protected volatile int localProcessingFileIndex;
     protected long localProcessingBlockIndex = -1;
@@ -52,6 +55,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
         this.fileList = fileList;
         this.lineBuffer = new String[EMIT_BATCH_SIZE];
         this.compressMode = compressMode;
+        GlobalVar.DEBUG_INFO.addFileReaderStat(fileReaderStat);
     }
 
     protected void appendToLineBuffer(String line) {
@@ -61,6 +65,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
             lineBuffer = new String[EMIT_BATCH_SIZE];
             bufferedLineCount = 0;
         }
+        fileReaderStat.increment();
     }
 
     protected void emitLineBuffer() {
@@ -84,6 +89,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
     @Override
     public void run() {
         try {
+            fileReaderStat.start();
             readData();
         } catch (Exception e) {
             context.setException(e);
@@ -106,5 +112,9 @@ public abstract class FileBufferedBatchReader implements Runnable {
 
     public boolean useMagicSeparator() {
         return false;
+    }
+
+    public FileReaderStat getFileReaderStat() {
+        return fileReaderStat;
     }
 }

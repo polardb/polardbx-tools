@@ -21,6 +21,7 @@ import com.lmax.disruptor.WorkHandler;
 import model.ConsumerExecutionContext;
 import model.config.ConfigConstant;
 import model.config.GlobalVar;
+import model.config.QuoteEncloseMode;
 
 /**
  * 限流代理类
@@ -39,15 +40,20 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
     protected void initLocalVars() {
         if (GlobalVar.IN_PERF_MODE) {
             this.sep = consumerContext.getSeparator();
-            hasEscapedQuote = true;
+            this.hasEscapedQuote = true;
+            return;
+        }
+        if (consumerContext.getQuoteEncloseMode() == QuoteEncloseMode.AUTO) {
+            this.sep = consumerContext.getSeparator();
+            this.hasEscapedQuote = true;
             return;
         }
         if (consumerContext.isUseMagicSeparator()) {
             this.sep = ConfigConstant.MAGIC_CSV_SEP1;
-            hasEscapedQuote = true;
+            this.hasEscapedQuote = true;
         } else {
             this.sep = consumerContext.getSeparator();
-            hasEscapedQuote = false;
+            this.hasEscapedQuote = false;
         }
     }
 

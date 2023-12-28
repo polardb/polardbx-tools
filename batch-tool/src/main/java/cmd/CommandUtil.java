@@ -599,6 +599,7 @@ public class CommandUtil {
         consumerExecutionContext.setReadProcessFileOnly(getReadAndProcessFileOnly(result));
         consumerExecutionContext.setWhereInEnabled(getWhereInEnabled(result));
         consumerExecutionContext.setWithLastSep(getWithLastSep(result));
+        consumerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
         consumerExecutionContext.setUseColumns(getUseColumns(result));
         consumerExecutionContext.setEmptyStrAsNull(getEmptyAsNull(result));

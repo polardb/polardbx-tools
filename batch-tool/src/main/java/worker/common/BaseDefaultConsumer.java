@@ -18,6 +18,7 @@ package worker.common;
 
 import com.alibaba.druid.util.JdbcUtils;
 import com.alibaba.druid.util.StringUtils;
+import model.stat.SqlStat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.FileUtil;
@@ -36,6 +37,7 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
     private static final Logger logger = LoggerFactory.getLogger(BaseDefaultConsumer.class);
 
     protected int estimateFieldCount = 16;
+    protected final SqlStat sqlStat = new SqlStat();
 
     protected void initLocalVars() {
         super.initLocalVars();
@@ -99,7 +101,10 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
             conn = consumerContext.getDataSource().getConnection();
             stmt = conn.createStatement();
             sql = getSql(data);
+            long startTime = System.nanoTime();
             stmt.execute(sql);
+            long endTime = System.nanoTime();
+            sqlStat.addTimeNs(endTime - startTime);
         } catch (SQLException e) {
 //            logger.error(sql);
             throw e;
@@ -107,5 +112,9 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
             JdbcUtils.close(stmt);
             JdbcUtils.close(conn);
         }
+    }
+
+    public SqlStat getSqlStat() {
+        return sqlStat;
     }
 }

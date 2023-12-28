@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import util.FileUtil;
+import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
 import worker.export.CollectFragmentWorker;
@@ -103,7 +104,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
 
             ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
             DirectExportWorker directExportWorker;
-            CountDownLatch countDownLatch = new CountDownLatch(shardSize);
+            CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(shardSize);
             switch (config.getExportWay()) {
             case MAX_LINE_NUM_IN_SINGLE_FILE:
             case DEFAULT:
@@ -118,7 +119,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 try {
                     countDownLatch.await();
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    logger.error("Interrupted when waiting for finish", e);
                 }
                 break;
             case FIXED_FILE_NUM:
@@ -131,7 +132,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             executor.shutdown();
             logger.info("导出 {} 数据完成", tableName);
         } catch (DatabaseException | SQLException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -150,7 +151,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         // 初始化缓冲区等
         EventFactory<ExportEvent> factory = ExportEvent::new;
         RingBuffer<ExportEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
-        AtomicInteger emittedDataCounter = new AtomicInteger(0);
+        AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
         // 消费者数量与文件数一致 生产者数量和shard数一致
         final int consumerCount = config.getLimitNum(), producerCount = shardSize;
 
@@ -203,7 +204,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             // 待消费者消费结束
             waitForFinish(countDownLatch, emittedDataCounter);
             workerPool.drainAndHalt();
-            CountDownLatch fragmentCountLatch = new CountDownLatch(consumerCount);
+            CountDownLatch fragmentCountLatch = SyncUtil.newMainCountDownLatch(consumerCount);
             // 再将碎片一次分配给每个文件
             for (int i = 0; i < consumerCount; i++) {
                 CollectFragmentWorker collectFragmentWorker = new CollectFragmentWorker(
@@ -213,7 +214,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             try {
                 fragmentCountLatch.await();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.error("Interrupted when waiting for finish", e);
             }
         }
         for (ExportConsumer consumer : consumers) {
