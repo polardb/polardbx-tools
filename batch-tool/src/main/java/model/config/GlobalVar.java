@@ -16,6 +16,8 @@
 
 package model.config;
 
+import model.stat.DebugInfo;
+
 public class GlobalVar {
 
     /**
@@ -41,4 +43,6 @@ public class GlobalVar {
     public static int DDL_PARALLELISM = 4;
 
     public static final boolean DEBUG_MODE = false;
+
+    public static final DebugInfo DEBUG_INFO = new DebugInfo();
 }

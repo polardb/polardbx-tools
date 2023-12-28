@@ -23,14 +23,17 @@ import com.lmax.disruptor.SequenceBarrier;
 import com.lmax.disruptor.WorkHandler;
 import com.lmax.disruptor.WorkerPool;
 import com.lmax.disruptor.dsl.ProducerType;
+import model.config.GlobalVar;
 
 import static model.config.GlobalVar.DEFAULT_RING_BUFFER_SIZE;
 
 public class MyWorkerPool {
 
     public static <T> RingBuffer<T> createRingBuffer(EventFactory<T> factory) {
-        return RingBuffer.create(ProducerType.MULTI,
+        RingBuffer ringBuffer = RingBuffer.create(ProducerType.MULTI,
             factory, DEFAULT_RING_BUFFER_SIZE, new BlockingWaitStrategy());
+        GlobalVar.DEBUG_INFO.setRingBuffer(ringBuffer);
+        return ringBuffer;
     }
 
     public static <T> RingBuffer<T> createSingleProducerRingBuffer(EventFactory<T> factory) {

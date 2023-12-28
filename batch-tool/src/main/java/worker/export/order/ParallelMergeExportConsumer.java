@@ -17,19 +17,12 @@
 package worker.export.order;
 
 import model.db.FieldMetaInfo;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import worker.MyThreadPool;
 import worker.util.ExportUtil;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -104,8 +97,7 @@ public class ParallelMergeExportConsumer extends MergeExportConsumer {
                 writeToBuffer(parallelOrderByExportEvent.getData());
             }
         } catch (IOException e) {
-            e.printStackTrace();
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
         }
         logger.info("写入文件结束");
     }

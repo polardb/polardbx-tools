@@ -40,8 +40,10 @@ import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
+import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
+import worker.common.BaseDefaultConsumer;
 import worker.common.BaseWorkHandler;
 import worker.common.BatchLineEvent;
 import worker.common.ReadFileProducer;
@@ -151,8 +153,8 @@ public abstract class BaseExecutor {
         ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorWithEnsure(producerType + "-producer",
             producerExecutionContext.getParallelism());
         producerExecutionContext.setProducerExecutor(producerThreadPool);
-        CountDownLatch countDownLatch = new CountDownLatch(producerExecutionContext.getParallelism());
-        AtomicInteger emittedDataCounter = new AtomicInteger(0);
+        CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(producerExecutionContext.getParallelism());
+        AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
         List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter = new ArrayList<>();
         for (int i = 0; i < producerExecutionContext.getDataFileLineRecordList().size(); i++) {
             eventCounter.add(new ConcurrentHashMap<>(16));
@@ -193,17 +195,19 @@ public abstract class BaseExecutor {
         BaseWorkHandler[] consumers = new BaseWorkHandler[consumerNum];
         try {
             for (int i = 0; i < consumerNum; i++) {
-                consumers[i] = clazz.newInstance();
-                consumers[i].setConsumerContext(consumerExecutionContext);
-                consumers[i].createTpsLimiter(consumerExecutionContext.getBatchTpsLimitPerConsumer());
-                consumers[i].setTableName(tableName);
+                BaseWorkHandler consumer = clazz.newInstance();
+                consumers[i] = consumer;
+                consumer.setConsumerContext(consumerExecutionContext);
+                consumer.createTpsLimiter(consumerExecutionContext.getBatchTpsLimitPerConsumer());
+                consumer.setTableName(tableName);
+                if (consumer instanceof BaseDefaultConsumer) {
+                    GlobalVar.DEBUG_INFO.addSqlStat(((BaseDefaultConsumer) consumer).getSqlStat());
+                }
             }
         } catch (Exception e) {
-            e.printStackTrace();
             logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
-
 
         logger.debug("producer config {}", producerExecutionContext);
         logger.debug("consumer config {}", consumerExecutionContext);
@@ -214,9 +218,8 @@ public abstract class BaseExecutor {
         try {
             producer.produce();
         } catch (Exception e) {
-            e.printStackTrace();
             logger.error(e.getMessage());
-            System.exit(1);
+            throw new RuntimeException(e);
         }
         // 开启断点续传和insert ignore，并且不是测试读性能模式，才开始记录断点
         if (usingBlockReader
@@ -285,19 +288,13 @@ public abstract class BaseExecutor {
      * 等待生产者、消费者结束
      *
      * @param countDownLatch 生产者结束标志
-     * @param emittedDataCounter 消费者结束标志
+     * @param remainDataCounter 消费者结束标志
      */
-    protected void waitForFinish(CountDownLatch countDownLatch, AtomicInteger emittedDataCounter) {
+    protected void waitForFinish(CountDownLatch countDownLatch, AtomicInteger remainDataCounter) {
         try {
-            // 等待生产者结束
-            countDownLatch.await();
-            // 等待消费者消费完成
-            int remain;
-            while ((remain = emittedDataCounter.get()) > 0) {
-                Thread.sleep(500);
-            }
+            SyncUtil.waitForFinish(countDownLatch, remainDataCounter);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error("Interrupted when waiting for finish", e);
         }
         onWorkFinished();
     }

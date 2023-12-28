@@ -71,8 +71,7 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
             executor.submit(directExportWorker);
             logger.info("开始导出表 {} 到文件 {}", tableName, fileName);
         } catch (DatabaseException | SQLException e) {
-            e.printStackTrace();
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
         }
     }
 }

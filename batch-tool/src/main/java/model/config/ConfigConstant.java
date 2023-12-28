@@ -16,6 +16,8 @@
 
 package model.config;
 
+import sun.misc.Signal;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -24,6 +26,8 @@ import java.util.List;
 public class ConfigConstant {
 
     public static final String APP_NAME = "BatchTool";
+
+    public static final Signal DEBUG_SIGNAL = new Signal("USR2");
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**

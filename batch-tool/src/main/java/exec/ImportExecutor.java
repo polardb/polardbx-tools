@@ -30,6 +30,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
+import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
 import worker.ddl.DdlImportWorker;
@@ -86,8 +87,7 @@ public class ImportExecutor extends WriteDbExecutor {
                    dbName));
             }
         } catch (SQLException | DatabaseException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
@@ -99,8 +99,7 @@ public class ImportExecutor extends WriteDbExecutor {
                         tableNames));
                 }
             } catch (SQLException | DatabaseException e) {
-                e.printStackTrace();
-                throw new RuntimeException(e.getMessage());
+                throw new RuntimeException(e);
             }
         }
     }
@@ -184,7 +183,7 @@ public class ImportExecutor extends WriteDbExecutor {
 
     private void handleTpchImport(List<String> tableNames) {
         int producerParallelism = producerExecutionContext.getParallelism();
-        AtomicInteger emittedDataCounter = new AtomicInteger(0);
+        AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
 
         ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(TpchProducer.class.getSimpleName(),
             producerParallelism);
@@ -200,9 +199,8 @@ public class ImportExecutor extends WriteDbExecutor {
 
         EventFactory<BatchInsertSqlEvent> factory = BatchInsertSqlEvent::new;
         RingBuffer<BatchInsertSqlEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
-
         TpchProducer tpchProducer = new TpchProducer(producerExecutionContext, tableNames, ringBuffer);
-        CountDownLatch countDownLatch = new CountDownLatch(tpchProducer.getWorkerCount());
+        CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(tpchProducer.getWorkerCount());
         producerExecutionContext.setCountDownLatch(countDownLatch);
 
         TpchConsumer[] consumers = new TpchConsumer[consumerParallelism];
@@ -211,7 +209,6 @@ public class ImportExecutor extends WriteDbExecutor {
                 consumers[i] = new TpchConsumer(consumerExecutionContext);
             }
         } catch (Exception e) {
-            e.printStackTrace();
             logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
@@ -263,7 +260,7 @@ public class ImportExecutor extends WriteDbExecutor {
         try {
             importThread.join();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error("Interrupted when waiting for finish", e);
         }
     }
 
