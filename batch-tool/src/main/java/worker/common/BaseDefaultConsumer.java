@@ -47,6 +47,11 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
     public void onProxyEvent(BatchLineEvent event) {
         if (consumerContext.getException() != null) {
             // fail fast on exception
+            consumerContext.getEmittedDataCounter().getAndDecrement();
+            if (consumerContext.isUseBlock()) {
+                consumerContext.getEventCounter().get(event.getLocalProcessingFileIndex()).
+                    get(event.getLocalProcessingBlockIndex()).getAndDecrement();
+            }
             return;
         }
         initLocalVars();

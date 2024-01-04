@@ -124,6 +124,9 @@ public class BlockReader extends FileBufferedBatchReader {
     protected void readData() {
         int curReadingPos;
         while (true) {
+            if (context.getException() != null) {
+                throw new RuntimeException(context.getException());
+            }
             try {
                 localProcessingBlockIndex = fileBlockListRecord.getStartPosArr()[localProcessingFileIndex].getAndIncrement();
                 long pos = localProcessingBlockIndex * readBlockSize;
@@ -181,8 +184,7 @@ public class BlockReader extends FileBufferedBatchReader {
                 context.getEventCounter().get(localProcessingFileIndex)
                     .get(localProcessingBlockIndex).getAndDecrement();
             } catch (Exception e) {
-                e.printStackTrace();
-                logger.error(e.getMessage());
+                logger.error(e.getMessage(), e);
                 throw new RuntimeException(e);
             }
         }
