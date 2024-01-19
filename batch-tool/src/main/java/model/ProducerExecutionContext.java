@@ -303,8 +303,10 @@ public class ProducerExecutionContext extends BaseConfig {
     public void validate() {
         super.validate();
         if (this.quoteEncloseMode == QuoteEncloseMode.FORCE) {
-            // 指定引号转义模式则采用安全的方式执行
-            this.parallelism = dataFileRecordList.size();
+            if (dataFileRecordList != null) {
+                // 指定引号转义模式则采用安全的方式执行
+                this.parallelism = dataFileRecordList.size();
+            }
         }
     }
 }

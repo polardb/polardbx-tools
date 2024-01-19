@@ -229,8 +229,8 @@ public abstract class BaseExecutor {
         }
         waitForFinish(countDownLatch, emittedDataCounter, producerExecutionContext, consumerExecutionContext);
         workerPool.drainAndHalt();
-        consumerThreadPool.shutdown();
-        producerThreadPool.shutdown();
+        producerThreadPool.shutdownNow();
+        consumerThreadPool.shutdownNow();
     }
 
     protected int getConsumerNum(ConsumerExecutionContext consumerExecutionContext) {
@@ -307,24 +307,21 @@ public abstract class BaseExecutor {
             while (!countDownLatch.await(3, TimeUnit.SECONDS)) {
                 if (producerContext.getException() != null) {
                     logger.warn("Early exit because of producer exception");
-                    return;
+                    break;
                 }
                 if (consumerContext.getException() != null) {
                     logger.warn("Early exit because of consumer exception");
-                    return;
+                    producerContext.setException(consumerContext.getException());
+                    break;
                 }
             }
             // 等待消费者消费完成
             int remain;
             while ((remain = emittedDataCounter.get()) > 0) {
-                if (consumerContext.getException() != null) {
-                    logger.warn("Early exit because of consumer exception");
-                    return;
-                }
                 Thread.sleep(500);
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error("Interrupted when waiting for finish", e);
         } finally {
             onWorkFinished();
         }
