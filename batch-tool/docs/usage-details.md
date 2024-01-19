@@ -195,6 +195,15 @@ mask: >-
 
 10. 导入时报错，`Incorrect value: '\N' for column`
 
-**原因**：BatchTool 导出NULL值的时候会转义成'\N'字符串
+   **原因**：BatchTool 导出NULL值的时候会转义成'\N'字符串
 
-**解决**：导入、导出时都加入参数 `-quote force` 参数
+   **解决**：导入、导出时都加入参数 `-quote force` 参数
+
+11. 导入/导出中文字符乱码
+
+   **原因**：可能有多种原因，例如操作系统的编码不是utf8，可能会将中文显示成问号`?`；也可能数据库侧的`character_set_server`
+   不是utf8mb4
+
+   **解决**：Linux系统上，可以通过`locale`命令查看编码；
+   如果是数据库`character_set_server`变量的问题，BatchTool可以加上`-connParam "useUnicode=true&characterEncoding=utf-8"`
+
