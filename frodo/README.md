@@ -98,7 +98,7 @@ java -jar slssniffer-1.0.jar --endpoint=cn-hangzhou-intranet.log.aliyuncs.com \
 ```
 输出日志案例：
 ```shell
-#第一列是SQL日志实际时间戳，第二列是回放所需要的json格式的sql日志。两列之间根据“-###@@@###-”分割
+#第一列是SQL日志实际时间戳，主要用于排序，第二列是回放所需要的json格式的sql日志。两列之间根据“-###@@@###-”分割,不分版本可能分隔符不一样，可以根据json内容确定分隔子串
 2023-05-05 13:17:45.458-###@@@###-{"schema":"sqlatest","session":"1275465","execTime":71,"startTime":"1683263865458440","convertSqlText":"select 'aaa'","user":"zkk_test"}
 ```
 
