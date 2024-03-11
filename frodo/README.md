@@ -118,7 +118,7 @@ egrep '^2023-05-05 (10|11|12){1}'  /root/rds.json >rds.json
 sort -S 10240M -T /data --parallel=8 rds.json  > sort_rds.json
 ```
 
-2.4 对日志进行截取
+2.4 对日志进行截取, -F 设置分割串，分割串部分版本可能不同，建议具体查看一下json文件，确定准确的分割串，其目的是删除时间戳，获取能够回放的最终json文件
 ```shell
 #该步骤跑完，即得到目标日志：out.json
 awk -F '-###@@@###-' '{print $2}' sort_rds.json >out.json
