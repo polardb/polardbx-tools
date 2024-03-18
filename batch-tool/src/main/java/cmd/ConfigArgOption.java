@@ -17,26 +17,6 @@
 package cmd;
 
 public class ConfigArgOption {
-    protected final String argShort;
-    protected final String argLong;
-    protected final String desc;
-    protected final String argName;
-
-    protected ConfigArgOption(String argShort, String argLong, String desc, String argName) {
-        this.argShort = argShort;
-        this.argLong = argLong;
-        this.desc = desc;
-        this.argName = argName;
-    }
-
-    private static ConfigArgOption of(String argShort, String argLong, String desc) {
-        return new ConfigArgOption(argShort, argLong, desc, null);
-    }
-
-    private static ConfigArgOption of(String argShort, String argLong, String desc, String argName) {
-        return new ConfigArgOption(argShort, argLong, desc, argName);
-    }
-
     public static final ConfigArgOption ARG_SHORT_HELP =
         of("help", "help", "Help message.");
     public static final ConfigArgOption ARG_SHORT_VERSION =
@@ -81,13 +61,13 @@ public class ConfigArgOption {
         of("dir", "directory", "Directory path including files to import.", "directory path");
     public static final ConfigArgOption ARG_SHORT_CHARSET =
         of("cs", "charset", "The charset of files.", "charset");
-     public static final ConfigArgOption ARG_SHORT_PRODUCER =
+    public static final ConfigArgOption ARG_SHORT_PRODUCER =
         of("pro", "producer", "Configure number of producer threads (export / import).", "producer count");
     public static final ConfigArgOption ARG_SHORT_CONSUMER =
         of("con", "consumer", "Configure number of consumer threads.", "consumer count");
     public static final ConfigArgOption ARG_SHORT_FORCE_CONSUMER =
         of("fcon", "forceConsumer", "Configure if allow force consumer parallelism.", "parallelism");
-  public static final ConfigArgOption ARG_SHORT_MAX_CONN_NUM =
+    public static final ConfigArgOption ARG_SHORT_MAX_CONN_NUM =
         of("maxConn", "maxConnection", "Max connection count (druid).", "max connection");
     public static final ConfigArgOption ARG_SHORT_MAX_WAIT =
         of("maxWait", "connMaxWait", "Max wait time when getting a connection.", "wait time(ms)");
@@ -103,7 +83,7 @@ public class ConfigArgOption {
         of("readsize", "readSize", "Read block size.", "size(MB)");
     public static final ConfigArgOption ARG_SHORT_RING_BUFFER_SIZE =
         of("ringsize", "ringSize", "Ring buffer size.", "size (power of 2)");
-   public static final ConfigArgOption ARG_SHORT_QUOTE_ENCLOSE_MODE =
+    public static final ConfigArgOption ARG_SHORT_QUOTE_ENCLOSE_MODE =
         of("quote", "quoteMode",
             "The mode of how field values are enclosed by double-quotes when exporting table (default FORCE).",
             "AUTO | FORCE | NONE");
@@ -132,6 +112,25 @@ public class ConfigArgOption {
         of("benchmark", "benchmark", "Fast loading benchmark data (dafault NONE).", "NONE | TPCH");
     public static final ConfigArgOption ARG_SHORT_SCALE =
         of("scale", "scale", "The size scale benchmark data (GB for tpch).", "size");
+
+    protected final String argShort;
+    protected final String argLong;
+    protected final String desc;
+    protected final String argName;
+    protected ConfigArgOption(String argShort, String argLong, String desc, String argName) {
+        this.argShort = argShort;
+        this.argLong = argLong;
+        this.desc = desc;
+        this.argName = argName;
+    }
+
+    private static ConfigArgOption of(String argShort, String argLong, String desc) {
+        return new ConfigArgOption(argShort, argLong, desc, null);
+    }
+
+    private static ConfigArgOption of(String argShort, String argLong, String desc, String argName) {
+        return new ConfigArgOption(argShort, argLong, desc, argName);
+    }
 
     public boolean hasArg() {
         return argName != null;
