@@ -207,3 +207,9 @@ mask: >-
    **解决**：Linux系统上，可以通过`locale`命令查看编码；
    如果是数据库`character_set_server`变量的问题，BatchTool可以加上`-connParam "useUnicode=true&characterEncoding=utf-8"`
 
+12. 使用`-con`指定了消费者线程数不生效
+
+   **原因**：消费者线程数会设置为`-con`和CPU核数的最大值
+
+   **解决**：当前可通过`-fcon`参数强制设置消费者线程数；后续可能会修改这个行为
+
