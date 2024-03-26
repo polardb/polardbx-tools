@@ -58,6 +58,9 @@ public class CipherLineReader extends FileBufferedBatchReader {
     protected void readData() {
         try {
             String line;
+            if (context.isWithHeader()) {
+                readLine();
+            }
             while ((line = readLine()) != null) {
                 appendToLineBuffer(line);
             }
@@ -98,7 +101,6 @@ public class CipherLineReader extends FileBufferedBatchReader {
         try {
             decryptedData = cipher.decrypt(data);
         } catch (Exception e) {
-            e.printStackTrace();
             logger.error("Failed to decrypted file {}: {}",
                 fileList.get(localProcessingFileIndex).getName(), e.getMessage());
             throw new RuntimeException(e);
