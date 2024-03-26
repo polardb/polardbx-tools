@@ -118,6 +118,7 @@ import static cmd.FlagOption.ARG_SHORT_USING_IN;
 import static cmd.FlagOption.ARG_SHORT_WITH_HEADER;
 import static cmd.FlagOption.ARG_SHORT_WITH_LAST_SEP;
 import static cmd.FlagOption.ARG_TRIM_RIGHT;
+import static cmd.FlagOption.ARG_WITH_VIEW;
 
 /**
  * 从命令行输入解析配置
@@ -403,6 +404,10 @@ public class CommandUtil {
         return result.getBooleanFlag(ARG_SHORT_WITH_LAST_SEP);
     }
 
+    private static boolean getWithView(ConfigResult result) {
+        return result.getBooleanFlag(ARG_WITH_VIEW);
+    }
+
     private static boolean getEmptyAsNull(ConfigResult result) {
         return result.getBooleanFlag(ARG_EMPTY_AS_NULL);
     }
@@ -439,6 +444,7 @@ public class CommandUtil {
         exportConfig.setParallelism(getProducerParallelism(result));
         exportConfig.setQuoteEncloseMode(getQuoteEncloseMode(result));
         exportConfig.setWithLastSep(getWithLastSep(result));
+        exportConfig.setWithView(getWithView(result));
         setDir(result, exportConfig);
         setFilenamePrefix(result, exportConfig);
         setFileNum(result, exportConfig);
@@ -571,6 +577,7 @@ public class CommandUtil {
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
         producerExecutionContext.setWithHeader(getWithHeader(result));
+        producerExecutionContext.setWithView(getWithView(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
         producerExecutionContext.setFileFormat(getFileFormat(result));

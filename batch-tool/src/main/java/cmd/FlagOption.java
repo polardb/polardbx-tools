@@ -70,4 +70,6 @@ public class FlagOption extends ConfigArgOption {
         of("dropTableIfExists", "dropTableIfExists",
             "Add 'drop table if exists xxx' when exporting DDL (default false).",
             false);
+    public static final FlagOption ARG_WITH_VIEW =
+        of("withView", "withView", "Export views into files, or (default false).", false);
 }

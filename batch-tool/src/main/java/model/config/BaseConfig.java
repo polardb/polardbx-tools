@@ -89,6 +89,8 @@ public class BaseConfig {
 
     private boolean isWithLastSep = false;
 
+    private boolean isWithView = false;
+
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
     }
@@ -187,6 +189,14 @@ public class BaseConfig {
         isWithLastSep = withLastSep;
     }
 
+    public boolean isWithView() {
+        return isWithView;
+    }
+
+    public void setWithView(boolean withView) {
+        isWithView = withView;
+    }
+
     /**
      * 目前 压缩模式、加密、特殊文件格式三者配置互不兼容
      */
@@ -213,6 +223,7 @@ public class BaseConfig {
             ", charset='" + charset + '\'' +
             ", isWithHeader='" + isWithHeader + '\'' +
             ", isWithLastSep='" + isWithLastSep + '\'' +
+            ", isWithView='" + isWithView + '\'' +
             ", quoteEncloseMode='" + quoteEncloseMode + '\'' +
             ", compressMode='" + compressMode + '\'' +
             ", ddlMode='" + ddlMode + '\'' +
