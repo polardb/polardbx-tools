@@ -51,12 +51,12 @@ public class OrderGenerator extends TableRowGenerator {
     static final int LINE_COUNT_MAX = 7;
     private static final int ORDER_DATE_MIN = MIN_GENERATE_DATE;
     private static final int ORDER_DATE_MAX = ORDER_DATE_MIN + (TOTAL_DATE_RANGE - ITEM_SHIP_DAYS - 1);
-    private static final int CLERK_SCALE_BASE = 1000;
+    public static final int CLERK_SCALE_BASE = 1000;
     private static final int LINE_COUNT_MIN = 1;
-    private static final int COMMENT_AVERAGE_LENGTH = 49;
+    public static final int COMMENT_AVERAGE_LENGTH = 49;
 
-    private static final int ORDER_KEY_SPARSE_BITS = 2;
-    private static final int ORDER_KEY_SPARSE_KEEP = 3;
+    protected static final int ORDER_KEY_SPARSE_BITS = 2;
+    protected static final int ORDER_KEY_SPARSE_KEEP = 3;
 
     private final RandomBoundedInt orderDateRandom = createOrderDateRandom();
     private final RandomBoundedInt lineCountRandom = createLineCountRandom();
@@ -110,11 +110,11 @@ public class OrderGenerator extends TableRowGenerator {
         linePartKeyRandom.advanceRows(startIndex);
     }
 
-    static RandomBoundedInt createLineCountRandom() {
+    public static RandomBoundedInt createLineCountRandom() {
         return new RandomBoundedInt(1434868289, LINE_COUNT_MIN, LINE_COUNT_MAX);
     }
 
-    static RandomBoundedInt createOrderDateRandom() {
+    public static RandomBoundedInt createOrderDateRandom() {
         return new RandomBoundedInt(1066728069, ORDER_DATE_MIN, ORDER_DATE_MAX);
     }
 

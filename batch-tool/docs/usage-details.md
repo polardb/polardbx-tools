@@ -103,6 +103,17 @@ c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 ### 导入Excel文件
 `-D sbtest_auto -o import -s , -t "sbtest1" -format XLSX -f "sbtest1_0.xlsx"`
 
+### 导入TPC-H数据集
+
+`-D tpch_auto -o import -benchmark TPCH -scale 100`
+> 1. 使用 -scale 指定导入数据集的规模，单位：G
+> 2. 可以使用 -t "lineitem;orders" 来指定表进行导入
+
+### 更新TPC-H数据集
+
+`-D tpch_auto -o update -benchmark TPCH -scale 100 -F 3`
+> 1. 使用 -F 来指定更新的轮数
+
 ## 使用yaml配置
 当有很多配置项需要设置时，使用命令行参数会很不方便编辑，此时建议使用yaml格式的配置文件，示例如下：
 

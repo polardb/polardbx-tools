@@ -75,6 +75,11 @@ public class ProducerExecutionContext extends BaseConfig {
     protected BenchmarkMode benchmarkMode;
 
     /**
+     * eg. TPC-H update round
+     */
+    protected int benchmarkRound = 0;
+
+    /**
      * Benchmark 数据集的规模
      */
     protected int scale;
@@ -270,6 +275,14 @@ public class ProducerExecutionContext extends BaseConfig {
 
     public void setBenchmarkMode(BenchmarkMode benchmarkMode) {
         this.benchmarkMode = benchmarkMode;
+    }
+
+    public int getBenchmarkRound() {
+        return benchmarkRound;
+    }
+
+    public void setBenchmarkRound(int benchmarkRound) {
+        this.benchmarkRound = benchmarkRound;
     }
 
     public int getScale() {

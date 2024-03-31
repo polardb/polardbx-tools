@@ -48,16 +48,16 @@ public class LineItemGenerator extends TableRowGenerator {
     private static final int DISCOUNT_MAX = 10;
     private static final int PART_KEY_MIN = 1;
 
-    private static final int SHIP_DATE_MIN = 1;
-    private static final int SHIP_DATE_MAX = 121;
-    private static final int COMMIT_DATE_MIN = 30;
-    private static final int COMMIT_DATE_MAX = 90;
-    private static final int RECEIPT_DATE_MIN = 1;
-    private static final int RECEIPT_DATE_MAX = 30;
+    public static final int SHIP_DATE_MIN = 1;
+    public static final int SHIP_DATE_MAX = 121;
+    public static final int COMMIT_DATE_MIN = 30;
+    public static final int COMMIT_DATE_MAX = 90;
+    public static final int RECEIPT_DATE_MIN = 1;
+    public static final int RECEIPT_DATE_MAX = 30;
 
     static final int ITEM_SHIP_DAYS = SHIP_DATE_MAX + RECEIPT_DATE_MAX;
 
-    private static final int COMMENT_AVERAGE_LENGTH = 27;
+    public static final int COMMENT_AVERAGE_LENGTH = 27;
 
     private final RandomBoundedInt orderDateRandom = createOrderDateRandom();
     private final RandomBoundedInt lineCountRandom = createLineCountRandom();

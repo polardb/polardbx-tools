@@ -19,6 +19,7 @@ package exec;
 import cmd.BaseOperateCommand;
 import cmd.WriteDbCommand;
 import com.alibaba.druid.pool.DruidDataSource;
+import com.lmax.disruptor.WorkerPool;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
 import model.ConsumerExecutionContext;
@@ -41,7 +42,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -208,5 +211,20 @@ public abstract class WriteDbExecutor extends BaseExecutor {
             return false;
         }
         return true;
+    }
+
+    protected void waitAndShutDown(CountDownLatch countDownLatch, AtomicInteger emittedDataCounter,
+                                   ThreadPoolExecutor producerThreadPool, ThreadPoolExecutor consumerThreadPool,
+                                   WorkerPool<?> workerPool) {
+        waitForFinish(countDownLatch, emittedDataCounter, producerExecutionContext, consumerExecutionContext);
+        if (producerExecutionContext.getException() != null || consumerExecutionContext.getException() != null) {
+            producerThreadPool.shutdownNow();
+            consumerThreadPool.shutdownNow();
+            workerPool.halt();
+        } else {
+            workerPool.drainAndHalt();
+            consumerThreadPool.shutdown();
+            producerThreadPool.shutdown();
+        }
     }
 }

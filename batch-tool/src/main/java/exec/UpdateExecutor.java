@@ -18,17 +18,41 @@ package exec;
 
 import cmd.BaseOperateCommand;
 import com.alibaba.druid.pool.DruidDataSource;
+import com.lmax.disruptor.EventFactory;
+import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.WorkerPool;
 import datasource.DataSourceConfig;
+import exception.DatabaseException;
+import model.config.BenchmarkMode;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.DbUtil;
+import util.SyncUtil;
+import worker.MyThreadPool;
+import worker.MyWorkerPool;
 import worker.common.BaseWorkHandler;
+import worker.tpch.consumer.TpchDeleteConsumer;
+import worker.tpch.consumer.TpchInsert2Consumer;
+import worker.tpch.consumer.TpchInsertConsumer;
+import worker.tpch.model.BatchDeleteSqlEvent;
+import worker.tpch.model.BatchInsertSql2Event;
+import worker.tpch.model.TpchTableModel;
+import worker.tpch.pruducer.TpchImportProducer;
+import worker.tpch.pruducer.TpchUDeleteProducer;
+import worker.tpch.pruducer.TpchUInsertProducer;
 import worker.update.ReplaceConsumer;
 import worker.update.ShardedReplaceConsumer;
 import worker.update.UpdateConsumer;
 import worker.update.UpdateWithFuncConsumer;
 import worker.update.UpdateWithFuncInConsumer;
 import worker.util.UpdateUtil;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class UpdateExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(UpdateExecutor.class);
@@ -41,6 +65,11 @@ public class UpdateExecutor extends WriteDbExecutor {
 
     @Override
     public void execute() {
+        if (producerExecutionContext.getBenchmarkMode() != BenchmarkMode.NONE) {
+            handleBenchmark();
+            return;
+        }
+
         configureFieldMetaInfo();
         configurePkList();
 
@@ -66,11 +95,152 @@ public class UpdateExecutor extends WriteDbExecutor {
         logger.info("更新 {} 数据完成", tableNames);
     }
 
+    private void handleBenchmark() {
+        switch (producerExecutionContext.getBenchmarkMode()) {
+        case TPCH:
+            handleTpchUpdate();
+            break;
+        default:
+            throw new UnsupportedOperationException("Not support " + producerExecutionContext.getBenchmarkMode());
+        }
+    }
+
+    private void handleTpchUpdate() {
+        checkTpchUpdateTablesExist();
+        final int totalRound = producerExecutionContext.getBenchmarkRound();
+        if (totalRound <= 0) {
+            throw new IllegalArgumentException("Use `-F` to set TPC-H update round");
+        }
+
+        if (!consumerExecutionContext.isForceParallelism()) {
+            // TPC-H update parallelism has a default limit
+            int curParallelism = consumerExecutionContext.getParallelism();
+            consumerExecutionContext.setParallelism(Math.min(2, curParallelism));
+            consumerExecutionContext.setForceParallelism(true);
+        }
+
+        logger.debug("producer config {}", producerExecutionContext);
+        logger.debug("consumer config {}", consumerExecutionContext);
+
+        for (int curRound = 1; curRound <= totalRound; curRound++) {
+            logger.info("Starting TPC-H update, round: {}, total round: {}", curRound, totalRound);
+            doTpchDelete(curRound);
+            doTpchInsert(curRound);
+            logger.info("TPC-H update round: {} ended, total round: {}", curRound, totalRound);
+        }
+    }
+
+    private void doTpchDelete(int curRound) {
+        final int producerParallelism = 1;
+        AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
+
+        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(TpchImportProducer.class.getSimpleName(),
+            producerParallelism);
+        producerExecutionContext.setProducerExecutor(producerThreadPool);
+        producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
+
+        int consumerParallelism = getConsumerNum(consumerExecutionContext);
+        consumerExecutionContext.setParallelism(consumerParallelism);
+        consumerExecutionContext.setDataSource(dataSource);
+        consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
+        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorExact(TpchInsertConsumer.class.getSimpleName(),
+            consumerParallelism);
+        EventFactory<BatchDeleteSqlEvent> factory = BatchDeleteSqlEvent::new;
+        RingBuffer<BatchDeleteSqlEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
+        TpchUDeleteProducer tpchProducer = new TpchUDeleteProducer(producerExecutionContext, ringBuffer, curRound);
+        CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(1);
+        producerExecutionContext.setCountDownLatch(countDownLatch);
+
+        TpchDeleteConsumer[] consumers = new TpchDeleteConsumer[consumerParallelism];
+        try {
+            for (int i = 0; i < consumerParallelism; i++) {
+                consumers[i] = new TpchDeleteConsumer(consumerExecutionContext);
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        // 开启线程工作
+        WorkerPool<BatchDeleteSqlEvent> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
+        workerPool.start(consumerThreadPool);
+        try {
+            tpchProducer.produce();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        waitAndShutDown(countDownLatch, emittedDataCounter, producerThreadPool, consumerThreadPool,
+            workerPool);
+    }
+
+    private void doTpchInsert(int curRound) {
+        final int producerParallelism = 1;
+        AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
+
+        ThreadPoolExecutor producerThreadPool =
+            MyThreadPool.createExecutorExact(TpchImportProducer.class.getSimpleName(),
+                producerParallelism);
+        producerExecutionContext.setProducerExecutor(producerThreadPool);
+        producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
+
+        int consumerParallelism = getConsumerNum(consumerExecutionContext);
+        consumerExecutionContext.setParallelism(consumerParallelism);
+        consumerExecutionContext.setDataSource(dataSource);
+        consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
+        ThreadPoolExecutor consumerThreadPool =
+            MyThreadPool.createExecutorExact(TpchInsertConsumer.class.getSimpleName(),
+                consumerParallelism);
+        EventFactory<BatchInsertSql2Event> factory = BatchInsertSql2Event::new;
+        RingBuffer<BatchInsertSql2Event> ringBuffer = MyWorkerPool.createRingBuffer(factory);
+        TpchUInsertProducer tpchProducer = new TpchUInsertProducer(producerExecutionContext, ringBuffer, curRound);
+        CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(1);
+        producerExecutionContext.setCountDownLatch(countDownLatch);
+
+        TpchInsert2Consumer[] consumers = new TpchInsert2Consumer[consumerParallelism];
+        try {
+            for (int i = 0; i < consumerParallelism; i++) {
+                consumers[i] = new TpchInsert2Consumer(consumerExecutionContext);
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        // 开启线程工作
+        WorkerPool<BatchInsertSql2Event> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
+        workerPool.start(consumerThreadPool);
+        try {
+            tpchProducer.produce();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        waitAndShutDown(countDownLatch, emittedDataCounter, producerThreadPool, consumerThreadPool,
+            workerPool);
+    }
+
+    private void checkTpchUpdateTablesExist() {
+        final String[] tables = {TpchTableModel.LINEITEM.getName(), TpchTableModel.ORDERS.getName()};
+        try (Connection conn = dataSource.getConnection()) {
+            for (String table : tables) {
+                if (!DbUtil.checkTableExists(conn, table)) {
+                    throw new RuntimeException("TPC-H update table: " + table + " does not exist");
+                }
+            }
+        } catch (SQLException | DatabaseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void doShardingUpdate() {
         configureTopology();
         configurePartitionKey();
         for (String tableName : tableNames) {
-            String toUpdateColumns = UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
+            String toUpdateColumns =
+                UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
             consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
             configureCommonContextAndRun(ShardedReplaceConsumer.class, producerExecutionContext,
                 consumerExecutionContext, tableName, useBlockReader());
@@ -104,7 +274,8 @@ public class UpdateExecutor extends WriteDbExecutor {
      */
     private void doDefaultUpdate(Class<? extends BaseWorkHandler> clazz) {
         for (String tableName : tableNames) {
-            String toUpdateColumns = UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
+            String toUpdateColumns =
+                UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
             consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
 
             configureCommonContextAndRun(clazz, producerExecutionContext,

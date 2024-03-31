@@ -240,7 +240,10 @@ public class CommandUtil {
         if (result.hasOption(ARG_SHORT_MIN_CONN_NUM)) {
             return Integer.parseInt(result.getOptionValue(ARG_SHORT_MIN_CONN_NUM));
         } else {
-            return DatasourceConstant.MIN_CONN_NUM;
+            int pro = getProducerParallelism(result);
+            int con = getConsumerParallelism(result);
+            int maxParallelism = Math.max(pro, con);
+            return Math.min(maxParallelism + 1, DatasourceConstant.MIN_CONN_NUM);
         }
     }
 
@@ -344,7 +347,7 @@ public class CommandUtil {
     }
 
     private static BaseOperateCommand parseUpdateCommand(ConfigResult result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY, ARG_SHORT_BENCHMARK);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
@@ -586,6 +589,7 @@ public class CommandUtil {
         producerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
         producerExecutionContext.setTrimRight(getTrimRight(result));
         producerExecutionContext.setBenchmarkMode(getBenchmarkMode(result));
+        producerExecutionContext.setBenchmarkRound(getBenchmarkRound(result));
         producerExecutionContext.setScale(getScale(result));
 
         producerExecutionContext.validate();
@@ -610,6 +614,7 @@ public class CommandUtil {
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
         consumerExecutionContext.setUseColumns(getUseColumns(result));
         consumerExecutionContext.setEmptyStrAsNull(getEmptyAsNull(result));
+        consumerExecutionContext.setMaxRetry(getMaxErrorCount(result));
 
         consumerExecutionContext.validate();
     }
@@ -675,6 +680,14 @@ public class CommandUtil {
             return BenchmarkMode.parseMode(result.getOptionValue(ARG_SHORT_BENCHMARK));
         } else {
             return BenchmarkMode.NONE;
+        }
+    }
+
+    private static int getBenchmarkRound(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_FILE_NUM)) {
+            return Integer.parseInt(result.getOptionValue(ARG_SHORT_FILE_NUM));
+        } else {
+            return 0;
         }
     }
 

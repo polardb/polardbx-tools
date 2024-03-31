@@ -52,7 +52,7 @@ public class ConfigArgOption {
     public static final ConfigArgOption ARG_SHORT_LINE =
         of("L", "line", "Max line limit of one single export file.", "line count");
     public static final ConfigArgOption ARG_SHORT_FILE_NUM =
-        of("F", "filenum", "Fixed number of exported files.", "file count");
+        of("F", "filenum", "Fixed number of exported files, or benchmark round.", "count");
     public static final ConfigArgOption ARG_SHORT_HISTORY_FILE =
         of("H", "historyFile", "History file name.", "filepath");
     public static final ConfigArgOption ARG_SHORT_WHERE =

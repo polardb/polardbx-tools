@@ -14,21 +14,36 @@
  * limitations under the License.
  */
 
-package worker.tpch;
+package worker.tpch.model;
 
 /**
- * batch insert SQL
+ * two batch insert SQL in a transaction
  */
-public class BatchInsertSqlEvent {
+public class BatchInsertSql2Event {
 
-    public String getSql() {
-        return sql;
+    /**
+     * insert into orders
+     */
+    private String sql1;
+    /**
+     * insert into lineitem
+     */
+    private String sql2;
+
+    public String getSql1() {
+        return sql1;
     }
 
-    public void setSql(String sql) {
-        this.sql = sql;
+    public void setSql1(String sql1) {
+        this.sql1 = sql1;
     }
 
-    private String sql;
+    public String getSql2() {
+        return sql2;
+    }
+
+    public void setSql2(String sql2) {
+        this.sql2 = sql2;
+    }
 
 }

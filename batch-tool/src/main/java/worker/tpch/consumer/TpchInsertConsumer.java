@@ -14,25 +14,26 @@
  * limitations under the License.
  */
 
-package worker.tpch;
+package worker.tpch.consumer;
 
 import com.lmax.disruptor.WorkHandler;
 import model.ConsumerExecutionContext;
 import model.config.GlobalVar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import worker.tpch.model.BatchInsertSqlEvent;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class TpchConsumer implements WorkHandler<BatchInsertSqlEvent> {
+public class TpchInsertConsumer implements WorkHandler<BatchInsertSqlEvent> {
 
-    private static final Logger logger = LoggerFactory.getLogger(TpchConsumer.class);
+    private static final Logger logger = LoggerFactory.getLogger(TpchInsertConsumer.class);
 
     protected final ConsumerExecutionContext consumerContext;
 
-    public TpchConsumer(ConsumerExecutionContext consumerContext) {
+    public TpchInsertConsumer(ConsumerExecutionContext consumerContext) {
         this.consumerContext = consumerContext;
     }
 
@@ -43,10 +44,14 @@ public class TpchConsumer implements WorkHandler<BatchInsertSqlEvent> {
             Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
         } catch (SQLException e) {
-            if (GlobalVar.DEBUG_MODE) {
-                logger.error(sql + ", due to " + e.getMessage());
+            if (sql == null) {
+                logger.error(e.getMessage());
             } else {
-                logger.error(sql.substring(0, Math.min(32, sql.length())) + ", due to" + e.getMessage());
+                if (GlobalVar.DEBUG_MODE) {
+                    logger.error(sql + ", due to " + e.getMessage());
+                } else {
+                    logger.error(sql.substring(0, Math.min(32, sql.length())) + ", due to" + e.getMessage());
+                }
             }
             consumerContext.setException(e);
             throw new RuntimeException(e);
