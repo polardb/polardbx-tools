@@ -34,11 +34,9 @@ import worker.MyWorkerPool;
 import worker.common.BaseWorkHandler;
 import worker.tpch.consumer.TpchDeleteConsumer;
 import worker.tpch.consumer.TpchInsert2Consumer;
-import worker.tpch.consumer.TpchInsertConsumer;
 import worker.tpch.model.BatchDeleteSqlEvent;
 import worker.tpch.model.BatchInsertSql2Event;
 import worker.tpch.model.TpchTableModel;
-import worker.tpch.pruducer.TpchImportProducer;
 import worker.tpch.pruducer.TpchUDeleteProducer;
 import worker.tpch.pruducer.TpchUInsertProducer;
 import worker.update.ReplaceConsumer;
@@ -134,7 +132,7 @@ public class UpdateExecutor extends WriteDbExecutor {
         final int producerParallelism = 1;
         AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
 
-        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(TpchImportProducer.class.getSimpleName(),
+        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(TpchUDeleteProducer.class.getSimpleName(),
             producerParallelism);
         producerExecutionContext.setProducerExecutor(producerThreadPool);
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
@@ -143,7 +141,7 @@ public class UpdateExecutor extends WriteDbExecutor {
         consumerExecutionContext.setParallelism(consumerParallelism);
         consumerExecutionContext.setDataSource(dataSource);
         consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
-        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorExact(TpchInsertConsumer.class.getSimpleName(),
+        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorExact(TpchDeleteConsumer.class.getSimpleName(),
             consumerParallelism);
         EventFactory<BatchDeleteSqlEvent> factory = BatchDeleteSqlEvent::new;
         RingBuffer<BatchDeleteSqlEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
@@ -180,7 +178,7 @@ public class UpdateExecutor extends WriteDbExecutor {
         AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
 
         ThreadPoolExecutor producerThreadPool =
-            MyThreadPool.createExecutorExact(TpchImportProducer.class.getSimpleName(),
+            MyThreadPool.createExecutorExact(TpchUInsertProducer.class.getSimpleName(),
                 producerParallelism);
         producerExecutionContext.setProducerExecutor(producerThreadPool);
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
@@ -190,7 +188,7 @@ public class UpdateExecutor extends WriteDbExecutor {
         consumerExecutionContext.setDataSource(dataSource);
         consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
         ThreadPoolExecutor consumerThreadPool =
-            MyThreadPool.createExecutorExact(TpchInsertConsumer.class.getSimpleName(),
+            MyThreadPool.createExecutorExact(TpchInsert2Consumer.class.getSimpleName(),
                 consumerParallelism);
         EventFactory<BatchInsertSql2Event> factory = BatchInsertSql2Event::new;
         RingBuffer<BatchInsertSql2Event> ringBuffer = MyWorkerPool.createRingBuffer(factory);

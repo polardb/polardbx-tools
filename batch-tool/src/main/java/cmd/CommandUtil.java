@@ -797,7 +797,8 @@ public class CommandUtil {
 
     private static int getMaxErrorCount(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_MAX_ERROR)) {
-            return Integer.parseInt(result.getOptionValue(ARG_SHORT_MAX_ERROR));
+            int maxError = Integer.parseInt(result.getOptionValue(ARG_SHORT_MAX_ERROR));
+            return Math.max(0, maxError);
         }
         return ConfigConstant.DEFAULT_MAX_ERROR_COUNT;
     }
