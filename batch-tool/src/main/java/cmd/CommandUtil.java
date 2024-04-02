@@ -353,6 +353,10 @@ public class CommandUtil {
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
         configureCommonContext(result, producerExecutionContext, consumerExecutionContext);
 
+        if (producerExecutionContext.getBenchmarkMode() == BenchmarkMode.TPCH) {
+            setUpdateBatchSize(result);
+        }
+
         consumerExecutionContext.setWhereCondition(getWhereCondition(result));
         consumerExecutionContext.setFuncSqlForUpdateEnabled(getFuncEnabled(result));
         return new UpdateCommand(getDbName(result), producerExecutionContext, consumerExecutionContext);
@@ -560,6 +564,12 @@ public class CommandUtil {
         setBatchSize(result);
         setRingBufferSize(result);
         setPerfMode(result);
+    }
+
+    private static void setUpdateBatchSize(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_BATCH_SIZE)) {
+            GlobalVar.setTpchUpdateBatchSize(Integer.parseInt(result.getOptionValue(ARG_SHORT_BATCH_SIZE)));
+        }
     }
 
     /**

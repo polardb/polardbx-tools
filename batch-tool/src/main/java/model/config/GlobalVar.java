@@ -17,6 +17,7 @@
 package model.config;
 
 import model.stat.DebugInfo;
+import worker.tpch.generator.BaseOrderLineUpdateGenerator;
 
 public class GlobalVar {
 
@@ -45,4 +46,22 @@ public class GlobalVar {
     public static final boolean DEBUG_MODE = false;
 
     public static final DebugInfo DEBUG_INFO = new DebugInfo();
+
+    /**
+     * delete 10 rows in one sql
+     */
+    public static int TPCH_UPDATE_DELETE_BATCH_NUM = 10;
+    /**
+     * insert 20 rows in one sql
+     */
+    public static int TPCH_UPDATE_INSERT_BATCH_NUM = 20;
+
+    public static void setTpchUpdateBatchSize(int batchSize) {
+        if (batchSize >= BaseOrderLineUpdateGenerator.SCALE_BASE) {
+            throw new IllegalArgumentException(
+                "TPC-H update batch size should be less than " + BaseOrderLineUpdateGenerator.SCALE_BASE);
+        }
+        TPCH_UPDATE_DELETE_BATCH_NUM = batchSize / 2;
+        TPCH_UPDATE_INSERT_BATCH_NUM = batchSize;
+    }
 }
