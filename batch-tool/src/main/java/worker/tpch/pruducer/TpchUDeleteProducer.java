@@ -44,7 +44,7 @@ public class TpchUDeleteProducer implements Producer {
                                int curRound) {
         this.context = context;
         this.ringBuffer = ringBuffer;
-        this.executor = context.getProducerExecutor();;
+        this.executor = context.getProducerExecutor();
 
         this.scale = context.getScale();
         if (scale <= 0) {
@@ -70,7 +70,11 @@ public class TpchUDeleteProducer implements Producer {
                     }
                     generator.next();
                 }
-                logger.info("TPC-H delete producer has finished");
+                logger.info("TPC-H delete producer has finished, round: {}", generator.getRound());
+            } catch (Exception e) {
+                logger.error("TPC-H delete producer failed, round: {}, due to: {}", generator.getRound(),
+                    e.getMessage(), e);
+                context.setException(e);
             } finally {
                 context.getCountDownLatch().countDown();
                 generator.close();

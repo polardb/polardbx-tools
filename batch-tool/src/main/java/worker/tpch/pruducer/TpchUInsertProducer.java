@@ -45,7 +45,6 @@ public class TpchUInsertProducer implements Producer {
         this.context = context;
         this.ringBuffer = ringBuffer;
         this.executor = context.getProducerExecutor();
-        ;
 
         this.scale = context.getScale();
         if (scale <= 0) {
@@ -74,7 +73,11 @@ public class TpchUInsertProducer implements Producer {
                         ringBuffer.publish(sequence);
                     }
                 }
-                logger.info("TPC-H insert producer has finished");
+                logger.info("TPC-H insert producer has finished, round: {}", generator.getRound());
+            } catch (Exception e) {
+                logger.error("TPC-H insert producer failed, round: {}, due to: {}", generator.getRound(),
+                    e.getMessage(), e);
+                context.setException(e);
             } finally {
                 context.getCountDownLatch().countDown();
                 generator.close();

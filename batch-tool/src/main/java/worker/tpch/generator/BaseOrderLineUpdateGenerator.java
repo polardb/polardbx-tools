@@ -38,6 +38,7 @@ public class BaseOrderLineUpdateGenerator {
     protected final double scaleFactor;
     protected final long count;
     protected final long startIndex;
+    protected final long endIndex;
     /**
      * the n-th round of update, starting from 1
      */
@@ -54,10 +55,15 @@ public class BaseOrderLineUpdateGenerator {
         this.round = round;
         this.count = (long) (SCALE_BASE * scaleFactor);
         this.startIndex = (round - 1) * count;
+        this.endIndex = round * count;
         this.batchSize = batchSize;
     }
 
     public void setBatchSize(int batchSize) {
         this.batchSize = batchSize;
+    }
+
+    public int getRound() {
+        return round;
     }
 }

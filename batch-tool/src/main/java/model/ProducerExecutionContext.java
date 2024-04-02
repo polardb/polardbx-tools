@@ -66,9 +66,9 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private int maxErrorCount;
 
-    private AtomicInteger emittedDataCounter;
+    private volatile AtomicInteger emittedDataCounter;
 
-    private CountDownLatch countDownLatch;
+    private volatile CountDownLatch countDownLatch;
 
     private volatile Exception exception;
 

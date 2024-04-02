@@ -193,7 +193,7 @@ public class OrderLineInsertGenerator extends BaseOrderLineUpdateGenerator {
 
     public void nextBatch() {
         long start = startIndex + curIdx + 1;
-        long remain = Math.min(count - start + 1, batchSize);
+        long remain = Math.min(endIndex - start + 1, batchSize);
         if (remain <= 0) {
             throw new IllegalStateException("No more data in this batch");
         }
