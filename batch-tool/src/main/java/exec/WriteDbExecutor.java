@@ -197,6 +197,11 @@ public abstract class WriteDbExecutor extends BaseExecutor {
         producerExecutionContext.saveToHistoryFile(true);
     }
 
+    @Override
+    public boolean hasFatalException() {
+        return producerExecutionContext.getException() != null || consumerExecutionContext.getException() != null;
+    }
+
     protected boolean useBlockReader() {
         if (GlobalVar.IN_PERF_MODE) {
             return true;

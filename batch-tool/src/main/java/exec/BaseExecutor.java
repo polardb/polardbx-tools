@@ -338,6 +338,10 @@ public abstract class BaseExecutor {
 
     }
 
+    public boolean hasFatalException() {
+        return false;
+    }
+
     protected String getSchemaName() {
         return dataSourceConfig.getDbName();
     }
