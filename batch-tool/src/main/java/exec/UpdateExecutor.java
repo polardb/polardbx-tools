@@ -122,9 +122,19 @@ public class UpdateExecutor extends WriteDbExecutor {
 
         for (int curRound = 1; curRound <= totalRound; curRound++) {
             logger.info("Starting TPC-H update, round: {}, total round: {}", curRound, totalRound);
+            long startTime = System.currentTimeMillis();
             doTpchDelete(curRound);
+            if (hasFatalException()) {
+                logger.warn("Terminating TPC-H update due to fatal exception...");
+                break;
+            }
             doTpchInsert(curRound);
-            logger.info("TPC-H update round: {} ended, total round: {}", curRound, totalRound);
+            if (hasFatalException()) {
+                logger.warn("Terminating TPC-H update due to fatal exception...");
+                break;
+            }
+            long endTime = System.currentTimeMillis();
+            logger.info("TPC-H update round-{} ended, elapsed time: {}s", curRound, (endTime - startTime) / 1000);
         }
     }
 

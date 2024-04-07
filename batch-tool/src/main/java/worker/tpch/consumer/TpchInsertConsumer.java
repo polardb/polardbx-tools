@@ -39,6 +39,11 @@ public class TpchInsertConsumer implements WorkHandler<BatchInsertSqlEvent> {
 
     @Override
     public void onEvent(BatchInsertSqlEvent event) {
+        if (consumerContext.getException() != null) {
+            // fail fast on exception
+            consumerContext.getEmittedDataCounter().getAndDecrement();
+            return;
+        }
         String sql = event.getSql();
         try (Connection conn = consumerContext.getDataSource().getConnection();
             Statement stmt = conn.createStatement()) {

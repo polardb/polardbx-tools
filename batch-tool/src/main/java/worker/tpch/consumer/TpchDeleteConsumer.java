@@ -56,6 +56,11 @@ public class TpchDeleteConsumer implements WorkHandler<BatchDeleteSqlEvent> {
 
     @Override
     public void onEvent(BatchDeleteSqlEvent event) {
+        if (consumerContext.getException() != null) {
+            // fail fast on exception
+            consumerContext.getEmittedDataCounter().getAndDecrement();
+            return;
+        }
         String values = event.getValues();
         try {
             deleteInTrx(values);
