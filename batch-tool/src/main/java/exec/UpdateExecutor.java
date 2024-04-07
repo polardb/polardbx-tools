@@ -121,7 +121,7 @@ public class UpdateExecutor extends WriteDbExecutor {
         logger.debug("consumer config {}", consumerExecutionContext);
 
         for (int curRound = 1; curRound <= totalRound; curRound++) {
-            logger.info("Starting TPC-H update, round: {}, total round: {}", curRound, totalRound);
+            logger.info("Starting TPC-H update round-{}, total round: {}", curRound, totalRound);
             long startTime = System.currentTimeMillis();
             doTpchDelete(curRound);
             if (hasFatalException()) {

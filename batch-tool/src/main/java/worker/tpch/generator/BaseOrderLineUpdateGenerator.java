@@ -66,4 +66,8 @@ public class BaseOrderLineUpdateGenerator {
     public int getRound() {
         return round;
     }
+
+    public long getCount() {
+        return count;
+    }
 }

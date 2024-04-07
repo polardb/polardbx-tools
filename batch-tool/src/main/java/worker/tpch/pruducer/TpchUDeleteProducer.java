@@ -70,9 +70,10 @@ public class TpchUDeleteProducer implements Producer {
                     }
                     generator.next();
                 }
-                logger.info("TPC-H delete producer has finished, round: {}", generator.getRound());
+                logger.info("TPC-H round-{} delete producer has finished, delete orders: {}", generator.getRound(),
+                    getOrdersCount());
             } catch (Exception e) {
-                logger.error("TPC-H delete producer failed, round: {}, due to: {}", generator.getRound(),
+                logger.error("TPC-H round-{} delete producer failed, due to: {}", generator.getRound(),
                     e.getMessage(), e);
                 context.setException(e);
             } finally {
@@ -81,5 +82,9 @@ public class TpchUDeleteProducer implements Producer {
             }
 
         });
+    }
+
+    public long getOrdersCount() {
+        return generator.getCount();
     }
 }

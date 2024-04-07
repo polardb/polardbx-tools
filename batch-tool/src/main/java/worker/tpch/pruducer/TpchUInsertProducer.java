@@ -73,9 +73,10 @@ public class TpchUInsertProducer implements Producer {
                         ringBuffer.publish(sequence);
                     }
                 }
-                logger.info("TPC-H insert producer has finished, round: {}", generator.getRound());
+                logger.info("TPC-H round-{} insert producer has finished, insert orders: {}", generator.getRound(),
+                    getOrdersCount());
             } catch (Exception e) {
-                logger.error("TPC-H insert producer failed, round: {}, due to: {}", generator.getRound(),
+                logger.error("TPC-H round-{} insert producer failed, due to: {}", generator.getRound(),
                     e.getMessage(), e);
                 context.setException(e);
             } finally {
@@ -83,5 +84,9 @@ public class TpchUInsertProducer implements Producer {
                 generator.close();
             }
         });
+    }
+
+    public long getOrdersCount() {
+        return generator.getCount();
     }
 }
