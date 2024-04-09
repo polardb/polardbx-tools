@@ -490,6 +490,9 @@ public class DbUtil {
         }
     }
 
+    /**
+     * include base table, views, orc tables, etc.
+     */
     public static List<String> getAllTablesInDb(Connection conn, String dbName) throws DatabaseException {
         List<String> allTables = new ArrayList<>();
         try (Statement stmt = conn.createStatement()) {
@@ -500,6 +503,20 @@ public class DbUtil {
             return allTables;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to show tables in:" + dbName, e);
+        }
+    }
+
+    public static List<String> getAllBaseTablesInDb(Connection conn, String dbName) throws DatabaseException {
+        List<String> allTables = new ArrayList<>();
+        try (Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery(String.format("SELECT TABLE_NAME FROM information_schema.tables "
+                + "WHERE TABLE_SCHEMA = '%s' AND TABLE_TYPE = 'BASE TABLE';", dbName));
+            while (rs.next()) {
+                allTables.add(rs.getString(1));
+            }
+            return allTables;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to query information_schema.tables in:" + dbName, e);
         }
     }
 

@@ -74,6 +74,9 @@ public class BatchTool {
         } finally {
             commandExecutor.close();
         }
+        if (commandExecutor.hasFatalException()) {
+            throw new RuntimeException("Fatal exception occurred during batch operation.");
+        }
     }
 
     private void addHooks() {

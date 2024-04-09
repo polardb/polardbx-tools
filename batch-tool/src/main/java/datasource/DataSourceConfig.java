@@ -210,7 +210,6 @@ public class DataSourceConfig {
             ", port='" + port + '\'' +
             ", dbName='" + dbName + '\'' +
             ", username='" + username + '\'' +
-            ", password='" + password + '\'' +
             ", maxConnectionNum=" + maxConnectionNum +
             ", minConnectionNum=" + minConnectionNum +
             ", loadBalanceEnabled=" + loadBalanceEnabled +

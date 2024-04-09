@@ -45,7 +45,7 @@ public class BatchToolLauncher {
             handleCmd(commandLine);
         } catch (Throwable e) {
             // 主线程异常
-            logger.error(e.getMessage(), e);
+            logger.error(e.getMessage());
             System.exit(1);
         }
     }

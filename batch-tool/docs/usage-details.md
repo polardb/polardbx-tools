@@ -3,11 +3,11 @@
   * [数据库表导出](#数据库表导出)
   * [数据库表导入](#数据库表导入)
   * [使用yaml配置](#使用yaml配置)
+  * [TPC-H数据集](#TPC-H数据集)
 * [常见问题排查](#常见问题排查)
 <!-- TOC -->
 
-
-# 常见导入导出场景
+# 常见使用场景
 以下省略 `java -jar batch-tool.jar -h 127.0.0.1 -u polardbx_root -p "123456" -P 8527`  等数据库连接信息配置 ，仅展示命令行功能参数的设置
 
 ## 数据库表导出
@@ -103,6 +103,17 @@ c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 ### 导入Excel文件
 `-D sbtest_auto -o import -s , -t "sbtest1" -format XLSX -f "sbtest1_0.xlsx"`
 
+### 导入TPC-H数据集
+
+`-D tpch_auto -o import -benchmark TPCH -scale 100`
+> 1. 使用 -scale 指定导入数据集的规模，单位：G
+> 2. 可以使用 -t "lineitem;orders" 来指定表进行导入
+
+### 更新TPC-H数据集
+
+`-D tpch_auto -o update -benchmark TPCH -scale 100 -F 3`
+> 1. 使用 -F 来指定更新的轮数
+
 ## 使用yaml配置
 当有很多配置项需要设置时，使用命令行参数会很不方便编辑，此时建议使用yaml格式的配置文件，示例如下：
 
@@ -133,6 +144,29 @@ mask: >-
 ```
 
 如果配置值包含[yaml特殊字符](https://yaml.org/spec/1.2.2/#53-indicator-characters)的话， 需要用引号括起来。
+
+## TPC-H数据集
+
+### 导入 TPC-H
+
+`-o import -benchmark tpch -scale ${规格}`
+
+其中规格的单位为GB，比如要导入 TPC-H 100G，则输入`-scale 100`。
+
+根据经验来看，当数据库不成为瓶颈的时候，4C16G的客户端配置可以在30分钟内完成 TPC-H 100G 的导入
+（使用参数`-pro 1 -con 80 -ringsize 8192 -minConn 81 -maxConn 81 -batchSize 500`）。
+
+### 更新 TPC-H
+
+` -o update -benchmark tpch -scale ${规格} -F ${更新轮数} `
+
+可以通过设置 并发数 和 BatchSize 来对更新性能进行调优。
+
+### 回滚 TPC-H 更新
+
+` -o delete -benchmark tpch -scale ${规格} -F ${回滚轮数} `
+
+回滚轮数需要与之前更新轮数一致，且确保之前的更新已完整执行
 
 # 常见问题排查
 1. 报错 **the server time zone value '' is unrecognized**
@@ -207,3 +241,14 @@ mask: >-
    **解决**：Linux系统上，可以通过`locale`命令查看编码；
    如果是数据库`character_set_server`变量的问题，BatchTool可以加上`-connParam "useUnicode=true&characterEncoding=utf-8"`
 
+12. 使用`-con`指定了消费者线程数不生效
+
+   **原因**：消费者线程数会设置为`-con`和CPU核数的最大值
+
+   **解决**：当前可通过`-fcon`参数强制设置消费者线程数；后续可能会修改这个行为
+
+13. 导出视图的相关问题
+
+   **原因**：BatchTool 在 v1.4.0 以前的版本，在导出整库时会默认导出所有表和视图的数据，无法控制是否导出视图
+   
+   **解决**：自v1.4.0开始，可指定参数`-withView true`来导出视图数据

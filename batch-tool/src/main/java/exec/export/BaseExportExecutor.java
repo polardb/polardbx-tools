@@ -50,7 +50,12 @@ public abstract class BaseExportExecutor extends BaseExecutor {
         } else {
             // 设置整库操作的目标表
             try (Connection conn = dataSource.getConnection()) {
-                List<String> tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+                List<String> tableNames;
+                if (config.isWithView()) {
+                    tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+                } else {
+                    tableNames = DbUtil.getAllBaseTablesInDb(conn, command.getDbName());
+                }
                 command.setTableNames(tableNames);
             } catch (SQLException | DatabaseException e) {
                 throw new RuntimeException(e);

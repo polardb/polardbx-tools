@@ -66,13 +66,18 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private int maxErrorCount;
 
-    private AtomicInteger emittedDataCounter;
+    private volatile AtomicInteger emittedDataCounter;
 
-    private CountDownLatch countDownLatch;
+    private volatile CountDownLatch countDownLatch;
 
     private volatile Exception exception;
 
     protected BenchmarkMode benchmarkMode;
+
+    /**
+     * eg. TPC-H update round
+     */
+    protected int benchmarkRound = 0;
 
     /**
      * Benchmark 数据集的规模
@@ -270,6 +275,14 @@ public class ProducerExecutionContext extends BaseConfig {
 
     public void setBenchmarkMode(BenchmarkMode benchmarkMode) {
         this.benchmarkMode = benchmarkMode;
+    }
+
+    public int getBenchmarkRound() {
+        return benchmarkRound;
+    }
+
+    public void setBenchmarkRound(int benchmarkRound) {
+        this.benchmarkRound = benchmarkRound;
     }
 
     public int getScale() {

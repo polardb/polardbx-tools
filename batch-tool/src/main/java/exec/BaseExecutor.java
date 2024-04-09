@@ -89,7 +89,6 @@ public abstract class BaseExecutor {
                     throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
                 }
             } catch (SQLException | DatabaseException e) {
-                e.printStackTrace();
                 throw new RuntimeException(e.getMessage());
             }
         }
@@ -337,6 +336,10 @@ public abstract class BaseExecutor {
 
     public void close() {
 
+    }
+
+    public boolean hasFatalException() {
+        return false;
     }
 
     protected String getSchemaName() {

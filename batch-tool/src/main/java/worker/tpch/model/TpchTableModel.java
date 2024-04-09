@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package worker.tpch;
+package worker.tpch.model;
 
 public enum TpchTableModel {
 

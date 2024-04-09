@@ -147,6 +147,8 @@ public class ConsumerExecutionContext extends BaseConfig {
      */
     private String useColumns = null;
 
+    private int maxRetry;
+
     private volatile Exception exception;
 
     public ConsumerExecutionContext() {
@@ -431,6 +433,14 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     public void setEmptyStrAsNull(boolean emptyStrAsNull) {
         this.emptyStrAsNull = emptyStrAsNull;
+    }
+
+    public int getMaxRetry() {
+        return maxRetry;
+    }
+
+    public void setMaxRetry(int maxRetry) {
+        this.maxRetry = maxRetry;
     }
 
     @Override

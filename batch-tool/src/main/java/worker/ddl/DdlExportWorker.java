@@ -57,6 +57,7 @@ public class DdlExportWorker implements Runnable {
         this.dbName = dbName;
         this.config = config;
         try (Connection conn = druid.getConnection()) {
+            // default include views when exporting ddl
             this.tableNames = DbUtil.getAllTablesInDb(conn, dbName);
         } catch (SQLException | DatabaseException e) {
             throw new RuntimeException(e);

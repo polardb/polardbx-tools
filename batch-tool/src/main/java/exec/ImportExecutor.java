@@ -38,9 +38,9 @@ import worker.insert.DirectImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
 import worker.insert.ShardedImportConsumer;
-import worker.tpch.BatchInsertSqlEvent;
-import worker.tpch.TpchConsumer;
-import worker.tpch.TpchProducer;
+import worker.tpch.consumer.TpchInsertConsumer;
+import worker.tpch.model.BatchInsertSqlEvent;
+import worker.tpch.pruducer.TpchImportProducer;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -178,14 +178,13 @@ public class ImportExecutor extends WriteDbExecutor {
         default:
             throw new UnsupportedOperationException("Not support " + producerExecutionContext.getBenchmarkMode());
         }
-
     }
 
     private void handleTpchImport(List<String> tableNames) {
         int producerParallelism = producerExecutionContext.getParallelism();
         AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
 
-        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(TpchProducer.class.getSimpleName(),
+        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(TpchImportProducer.class.getSimpleName(),
             producerParallelism);
         producerExecutionContext.setProducerExecutor(producerThreadPool);
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
@@ -194,19 +193,19 @@ public class ImportExecutor extends WriteDbExecutor {
         consumerExecutionContext.setParallelism(consumerParallelism);
         consumerExecutionContext.setDataSource(dataSource);
         consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
-        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorExact(TpchConsumer.class.getSimpleName(),
+        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorExact(TpchInsertConsumer.class.getSimpleName(),
             consumerParallelism);
 
         EventFactory<BatchInsertSqlEvent> factory = BatchInsertSqlEvent::new;
         RingBuffer<BatchInsertSqlEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
-        TpchProducer tpchProducer = new TpchProducer(producerExecutionContext, tableNames, ringBuffer);
+        TpchImportProducer tpchProducer = new TpchImportProducer(producerExecutionContext, tableNames, ringBuffer);
         CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(tpchProducer.getWorkerCount());
         producerExecutionContext.setCountDownLatch(countDownLatch);
 
-        TpchConsumer[] consumers = new TpchConsumer[consumerParallelism];
+        TpchInsertConsumer[] consumers = new TpchInsertConsumer[consumerParallelism];
         try {
             for (int i = 0; i < consumerParallelism; i++) {
-                consumers[i] = new TpchConsumer(consumerExecutionContext);
+                consumers[i] = new TpchInsertConsumer(consumerExecutionContext);
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -226,16 +225,8 @@ public class ImportExecutor extends WriteDbExecutor {
             throw new RuntimeException(e);
         }
 
-        waitForFinish(countDownLatch, emittedDataCounter, producerExecutionContext, consumerExecutionContext);
-        if (producerExecutionContext.getException() != null || consumerExecutionContext.getException() != null) {
-            producerThreadPool.shutdownNow();
-            consumerThreadPool.shutdownNow();
-            workerPool.halt();
-        } else {
-            workerPool.drainAndHalt();
-            consumerThreadPool.shutdown();
-            producerThreadPool.shutdown();
-        }
+        waitAndShutDown(countDownLatch, emittedDataCounter, producerThreadPool, consumerThreadPool,
+            workerPool);
     }
 
     /**

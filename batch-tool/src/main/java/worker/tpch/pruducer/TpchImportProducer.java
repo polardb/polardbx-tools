@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package worker.tpch;
+package worker.tpch.pruducer;
 
 import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
@@ -30,6 +30,8 @@ import worker.tpch.generator.PartSupplierGenerator;
 import worker.tpch.generator.RegionGenerator;
 import worker.tpch.generator.SupplierGenerator;
 import worker.tpch.generator.TableRowGenerator;
+import worker.tpch.model.BatchInsertSqlEvent;
+import worker.tpch.model.TpchTableModel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,9 +44,9 @@ import java.util.stream.Collectors;
 
 import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
-public class TpchProducer implements Producer {
+public class TpchImportProducer implements Producer {
 
-    private static final Logger logger = LoggerFactory.getLogger(TpchProducer.class);
+    private static final Logger logger = LoggerFactory.getLogger(TpchImportProducer.class);
 
     private final ProducerExecutionContext context;
     private final RingBuffer<BatchInsertSqlEvent> ringBuffer;
@@ -54,14 +56,14 @@ public class TpchProducer implements Producer {
 
     private Map<TpchTableModel, List<TableRowGenerator>> tableGeneratorsMap;
 
-    public TpchProducer(ProducerExecutionContext context, List<String> tableNames,
-                        RingBuffer<BatchInsertSqlEvent> ringBuffer) {
+    public TpchImportProducer(ProducerExecutionContext context, List<String> tableNames,
+                              RingBuffer<BatchInsertSqlEvent> ringBuffer) {
         this.context = context;
         this.ringBuffer = ringBuffer;
 
         this.scale = context.getScale();
         if (scale <= 0) {
-            throw new IllegalArgumentException("Scale must be a positive integer");
+            throw new IllegalArgumentException("TPC-H scale must be a positive integer");
         }
         this.executor = context.getProducerExecutor();
 
@@ -315,9 +317,9 @@ public class TpchProducer implements Producer {
             BatchInsertSqlEvent event;
             try {
                 event = ringBuffer.get(sequence);
-                sqlBuffer.setCharAt(sqlBuffer.length() - 1, ';');   // 最后一个逗号替换为分号
+                // 最后一个逗号替换为分号
+                sqlBuffer.setCharAt(sqlBuffer.length() - 1, ';');
                 String sql = sqlBuffer.toString();
-//                System.out.println(sql);
                 event.setSql(sql);
                 refreshBuffer();
             } finally {

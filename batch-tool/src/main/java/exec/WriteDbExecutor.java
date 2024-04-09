@@ -19,6 +19,7 @@ package exec;
 import cmd.BaseOperateCommand;
 import cmd.WriteDbCommand;
 import com.alibaba.druid.pool.DruidDataSource;
+import com.lmax.disruptor.WorkerPool;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
 import model.ConsumerExecutionContext;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import worker.common.BaseWorkHandler;
 import worker.common.ReadFileWithBlockProducer;
+import worker.tpch.model.TpchTableModel;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -41,7 +43,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -194,6 +198,11 @@ public abstract class WriteDbExecutor extends BaseExecutor {
         producerExecutionContext.saveToHistoryFile(true);
     }
 
+    @Override
+    public boolean hasFatalException() {
+        return producerExecutionContext.getException() != null || consumerExecutionContext.getException() != null;
+    }
+
     protected boolean useBlockReader() {
         if (GlobalVar.IN_PERF_MODE) {
             return true;
@@ -208,5 +217,33 @@ public abstract class WriteDbExecutor extends BaseExecutor {
             return false;
         }
         return true;
+    }
+
+    protected void waitAndShutDown(CountDownLatch countDownLatch, AtomicInteger emittedDataCounter,
+                                   ThreadPoolExecutor producerThreadPool, ThreadPoolExecutor consumerThreadPool,
+                                   WorkerPool<?> workerPool) {
+        waitForFinish(countDownLatch, emittedDataCounter, producerExecutionContext, consumerExecutionContext);
+        if (producerExecutionContext.getException() != null || consumerExecutionContext.getException() != null) {
+            producerThreadPool.shutdownNow();
+            consumerThreadPool.shutdownNow();
+            workerPool.halt();
+        } else {
+            workerPool.drainAndHalt();
+            consumerThreadPool.shutdown();
+            producerThreadPool.shutdown();
+        }
+    }
+
+    protected void checkTpchUpdateTablesExist() {
+        final String[] tables = {TpchTableModel.LINEITEM.getName(), TpchTableModel.ORDERS.getName()};
+        try (Connection conn = dataSource.getConnection()) {
+            for (String table : tables) {
+                if (!DbUtil.checkTableExists(conn, table)) {
+                    throw new RuntimeException("TPC-H update table: " + table + " does not exist");
+                }
+            }
+        } catch (SQLException | DatabaseException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

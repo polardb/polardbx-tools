@@ -1,6 +1,4 @@
 /*
- * Copyright [2013-2021], Alibaba Group Holding Limited
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +16,9 @@ package worker.tpch.util;
 
 import io.airlift.tpch.AbstractRandomInt;
 
+/**
+ * port from io.airlift.tpch
+ */
 public class RandomPhoneNumber
     extends AbstractRandomInt {
     // limited by country codes in phone numbers

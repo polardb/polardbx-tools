@@ -118,6 +118,7 @@ import static cmd.FlagOption.ARG_SHORT_USING_IN;
 import static cmd.FlagOption.ARG_SHORT_WITH_HEADER;
 import static cmd.FlagOption.ARG_SHORT_WITH_LAST_SEP;
 import static cmd.FlagOption.ARG_TRIM_RIGHT;
+import static cmd.FlagOption.ARG_WITH_VIEW;
 
 /**
  * 从命令行输入解析配置
@@ -239,7 +240,10 @@ public class CommandUtil {
         if (result.hasOption(ARG_SHORT_MIN_CONN_NUM)) {
             return Integer.parseInt(result.getOptionValue(ARG_SHORT_MIN_CONN_NUM));
         } else {
-            return DatasourceConstant.MIN_CONN_NUM;
+            int pro = getProducerParallelism(result);
+            int con = getConsumerParallelism(result);
+            int maxParallelism = Math.max(pro, con);
+            return Math.min(maxParallelism + 1, DatasourceConstant.MIN_CONN_NUM);
         }
     }
 
@@ -332,22 +336,30 @@ public class CommandUtil {
     }
 
     private static BaseOperateCommand parseDeleteCommand(ConfigResult result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY, ARG_SHORT_BENCHMARK);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
         configureCommonContext(result, producerExecutionContext, consumerExecutionContext);
+
+        if (producerExecutionContext.getBenchmarkMode() == BenchmarkMode.TPCH) {
+            setUpdateBatchSize(result);
+        }
 
         consumerExecutionContext.setWhereCondition(getWhereCondition(result));
         return new DeleteCommand(getDbName(result), producerExecutionContext, consumerExecutionContext);
     }
 
     private static BaseOperateCommand parseUpdateCommand(ConfigResult result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY, ARG_SHORT_BENCHMARK);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
         configureCommonContext(result, producerExecutionContext, consumerExecutionContext);
+
+        if (producerExecutionContext.getBenchmarkMode() == BenchmarkMode.TPCH) {
+            setUpdateBatchSize(result);
+        }
 
         consumerExecutionContext.setWhereCondition(getWhereCondition(result));
         consumerExecutionContext.setFuncSqlForUpdateEnabled(getFuncEnabled(result));
@@ -403,6 +415,10 @@ public class CommandUtil {
         return result.getBooleanFlag(ARG_SHORT_WITH_LAST_SEP);
     }
 
+    private static boolean getWithView(ConfigResult result) {
+        return result.getBooleanFlag(ARG_WITH_VIEW);
+    }
+
     private static boolean getEmptyAsNull(ConfigResult result) {
         return result.getBooleanFlag(ARG_EMPTY_AS_NULL);
     }
@@ -439,6 +455,7 @@ public class CommandUtil {
         exportConfig.setParallelism(getProducerParallelism(result));
         exportConfig.setQuoteEncloseMode(getQuoteEncloseMode(result));
         exportConfig.setWithLastSep(getWithLastSep(result));
+        exportConfig.setWithView(getWithView(result));
         setDir(result, exportConfig);
         setFilenamePrefix(result, exportConfig);
         setFileNum(result, exportConfig);
@@ -553,6 +570,12 @@ public class CommandUtil {
         setPerfMode(result);
     }
 
+    private static void setUpdateBatchSize(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_BATCH_SIZE)) {
+            GlobalVar.setTpchUpdateBatchSize(Integer.parseInt(result.getOptionValue(ARG_SHORT_BATCH_SIZE)));
+        }
+    }
+
     /**
      * 配置生产者
      */
@@ -571,6 +594,7 @@ public class CommandUtil {
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
         producerExecutionContext.setWithHeader(getWithHeader(result));
+        producerExecutionContext.setWithView(getWithView(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
         producerExecutionContext.setFileFormat(getFileFormat(result));
@@ -579,6 +603,7 @@ public class CommandUtil {
         producerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
         producerExecutionContext.setTrimRight(getTrimRight(result));
         producerExecutionContext.setBenchmarkMode(getBenchmarkMode(result));
+        producerExecutionContext.setBenchmarkRound(getBenchmarkRound(result));
         producerExecutionContext.setScale(getScale(result));
 
         producerExecutionContext.validate();
@@ -603,6 +628,7 @@ public class CommandUtil {
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
         consumerExecutionContext.setUseColumns(getUseColumns(result));
         consumerExecutionContext.setEmptyStrAsNull(getEmptyAsNull(result));
+        consumerExecutionContext.setMaxRetry(getMaxErrorCount(result));
 
         consumerExecutionContext.validate();
     }
@@ -668,6 +694,14 @@ public class CommandUtil {
             return BenchmarkMode.parseMode(result.getOptionValue(ARG_SHORT_BENCHMARK));
         } else {
             return BenchmarkMode.NONE;
+        }
+    }
+
+    private static int getBenchmarkRound(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_FILE_NUM)) {
+            return Integer.parseInt(result.getOptionValue(ARG_SHORT_FILE_NUM));
+        } else {
+            return 0;
         }
     }
 
@@ -777,7 +811,8 @@ public class CommandUtil {
 
     private static int getMaxErrorCount(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_MAX_ERROR)) {
-            return Integer.parseInt(result.getOptionValue(ARG_SHORT_MAX_ERROR));
+            int maxError = Integer.parseInt(result.getOptionValue(ARG_SHORT_MAX_ERROR));
+            return Math.max(0, maxError);
         }
         return ConfigConstant.DEFAULT_MAX_ERROR_COUNT;
     }
