@@ -21,7 +21,6 @@ import model.ConsumerExecutionContext;
 import model.config.GlobalVar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import worker.tpch.generator.OrderLineDeleteGenerator;
 import worker.tpch.model.BatchDeleteSqlEvent;
 
 import java.sql.Connection;
@@ -44,9 +43,9 @@ public class TpchDeleteConsumer implements WorkHandler<BatchDeleteSqlEvent> {
     protected final ConsumerExecutionContext consumerContext;
 
     private final StringBuilder deleteOrdersBuilder =
-        new StringBuilder(OrderLineDeleteGenerator.DEFAULT_DELETE_BATCH_NUM * 8 + 24);
+        new StringBuilder(GlobalVar.TPCH_UPDATE_DELETE_BATCH_NUM * 8 + 24);
     private final StringBuilder deleteLineitemBuilder =
-        new StringBuilder(OrderLineDeleteGenerator.DEFAULT_DELETE_BATCH_NUM * 8 + 24);
+        new StringBuilder(GlobalVar.TPCH_UPDATE_DELETE_BATCH_NUM * 8 + 24);
     private final int maxRetry;
 
     public TpchDeleteConsumer(ConsumerExecutionContext consumerContext) {

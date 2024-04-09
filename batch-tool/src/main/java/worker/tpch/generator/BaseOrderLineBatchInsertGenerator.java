@@ -24,6 +24,7 @@ import io.airlift.tpch.RandomBoundedLong;
 import io.airlift.tpch.RandomString;
 import io.airlift.tpch.RandomText;
 import io.airlift.tpch.TextPool;
+import model.config.GlobalVar;
 import worker.tpch.model.TpchTableModel;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -45,11 +46,6 @@ import static worker.tpch.generator.OrderGenerator.LINE_COUNT_MAX;
  */
 @NotThreadSafe
 public abstract class BaseOrderLineBatchInsertGenerator extends BaseOrderLineUpdateGenerator {
-
-    /**
-     * insert 20 rows in one sql
-     */
-    public static final int DEFAULT_INSERT_BATCH_NUM = 20;
 
     protected final RandomBoundedInt orderDateRandom = OrderGenerator.createOrderDateRandom();
     protected final RandomBoundedInt lineCountRandom = OrderGenerator.createLineCountRandom();
@@ -77,12 +73,12 @@ public abstract class BaseOrderLineBatchInsertGenerator extends BaseOrderLineUpd
 
     protected final long maxCustomerKey;
     protected StringBuilder orderStringBuilder =
-        new StringBuilder(DEFAULT_INSERT_BATCH_NUM * TpchTableModel.ORDERS.getRowStrLen() + 32);
+        new StringBuilder(GlobalVar.TPCH_UPDATE_INSERT_BATCH_NUM * TpchTableModel.ORDERS.getRowStrLen() + 32);
     protected StringBuilder lineitemStringBuilder =
-        new StringBuilder(DEFAULT_INSERT_BATCH_NUM * TpchTableModel.LINEITEM.getRowStrLen() + 32);
+        new StringBuilder(GlobalVar.TPCH_UPDATE_INSERT_BATCH_NUM * TpchTableModel.LINEITEM.getRowStrLen() + 32);
 
     public BaseOrderLineBatchInsertGenerator(double scaleFactor, int round) {
-        super(scaleFactor, round, DEFAULT_INSERT_BATCH_NUM);
+        super(scaleFactor, round, GlobalVar.TPCH_UPDATE_INSERT_BATCH_NUM);
 
         // initialize randoms
         maxCustomerKey = (long) (CustomerGenerator.SCALE_BASE * scaleFactor);

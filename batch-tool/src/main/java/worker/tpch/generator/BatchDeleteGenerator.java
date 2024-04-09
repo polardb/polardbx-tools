@@ -17,18 +17,14 @@
 package worker.tpch.generator;
 
 import com.google.common.annotations.VisibleForTesting;
+import model.config.GlobalVar;
 
 public abstract class BatchDeleteGenerator extends BaseOrderLineUpdateGenerator {
-
-    /**
-     * delete 10 rows in one sql
-     */
-    public static final int DEFAULT_DELETE_BATCH_NUM = 10;
 
     protected StringBuilder stringBuilder = new StringBuilder(128);
 
     public BatchDeleteGenerator(double scaleFactor, int round) {
-        super(scaleFactor, round, DEFAULT_DELETE_BATCH_NUM);
+        super(scaleFactor, round, GlobalVar.TPCH_UPDATE_DELETE_BATCH_NUM);
     }
 
     public abstract String getBatchDeleteKeys();
