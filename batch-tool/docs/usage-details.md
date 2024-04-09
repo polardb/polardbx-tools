@@ -3,11 +3,11 @@
   * [数据库表导出](#数据库表导出)
   * [数据库表导入](#数据库表导入)
   * [使用yaml配置](#使用yaml配置)
+  * [TPC-H数据集](#TPC-H数据集)
 * [常见问题排查](#常见问题排查)
 <!-- TOC -->
 
-
-# 常见导入导出场景
+# 常见使用场景
 以下省略 `java -jar batch-tool.jar -h 127.0.0.1 -u polardbx_root -p "123456" -P 8527`  等数据库连接信息配置 ，仅展示命令行功能参数的设置
 
 ## 数据库表导出
@@ -144,6 +144,29 @@ mask: >-
 ```
 
 如果配置值包含[yaml特殊字符](https://yaml.org/spec/1.2.2/#53-indicator-characters)的话， 需要用引号括起来。
+
+## TPC-H数据集
+
+### 导入 TPC-H
+
+`-o import -benchmark tpch -scale ${规格}`
+
+其中规格的单位为GB，比如要导入 TPC-H 100G，则输入`-scale 100`。
+
+根据经验来看，当数据库不成为瓶颈的时候，4C16G的客户端配置可以在30分钟内完成 TPC-H 100G 的导入
+（使用参数`-pro 1 -con 80 -ringsize 8192 -minConn 81 -maxConn 81 -batchSize 500`）。
+
+### 更新 TPC-H
+
+` -o update -benchmark tpch -scale ${规格} -F ${更新轮数} `
+
+可以通过设置 并发数 和 BatchSize 来对更新性能进行调优。
+
+### 回滚 TPC-H 更新
+
+` -o delete -benchmark tpch -scale ${规格} -F ${回滚轮数} `
+
+回滚轮数需要与之前更新轮数一致，且确保之前的更新已完整执行
 
 # 常见问题排查
 1. 报错 **the server time zone value '' is unrecognized**
