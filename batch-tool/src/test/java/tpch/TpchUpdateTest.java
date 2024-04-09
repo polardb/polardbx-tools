@@ -20,7 +20,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import worker.tpch.generator.OrderLineDeleteForRollbackGenerator;
 import worker.tpch.generator.OrderLineDeleteGenerator;
+import worker.tpch.generator.OrderLineInsertForRollbackGenerator;
 import worker.tpch.generator.OrderLineInsertGenerator;
 
 import java.io.BufferedReader;
@@ -40,8 +42,18 @@ public class TpchUpdateTest {
     }
 
     @Test
+    public void testInsertForRollback1G() throws IOException {
+        testInsertForRollback(1, 3);
+    }
+
+    @Test
     public void testGenDelete10G() throws IOException {
         testDelete(10, 2);
+    }
+
+    @Test
+    public void testInsertForRollback10G() throws IOException {
+        testInsertForRollback(10, 2);
     }
 
     @Test
@@ -50,8 +62,18 @@ public class TpchUpdateTest {
     }
 
     @Test
+    public void testDeleteForRollback1G() throws IOException {
+        testDeleteForRollback(1, 2);
+    }
+
+    @Test
     public void testGenInsert5G() throws IOException {
         testInsert(5, 3);
+    }
+
+    @Test
+    public void testDeleteForRollback5G() throws IOException {
+        testDeleteForRollback(5, 3);
     }
 
     @Test
@@ -63,12 +85,12 @@ public class TpchUpdateTest {
         int remain = 1500 % batchSize;
         for (int i = 0; i < round; i++) {
             Assert.assertTrue(generator.hasData());
-            String batchKeys = generator.getBatchDeleteOrderkey();
+            String batchKeys = generator.getBatchDeleteKeys();
             String[] split = batchKeys.split(",");
             Assert.assertEquals(batchSize, split.length);
             generator.next();
         }
-        String batchKeys = generator.getBatchDeleteOrderkey();
+        String batchKeys = generator.getBatchDeleteKeys();
         String[] split = batchKeys.split(",");
         Assert.assertEquals(remain, split.length);
         generator.next();
@@ -134,13 +156,45 @@ public class TpchUpdateTest {
                 while ((line = reader.readLine()) != null) {
                     String deleteKey = line.substring(0, line.length() - 1);
                     Assert.assertTrue(idx < keys.length);
-                    Assert.assertEquals("Failed in file: " + deletePart.getName() + ", at line: " + lineIdx, keys[idx],
-                        deleteKey);
+                    Assert.assertEquals("Failed in file: " + deletePart.getName() + ", at line: " + lineIdx,
+                        deleteKey, keys[idx]);
                     idx++;
                     lineIdx++;
                 }
             }
             logger.info("{} checked successfully", deletePart.getName());
+        }
+    }
+
+    private void testInsertForRollback(int scale, int round) throws IOException {
+        File deleteFileDir = new File(TPCH_RESOURCE_DIR, String.format("delete-%dg-%d", scale, round));
+        if (!deleteFileDir.exists() || !deleteFileDir.isDirectory()) {
+            Assert.fail(deleteFileDir.getAbsolutePath() + " not exists or not directory");
+        }
+        for (int i = 1; i <= round; i++) {
+            OrderLineInsertForRollbackGenerator generator =
+                new OrderLineInsertForRollbackGenerator(scale, i);
+
+            File deletePart = new File(deleteFileDir, "delete." + i);
+            if (!deletePart.exists() || !deletePart.isFile()) {
+                Assert.fail(deletePart.getAbsolutePath() + " not exists or not file");
+            }
+            try (BufferedReader reader = new BufferedReader(new FileReader(deletePart))) {
+                String line = null;
+                int lineIdx = 1;
+                while ((line = reader.readLine()) != null) {
+                    String expectedInsertKey = line.substring(0, line.length() - 1);
+                    generator.nextRow();
+                    // check orders
+                    String orderRow = generator.getOrderRow();
+                    String[] actualParts = orderRow.split("\\|");
+
+                    Assert.assertEquals("Failed in file: " + deletePart.getName() + ", at line: " + lineIdx,
+                        expectedInsertKey, actualParts[0]);
+                    lineIdx++;
+                }
+            }
+            logger.info("{} checked for rollback successfully", deletePart.getName());
         }
     }
 
@@ -224,6 +278,39 @@ public class TpchUpdateTest {
                 logger.info("{} checked successfully", insertOrdersPart.getName());
                 logger.info("{} checked successfully", insertLineitemPart.getName());
             }
+        }
+    }
+
+    private void testDeleteForRollback(int scale, int round) throws IOException {
+        File insertFileDir = new File(TPCH_RESOURCE_DIR, String.format("insert-%dg-%d", scale, round));
+        if (!insertFileDir.exists() || !insertFileDir.isDirectory()) {
+            Assert.fail(insertFileDir.getAbsolutePath() + " not exists or not directory");
+        }
+        for (int i = 1; i <= round; i++) {
+            OrderLineDeleteForRollbackGenerator generator =
+                new OrderLineDeleteForRollbackGenerator(scale, i);
+            String batchDeleteOrderkey = generator.getAllDeleteOrderkey();
+            String[] keys = batchDeleteOrderkey.split(",");
+            int idx = 0;
+
+            File insertOrdersPart = new File(insertFileDir, "orders.tbl.u" + i);
+            if (!insertOrdersPart.exists() || !insertOrdersPart.isFile()) {
+                Assert.fail(insertOrdersPart.getAbsolutePath() + " not exists or not file");
+            }
+
+            try (BufferedReader orderReader = new BufferedReader(new FileReader(insertOrdersPart))) {
+                String line = null;
+                while ((line = orderReader.readLine()) != null) {
+                    String actualOrderKey = keys[idx];
+                    String expectOrderKey = line.substring(0, line.indexOf('|'));
+
+                    Assert.assertEquals(
+                        "Failed at index: " + idx, expectOrderKey, actualOrderKey);
+                    idx++;
+                }
+            }
+            Assert.assertEquals("Expected all keys are matched", keys.length, idx);
+            logger.info("{} checked for rollback successfully", insertOrdersPart.getName());
         }
     }
 }

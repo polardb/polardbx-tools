@@ -21,6 +21,8 @@ import model.ProducerExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import worker.common.Producer;
+import worker.tpch.generator.BaseOrderLineBatchInsertGenerator;
+import worker.tpch.generator.OrderLineInsertForRollbackGenerator;
 import worker.tpch.generator.OrderLineInsertGenerator;
 import worker.tpch.model.BatchInsertSql2Event;
 
@@ -34,14 +36,21 @@ public class TpchUInsertProducer implements Producer {
     private final RingBuffer<BatchInsertSql2Event> ringBuffer;
     private final ThreadPoolExecutor executor;
     private final int scale;
-    private final OrderLineInsertGenerator generator;
+    private final boolean forRollbackInsert;
+    private final BaseOrderLineBatchInsertGenerator generator;
+
+    public TpchUInsertProducer(ProducerExecutionContext context,
+                               RingBuffer<BatchInsertSql2Event> ringBuffer,
+                               int curRound) {
+        this(context, ringBuffer, curRound, false);
+    }
 
     /**
      * @param curRound the n-th round of update, starting from 1
      */
     public TpchUInsertProducer(ProducerExecutionContext context,
                                RingBuffer<BatchInsertSql2Event> ringBuffer,
-                               int curRound) {
+                               int curRound, boolean forRollbackInsert) {
         this.context = context;
         this.ringBuffer = ringBuffer;
         this.executor = context.getProducerExecutor();
@@ -50,7 +59,12 @@ public class TpchUInsertProducer implements Producer {
         if (scale <= 0) {
             throw new IllegalArgumentException("TPC-H scale must be a positive integer");
         }
-        this.generator = new OrderLineInsertGenerator(scale, curRound);
+        this.forRollbackInsert = forRollbackInsert;
+        if (forRollbackInsert) {
+            this.generator = new OrderLineInsertForRollbackGenerator(scale, curRound);
+        } else {
+            this.generator = new OrderLineInsertGenerator(scale, curRound);
+        }
     }
 
     @Override

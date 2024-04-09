@@ -18,19 +18,13 @@ package worker.tpch.generator;
 
 import com.google.common.base.Preconditions;
 
+import static worker.tpch.generator.OrderGenerator.ORDER_KEY_SPARSE_BITS;
+import static worker.tpch.generator.OrderGenerator.ORDER_KEY_SPARSE_KEEP;
+
 /**
- * Delete first, then insert
+ * Update / Rollback: delete first, then insert
  */
 public class BaseOrderLineUpdateGenerator {
-
-    /**
-     * delete 10 rows in one sql
-     */
-    public static final int DEFAULT_DELETE_BATCH_NUM = 10;
-    /**
-     * insert 20 rows in one sql
-     */
-    public static final int DEFAULT_INSERT_BATCH_NUM = 20;
 
     public static final int SCALE_BASE = 1_500;
     public static final int MAX_UPDATE_ROUND = 100;
@@ -69,5 +63,30 @@ public class BaseOrderLineUpdateGenerator {
 
     public long getCount() {
         return count;
+    }
+
+    static long makeDeleteOrderKey(long orderIndex) {
+        long lowBits = orderIndex & ((1 << ORDER_KEY_SPARSE_KEEP) - 1);
+
+        long key = orderIndex;
+        key >>= ORDER_KEY_SPARSE_KEEP;
+        key <<= ORDER_KEY_SPARSE_BITS;
+        key <<= ORDER_KEY_SPARSE_KEEP;
+        key += lowBits;
+
+        return key;
+    }
+
+    static long makeInsertOrderKey(long orderIndex) {
+        long lowBits = orderIndex & ((1 << ORDER_KEY_SPARSE_KEEP) - 1);
+
+        long key = orderIndex;
+        key >>= ORDER_KEY_SPARSE_KEEP;
+        key <<= ORDER_KEY_SPARSE_BITS;
+        key += 1;
+        key <<= ORDER_KEY_SPARSE_KEEP;
+        key += lowBits;
+
+        return key;
     }
 }

@@ -21,6 +21,8 @@ import model.ProducerExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import worker.common.Producer;
+import worker.tpch.generator.BatchDeleteGenerator;
+import worker.tpch.generator.OrderLineDeleteForRollbackGenerator;
 import worker.tpch.generator.OrderLineDeleteGenerator;
 import worker.tpch.model.BatchDeleteSqlEvent;
 
@@ -34,14 +36,21 @@ public class TpchUDeleteProducer implements Producer {
     private final RingBuffer<BatchDeleteSqlEvent> ringBuffer;
     private final ThreadPoolExecutor executor;
     private final int scale;
-    private final OrderLineDeleteGenerator generator;
+    private final boolean forRollbackInsert;
+    private final BatchDeleteGenerator generator;
+
+    public TpchUDeleteProducer(ProducerExecutionContext context,
+                               RingBuffer<BatchDeleteSqlEvent> ringBuffer,
+                               int curRound) {
+        this(context, ringBuffer, curRound, false);
+    }
 
     /**
      * @param curRound the n-th round of update, starting from 1
      */
     public TpchUDeleteProducer(ProducerExecutionContext context,
                                RingBuffer<BatchDeleteSqlEvent> ringBuffer,
-                               int curRound) {
+                               int curRound, boolean forRollbackInsert) {
         this.context = context;
         this.ringBuffer = ringBuffer;
         this.executor = context.getProducerExecutor();
@@ -50,7 +59,13 @@ public class TpchUDeleteProducer implements Producer {
         if (scale <= 0) {
             throw new IllegalArgumentException("TPC-H scale must be a positive integer");
         }
-        this.generator = new OrderLineDeleteGenerator(scale, curRound);
+
+        this.forRollbackInsert = forRollbackInsert;
+        if (forRollbackInsert) {
+            this.generator = new OrderLineDeleteForRollbackGenerator(scale, curRound);
+        } else {
+            this.generator = new OrderLineDeleteGenerator(scale, curRound);
+        }
     }
 
     @Override
@@ -58,7 +73,7 @@ public class TpchUDeleteProducer implements Producer {
         executor.submit(() -> {
             try {
                 while (generator.hasData()) {
-                    String batchDeleteOrderkey = generator.getBatchDeleteOrderkey();
+                    String batchDeleteOrderkey = generator.getBatchDeleteKeys();
                     long sequence = ringBuffer.next();
                     BatchDeleteSqlEvent event;
                     try {

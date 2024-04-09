@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import worker.common.BaseWorkHandler;
 import worker.common.ReadFileWithBlockProducer;
+import worker.tpch.model.TpchTableModel;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -230,6 +231,19 @@ public abstract class WriteDbExecutor extends BaseExecutor {
             workerPool.drainAndHalt();
             consumerThreadPool.shutdown();
             producerThreadPool.shutdown();
+        }
+    }
+
+    protected void checkTpchUpdateTablesExist() {
+        final String[] tables = {TpchTableModel.LINEITEM.getName(), TpchTableModel.ORDERS.getName()};
+        try (Connection conn = dataSource.getConnection()) {
+            for (String table : tables) {
+                if (!DbUtil.checkTableExists(conn, table)) {
+                    throw new RuntimeException("TPC-H update table: " + table + " does not exist");
+                }
+            }
+        } catch (SQLException | DatabaseException e) {
+            throw new RuntimeException(e);
         }
     }
 }

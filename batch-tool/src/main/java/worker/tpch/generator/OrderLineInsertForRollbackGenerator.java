@@ -30,76 +30,34 @@ import static worker.tpch.util.StringBufferUtil.appendDecimalWithFrac2;
 import static worker.tpch.util.StringBufferUtil.formatDateByDays;
 
 @NotThreadSafe
-public class OrderLineInsertGenerator extends BaseOrderLineBatchInsertGenerator {
+public class OrderLineInsertForRollbackGenerator extends BaseOrderLineBatchInsertGenerator {
 
-    private static final int STEPS = 101;
-    private static final int PROCS = 100;
-
-    public OrderLineInsertGenerator(double scaleFactor, int round) {
+    public OrderLineInsertForRollbackGenerator(double scaleFactor, int round) {
         super(scaleFactor, round);
     }
 
     @Override
     protected void advanceRandoms() {
+        orderDateRandom.advanceRows(startIndex);
+        lineCountRandom.advanceRows(startIndex);
+        customerKeyRandom.advanceRows(startIndex);
+        orderPriorityRandom.advanceRows(startIndex);
+        clerkRandom.advanceRows(startIndex);
+        ordersCommentRandom.advanceRows(startIndex);
 
-        long rowcount = (long) (OrderGenerator.SCALE_BASE * scaleFactor);
-        long extra = rowcount % PROCS;
-        rowcount /= PROCS;
+        supplierNumberRandom.advanceRows(startIndex);
 
-        for (int i = 0; i < STEPS - 1; i++) {
-            orderDateRandom.advanceRows(rowcount);
-            lineCountRandom.advanceRows(rowcount);
-            customerKeyRandom.advanceRows(rowcount);
-            orderPriorityRandom.advanceRows(rowcount);
-            clerkRandom.advanceRows(rowcount);
-            ordersCommentRandom.advanceRows(rowcount);
-
-            supplierNumberRandom.advanceRows(rowcount);
-
-            lineQuantityRandom.advanceRows(rowcount);
-            lineDiscountRandom.advanceRows(rowcount);
-            lineShipDateRandom.advanceRows(rowcount);
-            lineTaxRandom.advanceRows(rowcount);
-            linePartKeyRandom.advanceRows(rowcount);
-            lineCommitDateRandom.advanceRows(rowcount);
-            lineReceiptDateRandom.advanceRows(rowcount);
-            returnedFlagRandom.advanceRows(rowcount);
-            shipInstructionsRandom.advanceRows(rowcount);
-            shipModeRandom.advanceRows(rowcount);
-            lineCommentRandom.advanceRows(rowcount);
-        }
-
-        if (extra != 0) {
-            orderDateRandom.advanceRows(extra);
-            lineCountRandom.advanceRows(extra);
-            customerKeyRandom.advanceRows(extra);
-            orderPriorityRandom.advanceRows(extra);
-            clerkRandom.advanceRows(extra);
-            ordersCommentRandom.advanceRows(extra);
-        }
-
-        if (startIndex != 0) {
-            orderDateRandom.advanceRows(startIndex);
-            lineCountRandom.advanceRows(startIndex);
-            customerKeyRandom.advanceRows(startIndex);
-            orderPriorityRandom.advanceRows(startIndex);
-            clerkRandom.advanceRows(startIndex);
-            ordersCommentRandom.advanceRows(startIndex);
-
-            supplierNumberRandom.advanceRows(startIndex);
-
-            lineQuantityRandom.advanceRows(startIndex);
-            lineDiscountRandom.advanceRows(startIndex);
-            lineTaxRandom.advanceRows(startIndex);
-            linePartKeyRandom.advanceRows(startIndex);
-            lineShipDateRandom.advanceRows(startIndex);
-            lineCommitDateRandom.advanceRows(startIndex);
-            lineReceiptDateRandom.advanceRows(startIndex);
-            returnedFlagRandom.advanceRows(startIndex);
-            shipInstructionsRandom.advanceRows(startIndex);
-            shipModeRandom.advanceRows(startIndex);
-            lineCommentRandom.advanceRows(startIndex);
-        }
+        lineQuantityRandom.advanceRows(startIndex);
+        lineDiscountRandom.advanceRows(startIndex);
+        lineShipDateRandom.advanceRows(startIndex);
+        lineTaxRandom.advanceRows(startIndex);
+        linePartKeyRandom.advanceRows(startIndex);
+        lineCommitDateRandom.advanceRows(startIndex);
+        lineReceiptDateRandom.advanceRows(startIndex);
+        returnedFlagRandom.advanceRows(startIndex);
+        shipInstructionsRandom.advanceRows(startIndex);
+        shipModeRandom.advanceRows(startIndex);
+        lineCommentRandom.advanceRows(startIndex);
     }
 
     @Override
@@ -115,7 +73,7 @@ public class OrderLineInsertGenerator extends BaseOrderLineBatchInsertGenerator 
         lineitemStringBuilder.append("INSERT INTO ").append(TpchTableModel.LINEITEM.getName()).append(" VALUES ");
 
         for (long i = start; remain > 0; i++, remain--) {
-            long orderKey = makeInsertOrderKey(i);
+            long orderKey = makeDeleteOrderKey(i);
             int orderDate = orderDateRandom.nextValue();
 
             // generate customer key, taking into account customer mortality rate
@@ -259,7 +217,7 @@ public class OrderLineInsertGenerator extends BaseOrderLineBatchInsertGenerator 
         orderStringBuilder.setLength(0);
         lineitemStringBuilder.setLength(0);
 
-        long orderKey = makeInsertOrderKey(startIndex + curIdx + 1);
+        long orderKey = makeDeleteOrderKey(startIndex + curIdx + 1);
         int orderDate = orderDateRandom.nextValue();
 
         // generate customer key, taking into account customer mortality rate

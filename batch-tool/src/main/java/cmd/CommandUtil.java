@@ -336,11 +336,15 @@ public class CommandUtil {
     }
 
     private static BaseOperateCommand parseDeleteCommand(ConfigResult result) {
-        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY);
+        requireOnlyOneArg(result, ARG_SHORT_FROM_FILE, ARG_SHORT_DIRECTORY, ARG_SHORT_BENCHMARK);
 
         ProducerExecutionContext producerExecutionContext = new ProducerExecutionContext();
         ConsumerExecutionContext consumerExecutionContext = new ConsumerExecutionContext();
         configureCommonContext(result, producerExecutionContext, consumerExecutionContext);
+
+        if (producerExecutionContext.getBenchmarkMode() == BenchmarkMode.TPCH) {
+            setUpdateBatchSize(result);
+        }
 
         consumerExecutionContext.setWhereCondition(getWhereCondition(result));
         return new DeleteCommand(getDbName(result), producerExecutionContext, consumerExecutionContext);

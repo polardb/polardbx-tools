@@ -22,12 +22,10 @@ import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.WorkerPool;
 import datasource.DataSourceConfig;
-import exception.DatabaseException;
 import model.config.BenchmarkMode;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.DbUtil;
 import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
@@ -36,7 +34,6 @@ import worker.tpch.consumer.TpchDeleteConsumer;
 import worker.tpch.consumer.TpchInsert2Consumer;
 import worker.tpch.model.BatchDeleteSqlEvent;
 import worker.tpch.model.BatchInsertSql2Event;
-import worker.tpch.model.TpchTableModel;
 import worker.tpch.pruducer.TpchUDeleteProducer;
 import worker.tpch.pruducer.TpchUInsertProducer;
 import worker.update.ReplaceConsumer;
@@ -46,8 +43,6 @@ import worker.update.UpdateWithFuncConsumer;
 import worker.update.UpdateWithFuncInConsumer;
 import worker.util.UpdateUtil;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -113,7 +108,7 @@ public class UpdateExecutor extends WriteDbExecutor {
         if (!consumerExecutionContext.isForceParallelism()) {
             // TPC-H update parallelism has a default limit
             int curParallelism = consumerExecutionContext.getParallelism();
-            consumerExecutionContext.setParallelism(Math.min(2, curParallelism));
+            consumerExecutionContext.setParallelism(Math.min(4, curParallelism));
             consumerExecutionContext.setForceParallelism(true);
         }
 
@@ -228,19 +223,6 @@ public class UpdateExecutor extends WriteDbExecutor {
 
         waitAndShutDown(countDownLatch, emittedDataCounter, producerThreadPool, consumerThreadPool,
             workerPool);
-    }
-
-    private void checkTpchUpdateTablesExist() {
-        final String[] tables = {TpchTableModel.LINEITEM.getName(), TpchTableModel.ORDERS.getName()};
-        try (Connection conn = dataSource.getConnection()) {
-            for (String table : tables) {
-                if (!DbUtil.checkTableExists(conn, table)) {
-                    throw new RuntimeException("TPC-H update table: " + table + " does not exist");
-                }
-            }
-        } catch (SQLException | DatabaseException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private void doShardingUpdate() {
