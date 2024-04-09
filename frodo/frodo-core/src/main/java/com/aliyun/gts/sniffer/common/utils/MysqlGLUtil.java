@@ -9,4 +9,9 @@ public class MysqlGLUtil {
     public static boolean matchReplace(String s){
         return insertIgnorePattern.matcher(s).matches();
     }
+
+    private static Pattern numberPattern=Pattern.compile(Config.numberPattern);
+    public static boolean matchNumber(String s){
+        return numberPattern.matcher(s).matches();
+    }
 }

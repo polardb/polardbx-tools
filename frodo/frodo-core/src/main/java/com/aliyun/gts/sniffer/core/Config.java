@@ -47,6 +47,7 @@ public class Config implements Serializable{
 
     public static int maxPacketQueueSize=65535;//单个线程缓存packet数量，
     public static String replacePattern="^replace\\s+into";
+    public static String numberPattern="^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$";
     public static boolean excludeNetworkRound=false;//是否排除网络来回时间影响，默认false，那么会探测网络来回耗时。在计算RT时，减去网络来回耗时。
     public static Long dstNetworkRoundMicrosecond= -1L;//设置网络来回的耗时，单位微秒，在统计SQL耗时时，减去网络耗时，单位微秒
 
