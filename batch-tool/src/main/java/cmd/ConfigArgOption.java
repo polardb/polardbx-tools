@@ -112,6 +112,8 @@ public class ConfigArgOption {
         of("benchmark", "benchmark", "Fast loading benchmark data (dafault NONE).", "NONE | TPCH");
     public static final ConfigArgOption ARG_SHORT_SCALE =
         of("scale", "scale", "The size scale benchmark data (GB for tpch).", "size");
+    public static final ConfigArgOption ARG_TBL_PART =
+        of("part", "tblPart", "Partitions of the target tables, starting from 0 (both inclusive).", "start:end");
 
     protected final String argShort;
     protected final String argLong;

@@ -24,36 +24,7 @@ import java.nio.charset.Charset;
  */
 public class BaseConfig {
 
-    private static class FileMode {
-        static final byte COMPRESS_FLAG = 1;
-        static final byte ENCRYPTION_FLAG = 1 << 2;
-        static final byte FILE_FORMAT_FLAG = 1 << 3;
-
-        byte flag = 0;
-
-        void setCompress() {
-            this.flag |= COMPRESS_FLAG;
-        }
-
-        void setEncryption() {
-            this.flag |= ENCRYPTION_FLAG;
-        }
-
-        void setFileFormat() {
-            this.flag |= FILE_FORMAT_FLAG;
-        }
-
-        int bitCount() {
-            int count = 0;
-            byte n = flag;
-            while (n != 0) {
-                n &= n - 1;
-                count++;
-            }
-            return count;
-        }
-    }
-
+    private final FileMode fileMode = new FileMode();
     /**
      * 分隔符
      */
@@ -84,15 +55,29 @@ public class BaseConfig {
      * 引号模式
      */
     protected QuoteEncloseMode quoteEncloseMode;
-
-    private final FileMode fileMode = new FileMode();
-
     private boolean isWithLastSep = false;
-
     private boolean isWithView = false;
+    private int startPart = -1;
+    private int endPart = -1;
 
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
+    }
+
+    public int getStartPart() {
+        return startPart;
+    }
+
+    public void setStartPart(int startPart) {
+        this.startPart = startPart;
+    }
+
+    public int getEndPart() {
+        return endPart;
+    }
+
+    public void setEndPart(int endPart) {
+        this.endPart = endPart;
     }
 
     public String getSeparator() {
@@ -230,5 +215,35 @@ public class BaseConfig {
             ", dropTableIfExists='" + dropTableIfExists + '\'' +
             ", encryptionConfig='" + encryptionConfig + '\'' +
             '}';
+    }
+
+    private static class FileMode {
+        static final byte COMPRESS_FLAG = 1;
+        static final byte ENCRYPTION_FLAG = 1 << 2;
+        static final byte FILE_FORMAT_FLAG = 1 << 3;
+
+        byte flag = 0;
+
+        void setCompress() {
+            this.flag |= COMPRESS_FLAG;
+        }
+
+        void setEncryption() {
+            this.flag |= ENCRYPTION_FLAG;
+        }
+
+        void setFileFormat() {
+            this.flag |= FILE_FORMAT_FLAG;
+        }
+
+        int bitCount() {
+            int count = 0;
+            byte n = flag;
+            while (n != 0) {
+                n &= n - 1;
+                count++;
+            }
+            return count;
+        }
     }
 }

@@ -44,6 +44,7 @@ import worker.factory.ExportWorkerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -87,6 +88,23 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             throw new RuntimeException(e);
         }
 
+        int startOffset = 0;
+        if (config.getStartPart() >= 0 && config.getEndPart() >= 0) {
+            int startPart = config.getStartPart();
+            int endPart = config.getEndPart();
+            if (endPart >= topologyList.size()) {
+                throw new IllegalArgumentException(
+                    String.format("EndPart %d is larger than topology size %d", endPart, topologyList.size()));
+            }
+            startOffset = startPart;
+            // topologyList is in order
+            List<TableTopology> newTopologyList = new ArrayList<>(topologyList.subList(startPart, endPart + 1));
+            topologyList = newTopologyList;
+            logger.info("Exporting partitions {}~{} of table {}", startPart, endPart, tableName);
+        } else {
+            logger.info("Exporting all partitions of table {}, total part count: {}", tableName, topologyList.size());
+        }
+
         try (Connection connection = dataSource.getConnection()) {
             boolean isBroadCast = DbUtil.isBroadCast(connection, tableName);
             if (isBroadCast) {
@@ -109,9 +127,10 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             case MAX_LINE_NUM_IN_SINGLE_FILE:
             case DEFAULT:
                 for (int i = 0; i < shardSize; i++) {
+                    int suffix = startOffset + i;
                     directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
                         topologyList.get(i), tableFieldMetaInfo,
-                        filePathPrefix + i, config);
+                        filePathPrefix + suffix, config);
                     directExportWorker.setCountDownLatch(countDownLatch);
                     directExportWorker.setPermitted(permitted);
                     executor.submit(directExportWorker);

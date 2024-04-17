@@ -168,10 +168,6 @@ public abstract class BaseExportWorker implements Runnable {
      * @param columnIdx 从 0 开始
      */
     protected void writeFieldValue(ByteArrayOutputStream os, byte[] value, int columnIdx) throws IOException {
-        if (columnDataMaskerList != null && columnDataMaskerList.get(columnIdx) != null) {
-            value = columnDataMaskerList.get(columnIdx).doMask(value);
-        }
-        boolean isStringType = isStringTypeList.get(columnIdx);
         switch (quoteEncloseMode) {
         case NONE:
             FileUtil.writeToByteArrayStream(os, value);
@@ -180,6 +176,10 @@ public abstract class BaseExportWorker implements Runnable {
             FileUtil.writeToByteArrayStreamWithQuote(os, value);
             break;
         case AUTO:
+            if (columnDataMaskerList != null && columnDataMaskerList.get(columnIdx) != null) {
+                value = columnDataMaskerList.get(columnIdx).doMask(value);
+            }
+            boolean isStringType = isStringTypeList.get(columnIdx);
             if (!isStringType) {
                 FileUtil.writeToByteArrayStream(os, value);
             } else {
