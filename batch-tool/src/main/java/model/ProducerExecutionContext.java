@@ -42,6 +42,8 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private ThreadPoolExecutor producerExecutor;
 
+    private String filenamePrefix;
+
     private List<FileLineRecord> dataFileRecordList;
 
     private List<FileLineRecord> ddlFileRecordList;
@@ -94,6 +96,14 @@ public class ProducerExecutionContext extends BaseConfig {
 
     public void setProducerExecutor(ThreadPoolExecutor producerExecutor) {
         this.producerExecutor = producerExecutor;
+    }
+
+    public String getFilenamePrefix() {
+        return filenamePrefix;
+    }
+
+    public void setFilenamePrefix(String filenamePrefix) {
+        this.filenamePrefix = filenamePrefix;
     }
 
     public List<FileLineRecord> getDataFileLineRecordList() {

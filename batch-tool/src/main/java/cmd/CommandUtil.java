@@ -509,11 +509,7 @@ public class CommandUtil {
     }
 
     private static void setFilenamePrefix(ConfigResult result, ExportConfig exportConfig) {
-        if (result.hasOption(ARG_SHORT_PREFIX)) {
-            exportConfig.setFilenamePrefix(result.getOptionValue(ARG_SHORT_PREFIX));
-        } else {
-            exportConfig.setFilenamePrefix("");
-        }
+        exportConfig.setFilenamePrefix(getPrefix(result));
     }
 
     private static void setOrderBy(ConfigResult result, ExportConfig exportConfig) {
@@ -620,6 +616,7 @@ public class CommandUtil {
         if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
             producerExecutionContext.setDdlFileLineRecordList(getDdlFileRecordList(result));
         }
+        producerExecutionContext.setFilenamePrefix(getPrefix(result));
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
         producerExecutionContext.setWithHeader(getWithHeader(result));
@@ -703,6 +700,14 @@ public class CommandUtil {
             return parallelism;
         } else {
             return ConfigConstant.DEFAULT_PRODUCER_SIZE;
+        }
+    }
+
+    private static String getPrefix(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_PREFIX)) {
+            return result.getOptionValue(ARG_SHORT_PREFIX);
+        } else {
+            return "";
         }
     }
 
