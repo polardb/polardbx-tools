@@ -24,6 +24,7 @@ import com.opencsv.RFC4180ParserBuilder;
 import com.opencsv.exceptions.CsvValidationException;
 import model.ProducerExecutionContext;
 import model.config.ConfigConstant;
+import model.config.GlobalVar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.IOUtil;
@@ -54,7 +55,7 @@ public class CsvReader extends FileBufferedBatchReader {
         try {
             this.reader = new CSVReaderBuilder(new InputStreamReader(
                 new FileInputStream(fileList.get(fileIndex).getAbsolutePath()), context.getCharset()))
-                .withCSVParser(parser).build();
+                .withCSVParser(parser).withMultilineLimit(GlobalVar.MAX_CSV_MULTI_LINE).build();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e.getMessage());
         }

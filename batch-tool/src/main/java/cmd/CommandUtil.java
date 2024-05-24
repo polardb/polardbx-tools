@@ -103,6 +103,7 @@ import static cmd.ConfigArgOption.ARG_SHORT_USERNAME;
 import static cmd.ConfigArgOption.ARG_SHORT_VERSION;
 import static cmd.ConfigArgOption.ARG_SHORT_WHERE;
 import static cmd.ConfigArgOption.ARG_SHORT_WITH_DDL;
+import static cmd.ConfigArgOption.ARG_TBL_PART;
 import static cmd.FlagOption.ARG_DROP_TABLE_IF_EXISTS;
 import static cmd.FlagOption.ARG_EMPTY_AS_NULL;
 import static cmd.FlagOption.ARG_SHORT_ENABLE_SHARDING;
@@ -462,8 +463,36 @@ public class CommandUtil {
         setFileLine(result, exportConfig);
         setOrderBy(result, exportConfig);
         setColumnMaskerMap(result, exportConfig);
+        setPartitions(result, exportConfig);
         exportConfig.validate();
         return new ExportCommand(getDbName(result), tableNames, exportConfig);
+    }
+
+    private static void setPartitions(ConfigResult result, ExportConfig exportConfig) {
+        if (result.hasOption(ARG_TBL_PART)) {
+            String partOpt = result.getOptionValue(ARG_TBL_PART);
+            if (StringUtils.isNotEmpty(partOpt)) {
+                String[] parts = StringUtils.split(partOpt, ":");
+                if (parts.length == 2) {
+                    int startPart = Integer.parseInt(parts[0]);
+                    int endPart = Integer.parseInt(parts[1]);
+                    if (startPart < 0) {
+                        throw new IllegalArgumentException("Illegal start partition: " + startPart);
+                    }
+                    if (endPart < 0) {
+                        throw new IllegalArgumentException("Illegal end partition: " + endPart);
+                    }
+                    if (endPart < startPart) {
+                        throw new IllegalArgumentException(
+                            "End partition should be greater than start partition: " + endPart);
+                    }
+                    exportConfig.setStartPart(startPart);
+                    exportConfig.setEndPart(endPart);
+                    return;
+                }
+            }
+            throw new IllegalArgumentException("Illegal table part option: " + partOpt);
+        }
     }
 
     private static void setDir(ConfigResult result, ExportConfig exportConfig) {
@@ -480,11 +509,7 @@ public class CommandUtil {
     }
 
     private static void setFilenamePrefix(ConfigResult result, ExportConfig exportConfig) {
-        if (result.hasOption(ARG_SHORT_PREFIX)) {
-            exportConfig.setFilenamePrefix(result.getOptionValue(ARG_SHORT_PREFIX));
-        } else {
-            exportConfig.setFilenamePrefix("");
-        }
+        exportConfig.setFilenamePrefix(getPrefix(result));
     }
 
     private static void setOrderBy(ConfigResult result, ExportConfig exportConfig) {
@@ -591,6 +616,7 @@ public class CommandUtil {
         if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
             producerExecutionContext.setDdlFileLineRecordList(getDdlFileRecordList(result));
         }
+        producerExecutionContext.setFilenamePrefix(getPrefix(result));
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
         producerExecutionContext.setWithHeader(getWithHeader(result));
@@ -674,6 +700,14 @@ public class CommandUtil {
             return parallelism;
         } else {
             return ConfigConstant.DEFAULT_PRODUCER_SIZE;
+        }
+    }
+
+    private static String getPrefix(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_PREFIX)) {
+            return result.getOptionValue(ARG_SHORT_PREFIX);
+        } else {
+            return "";
         }
     }
 

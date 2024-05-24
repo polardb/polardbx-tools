@@ -56,6 +56,11 @@ public class GlobalVar {
      */
     public static int TPCH_UPDATE_INSERT_BATCH_NUM = 20;
 
+    /**
+     * max line count for single csv row
+     */
+    public static int MAX_CSV_MULTI_LINE = 500;
+
     public static void setTpchUpdateBatchSize(int batchSize) {
         if (batchSize >= BaseOrderLineUpdateGenerator.SCALE_BASE) {
             throw new IllegalArgumentException(

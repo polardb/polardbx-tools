@@ -37,6 +37,7 @@ import model.config.ExportConfig;
 import model.config.FileLineRecord;
 import model.config.GlobalVar;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -65,10 +66,9 @@ import java.util.stream.Collectors;
 
 public abstract class BaseExecutor {
     private static final Logger logger = LoggerFactory.getLogger(BaseExecutor.class);
-
-    private final DataSourceConfig dataSourceConfig;
     protected final DataSource dataSource;
     protected final BaseOperateCommand command;
+    private final DataSourceConfig dataSourceConfig;
 
     public BaseExecutor(DataSourceConfig dataSourceConfig,
                         DataSource dataSource,
@@ -77,24 +77,6 @@ public abstract class BaseExecutor {
         this.dataSource = dataSource;
         this.command = baseCommand;
     }
-
-    public void preCheck() {
-
-    }
-
-    protected void checkTableExists(List<String> tableNames) {
-        for (String tableName : tableNames) {
-            try (Connection connection = dataSource.getConnection()) {
-                if (!DbUtil.checkTableExists(connection, tableName)) {
-                    throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
-                }
-            } catch (SQLException | DatabaseException e) {
-                throw new RuntimeException(e.getMessage());
-            }
-        }
-    }
-
-    public abstract void execute();
 
     public static BaseExecutor getExecutor(BaseOperateCommand command, DataSourceConfig dataSourceConfig,
                                            DruidDataSource druid) {
@@ -124,6 +106,24 @@ public abstract class BaseExecutor {
         return new SingleThreadExportExecutor(dataSourceConfig, druid, command);
     }
 
+    public void preCheck() {
+
+    }
+
+    protected void checkTableExists(List<String> tableNames) {
+        for (String tableName : tableNames) {
+            try (Connection connection = dataSource.getConnection()) {
+                if (!DbUtil.checkTableExists(connection, tableName)) {
+                    throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
+                }
+            } catch (SQLException | DatabaseException e) {
+                throw new RuntimeException(e.getMessage());
+            }
+        }
+    }
+
+    public abstract void execute();
+
     /**
      * 对生产者、消费者的上下文进行通用配置
      * 并开始执行任务 等待结束
@@ -134,13 +134,14 @@ public abstract class BaseExecutor {
                                                 String tableName,
                                                 boolean usingBlockReader) {
         List<FileLineRecord> fileLineRecordList =
-            getFileRecordList(producerExecutionContext.getDataFileLineRecordList(), tableName);
+            getFileRecordList(producerExecutionContext.getDataFileLineRecordList(), tableName,
+                producerExecutionContext.getFilenamePrefix());
         if (CollectionUtils.isEmpty(fileLineRecordList)) {
             if (command.isDbOperation()) {
                 logger.warn("Skip table {} operation since no filename matches", tableName);
                 return;
             }
-            throw new IllegalArgumentException("No filename with suffix starts with table name: " + tableName);
+            throw new IllegalArgumentException("No filename matches table name with BatchTool format: " + tableName);
         }
         String producerType;
         if (!usingBlockReader) {
@@ -172,9 +173,9 @@ public abstract class BaseExecutor {
         consumerExecutionContext.setBatchTpsLimitPerConsumer((double) consumerExecutionContext.getTpsLimit()
             / (consumerNum * GlobalVar.EMIT_BATCH_SIZE));
 
-
-        ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getSimpleName() + "-consumer",
-            consumerNum);
+        ThreadPoolExecutor consumerThreadPool =
+            MyThreadPool.createExecutorWithEnsure(clazz.getSimpleName() + "-consumer",
+                consumerNum);
         EventFactory<BatchLineEvent> factory = BatchLineEvent::new;
         RingBuffer<BatchLineEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
 
@@ -244,7 +245,8 @@ public abstract class BaseExecutor {
     /**
      * 获取当前导入表对应的文件路径
      */
-    private List<FileLineRecord> getFileRecordList(List<FileLineRecord> allFilePathList, String tableName) {
+    private static List<FileLineRecord> getFileRecordList(List<FileLineRecord> allFilePathList, String tableName,
+                                                          String filenamePrefix) {
         if (allFilePathList == null || allFilePathList.isEmpty()) {
             throw new IllegalArgumentException("File path list cannot be empty");
         }
@@ -256,6 +258,13 @@ public abstract class BaseExecutor {
         List<FileLineRecord> fileRecordList = allFilePathList.stream()
             .filter(fileRecord -> {
                 String fileName = new File(fileRecord.getFilePath()).getName();
+
+                if (StringUtils.isNotBlank(filenamePrefix)) {
+                    // 如果指定了文件名前缀，则匹配优先级最高
+                    return fileName.startsWith(filenamePrefix);
+                }
+
+                // 按照 BatchTool 自身的导出命名规则进行匹配
                 if (!(fileName.length() >= tableName.length() + 2)) {
                     return false;
                 }
