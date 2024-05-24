@@ -100,7 +100,7 @@ public class ConfigArgOption {
     public static final ConfigArgOption ARG_SHORT_FILE_FORMAT =
         of("format", "fileFormat", "File format (default NONE).", "NONE | TXT | CSV | XLS | XLSX");
     public static final ConfigArgOption ARG_SHORT_MAX_ERROR =
-        of("error", "maxError", "Max error count threshold, program exits when the limit is exceeded.",
+        of("maxError", "maxError", "Max error count threshold, program exits when the limit is exceeded.",
             "max error count");
     public static final ConfigArgOption ARG_SHORT_MASK =
         of("mask", "mask", "Masking sensitive columns while exporting data.", "Json format config");

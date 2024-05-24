@@ -38,9 +38,11 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
 
     protected int estimateFieldCount = 16;
     protected final SqlStat sqlStat = new SqlStat();
+    protected int maxRetry = 0;
 
     protected void initLocalVars() {
         super.initLocalVars();
+        maxRetry = consumerContext.getMaxRetry();
     }
 
     @Override
@@ -107,7 +109,21 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
             stmt = conn.createStatement();
             sql = getSql(data);
             long startTime = System.nanoTime();
-            stmt.execute(sql);
+            for (int i = 0; i <= maxRetry; i++) {
+                try {
+                    stmt.execute(sql);
+                    break;
+                } catch (SQLException e) {
+                    logger.error("Error executing SQL (retry count: {}): {}",
+                        i, e.getMessage());
+                    // 如果达到最大重试次数，抛出异常
+                    if (i >= maxRetry) {
+                        throw e;
+                    }
+                    // 暂不添加延迟逻辑
+                }
+            }
+
             long endTime = System.nanoTime();
             sqlStat.addTimeNs(endTime - startTime);
         } catch (SQLException e) {
