@@ -64,7 +64,7 @@ public class ConfigConstant {
     /**
      * 默认消费者数量
      */
-    public static final int DEFAULT_CONSUMER_SIZE = CPU_NUM * 4;
+    public static final int DEFAULT_CONSUMER_SIZE = CPU_NUM;
 
     /**
      * 默认不强制使用指定并发度，考虑实际机器的core数目

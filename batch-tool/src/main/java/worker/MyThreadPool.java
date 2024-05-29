@@ -24,7 +24,7 @@ public class MyThreadPool {
 
     private static final int MAX_POOL_SIZE = 2048;
     private static final long ALIVE_TIME = 5 * 1000L;
-    private static final int QUEUE_SIZE = 500;
+    private static final int QUEUE_SIZE = 1000;
 
     @Deprecated
     public static ThreadPoolExecutor createExecutor(String name) {
@@ -65,7 +65,8 @@ public class MyThreadPool {
             ALIVE_TIME,
             TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(QUEUE_SIZE),
-            new NamedThreadFactory(name, false));
+            new NamedThreadFactory(name, false),
+            new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
     public static ThreadPoolExecutor createExecutorExact(String name, int coreSize) {
@@ -75,7 +76,8 @@ public class MyThreadPool {
             ALIVE_TIME,
             TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(QUEUE_SIZE),
-            new NamedThreadFactory(name, false));
+            new NamedThreadFactory(name, false),
+            new ThreadPoolExecutor.CallerRunsPolicy());
     }
 }
 

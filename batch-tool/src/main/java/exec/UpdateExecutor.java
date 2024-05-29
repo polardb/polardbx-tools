@@ -105,12 +105,9 @@ public class UpdateExecutor extends WriteDbExecutor {
             throw new IllegalArgumentException("Use `-F` to set TPC-H update round");
         }
 
-        if (!consumerExecutionContext.isForceParallelism()) {
-            // TPC-H update parallelism has a default limit
-            int curParallelism = consumerExecutionContext.getParallelism();
-            consumerExecutionContext.setParallelism(Math.min(4, curParallelism));
-            consumerExecutionContext.setForceParallelism(true);
-        }
+        // TPC-H update parallelism has a default limit
+        int curParallelism = consumerExecutionContext.getParallelism();
+        consumerExecutionContext.setParallelism(Math.min(4, curParallelism));
 
         logger.debug("producer config {}", producerExecutionContext);
         logger.debug("consumer config {}", consumerExecutionContext);

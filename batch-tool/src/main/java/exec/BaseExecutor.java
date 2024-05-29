@@ -32,7 +32,6 @@ import exec.export.ShardingExportExecutor;
 import exec.export.SingleThreadExportExecutor;
 import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
-import model.config.ConfigConstant;
 import model.config.ExportConfig;
 import model.config.FileLineRecord;
 import model.config.GlobalVar;
@@ -235,12 +234,7 @@ public abstract class BaseExecutor {
     }
 
     protected int getConsumerNum(ConsumerExecutionContext consumerExecutionContext) {
-        if (!consumerExecutionContext.isForceParallelism()) {
-            return Math.max(consumerExecutionContext.getParallelism(),
-                ConfigConstant.CPU_NUM);
-        } else {
-            return consumerExecutionContext.getParallelism();
-        }
+        return consumerExecutionContext.getParallelism();
     }
 
     /**
@@ -279,8 +273,8 @@ public abstract class BaseExecutor {
                     return false;
                 }
                 for (; i < fileName.length(); i++) {
-                    if (fileName.charAt(i) == '.') {
-                        // ignore suffix match after dot
+                    if (fileName.charAt(i) == '.' || fileName.charAt(i) == '-') {
+                        // ignore suffix match after dot or hyphen
                         break;
                     }
                     if (!Character.isDigit(fileName.charAt(i))) {

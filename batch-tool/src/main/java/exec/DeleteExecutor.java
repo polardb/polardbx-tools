@@ -91,12 +91,9 @@ public class DeleteExecutor extends WriteDbExecutor {
             throw new IllegalArgumentException("Use `-F` to set TPC-H rollback round");
         }
 
-        if (!consumerExecutionContext.isForceParallelism()) {
-            // TPC-H update parallelism has a default limit
-            int curParallelism = consumerExecutionContext.getParallelism();
-            consumerExecutionContext.setParallelism(Math.min(4, curParallelism));
-            consumerExecutionContext.setForceParallelism(true);
-        }
+        // TPC-H update parallelism has a default limit
+        int curParallelism = consumerExecutionContext.getParallelism();
+        consumerExecutionContext.setParallelism(Math.min(4, curParallelism));
 
         for (int curRound = 1; curRound <= totalRound; curRound++) {
             logger.info("Starting TPC-H rollback round-{}, total round: {}", curRound, totalRound);
