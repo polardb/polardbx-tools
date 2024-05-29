@@ -143,17 +143,18 @@ public abstract class BaseExecutor {
             }
             throw new IllegalArgumentException("No filename matches table name with BatchTool format: " + tableName);
         }
-        String producerType;
-        if (!usingBlockReader) {
-            producerType = "Line";
-            producerExecutionContext.setParallelism(fileLineRecordList.size());
+        String producerName;
+        CountDownLatch countDownLatch;
+        if (usingBlockReader) {
+            producerName = "Block-producer";
+            countDownLatch = SyncUtil.newMainCountDownLatch(producerExecutionContext.getParallelism());
         } else {
-            producerType = "Block";
+            producerName = "Line-producer";
+            countDownLatch = SyncUtil.newMainCountDownLatch(fileLineRecordList.size());
         }
-        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorWithEnsure(producerType + "-producer",
+        ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorExact(producerName,
             producerExecutionContext.getParallelism());
         producerExecutionContext.setProducerExecutor(producerThreadPool);
-        CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(producerExecutionContext.getParallelism());
         AtomicInteger emittedDataCounter = SyncUtil.newRemainDataCounter();
         List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter = new ArrayList<>();
         for (int i = 0; i < producerExecutionContext.getDataFileLineRecordList().size(); i++) {

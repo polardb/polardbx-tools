@@ -52,4 +52,13 @@ public class NamedThreadFactory implements ThreadFactory {
         t.setUncaughtExceptionHandler(handler);
         return t;
     }
+
+    @Override
+    public String toString() {
+        return "NamedThreadFactory{" +
+            "namePrefix=" + namePrefix +
+            ", group=" + group +
+            ", isDaemon=" + isDaemon +
+            '}';
+    }
 }

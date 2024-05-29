@@ -68,7 +68,6 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
             try {
                 data = cipher.encrypt(data);
             } catch (Exception e) {
-                e.printStackTrace();
                 throw new RuntimeException(e);
             }
         }

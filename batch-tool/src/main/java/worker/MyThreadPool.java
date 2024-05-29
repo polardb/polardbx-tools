@@ -58,9 +58,10 @@ public class MyThreadPool {
     }
 
     public static ThreadPoolExecutor createExecutorWithEnsure(String name, int coreSize) {
+        int ensuredSize = coreSize + 1;
         return new ThreadPoolExecutor(
-            coreSize + 20,
-            coreSize + 20,
+            ensuredSize,
+            ensuredSize,
             ALIVE_TIME,
             TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(QUEUE_SIZE),

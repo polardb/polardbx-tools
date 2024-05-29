@@ -328,7 +328,11 @@ public class ProducerExecutionContext extends BaseConfig {
         if (this.quoteEncloseMode == QuoteEncloseMode.FORCE) {
             if (dataFileRecordList != null) {
                 // 指定引号转义模式则采用安全的方式执行
-                this.parallelism = dataFileRecordList.size();
+                if (parallelism == 0) {
+                    this.parallelism = dataFileRecordList.size();
+                } else {
+                    this.parallelism = Math.min(parallelism, dataFileRecordList.size());
+                }
             }
         }
     }
