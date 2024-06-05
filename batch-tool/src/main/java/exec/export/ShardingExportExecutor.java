@@ -30,6 +30,7 @@ import model.db.TableTopology;
 import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.Count;
 import util.DbUtil;
 import util.FileUtil;
 import util.SyncUtil;
@@ -149,7 +150,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 throw new RuntimeException("Unsupported export exception: " + config.getExportWay());
             }
             executor.shutdown();
-            logger.info("导出 {} 数据完成", tableName);
+            logger.info("导出 {} 数据完成,导出计数: {}", tableName, Count.getCount());
         } catch (DatabaseException | SQLException e) {
             logger.error(e.getMessage(), e);
         }

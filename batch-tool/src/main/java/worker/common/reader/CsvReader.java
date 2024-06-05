@@ -27,6 +27,7 @@ import model.config.ConfigConstant;
 import model.config.GlobalVar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.Count;
 import util.IOUtil;
 import worker.common.BatchLineEvent;
 
@@ -36,12 +37,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CsvReader extends FileBufferedBatchReader {
     private static final Logger logger = LoggerFactory.getLogger(CsvReader.class);
 
     private final CSVReader reader;
-
+    private static AtomicInteger count = new AtomicInteger(0);
     public CsvReader(ProducerExecutionContext context,
                      List<File> fileList, int fileIndex,
                      RingBuffer<BatchLineEvent> ringBuffer) {
@@ -73,8 +75,12 @@ public class CsvReader extends FileBufferedBatchReader {
                 localProcessingBlockIndex++;
                 String line = String.join(ConfigConstant.MAGIC_CSV_SEP1, fields);
                 appendToLineBuffer(line);
+                // 计数
+                count.getAndIncrement();
             }
             emitLineBuffer();
+            // 保存计数
+            Count.setCount(count);
             logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
         } catch (IOException e) {
             logger.error(e.getMessage());

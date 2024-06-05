@@ -27,7 +27,16 @@ public class ConfigConstant {
 
     public static final String APP_NAME = "BatchTool";
 
-    public static final Signal DEBUG_SIGNAL = new Signal("USR2");
+    public static final Signal DEBUG_SIGNAL;
+
+    static {
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("linux") || osName.contains("mac") || osName.contains("darwin")) {
+            DEBUG_SIGNAL = new Signal("USR2");
+        } else {
+            DEBUG_SIGNAL = null; // windows 暂不处理
+        }
+    }
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**
