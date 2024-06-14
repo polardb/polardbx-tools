@@ -20,10 +20,12 @@ import model.db.FieldMetaInfo;
 import model.db.PrimaryKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.Count;
 import worker.common.BaseDefaultConsumer;
 import worker.util.DeleteUtil;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DeleteInConsumer extends BaseDefaultConsumer {
     private static final Logger logger = LoggerFactory.getLogger(DeleteInConsumer.class);
@@ -32,6 +34,7 @@ public class DeleteInConsumer extends BaseDefaultConsumer {
     private String[] pkValues;
     private List<FieldMetaInfo> fieldMetaInfoList;
     private String formattedPkNames;
+    private static AtomicInteger count = new AtomicInteger(0);
 
     @Override
     protected void initLocalVars() {
@@ -45,6 +48,8 @@ public class DeleteInConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
+        // 计数
+        count.getAndIncrement();
         for (int i = 0; i < pkList.size(); i++) {
             pkValues[i] = values.get(pkList.get(i).getOrdinalPosition() - 1);
         }
@@ -52,6 +57,8 @@ public class DeleteInConsumer extends BaseDefaultConsumer {
         DeleteUtil.appendPkValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList,
             pkList, pkValues);
         stringBuilder.append("),");
+        // 保存计数
+        Count.setCount(count);
     }
 
     @Override
