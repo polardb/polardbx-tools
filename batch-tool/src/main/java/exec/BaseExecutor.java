@@ -105,6 +105,56 @@ public abstract class BaseExecutor {
         return new SingleThreadExportExecutor(dataSourceConfig, druid, command);
     }
 
+    /**
+     * 获取当前导入表对应的文件路径
+     */
+    private static List<FileLineRecord> getFileRecordList(List<FileLineRecord> allFilePathList, String tableName,
+                                                          String filenamePrefix) {
+        if (allFilePathList == null || allFilePathList.isEmpty()) {
+            throw new IllegalArgumentException("File path list cannot be empty");
+        }
+        if (allFilePathList.size() == 1) {
+            // 当只有一个文件时 无需匹配表名与文件名
+            return allFilePathList;
+        }
+        // 匹配文件名与表名
+        List<FileLineRecord> fileRecordList = allFilePathList.stream()
+            .filter(fileRecord -> {
+                String fileName = new File(fileRecord.getFilePath()).getName();
+
+                if (StringUtils.isNotBlank(filenamePrefix)) {
+                    // 如果指定了文件名前缀，则匹配优先级最高
+                    return fileName.startsWith(filenamePrefix);
+                }
+
+                // 按照 BatchTool 自身的导出命名规则进行匹配
+                if (!(fileName.length() >= tableName.length() + 2)) {
+                    return false;
+                }
+                int i = 0;
+                for (; i < tableName.length(); i++) {
+                    if (tableName.charAt(i) != fileName.charAt(i)) {
+                        return false;
+                    }
+                }
+                if (fileName.charAt(i++) != '_') {
+                    return false;
+                }
+                for (; i < fileName.length(); i++) {
+                    if (fileName.charAt(i) == '.' || fileName.charAt(i) == '-') {
+                        // ignore suffix match after dot or hyphen
+                        break;
+                    }
+                    if (!Character.isDigit(fileName.charAt(i))) {
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .collect(Collectors.toList());
+        return fileRecordList;
+    }
+
     public void preCheck() {
 
     }
@@ -231,60 +281,14 @@ public abstract class BaseExecutor {
         workerPool.drainAndHalt();
         producerThreadPool.shutdownNow();
         consumerThreadPool.shutdownNow();
+
+        if (usingBlockReader) {
+            logger.info("{} 总文件读取行数：{}", tableName, ((ReadFileWithBlockProducer) producer).getTotalReadLines());
+        }
     }
 
     protected int getConsumerNum(ConsumerExecutionContext consumerExecutionContext) {
         return consumerExecutionContext.getParallelism();
-    }
-
-    /**
-     * 获取当前导入表对应的文件路径
-     */
-    private static List<FileLineRecord> getFileRecordList(List<FileLineRecord> allFilePathList, String tableName,
-                                                          String filenamePrefix) {
-        if (allFilePathList == null || allFilePathList.isEmpty()) {
-            throw new IllegalArgumentException("File path list cannot be empty");
-        }
-        if (allFilePathList.size() == 1) {
-            // 当只有一个文件时 无需匹配表名与文件名
-            return allFilePathList;
-        }
-        // 匹配文件名与表名
-        List<FileLineRecord> fileRecordList = allFilePathList.stream()
-            .filter(fileRecord -> {
-                String fileName = new File(fileRecord.getFilePath()).getName();
-
-                if (StringUtils.isNotBlank(filenamePrefix)) {
-                    // 如果指定了文件名前缀，则匹配优先级最高
-                    return fileName.startsWith(filenamePrefix);
-                }
-
-                // 按照 BatchTool 自身的导出命名规则进行匹配
-                if (!(fileName.length() >= tableName.length() + 2)) {
-                    return false;
-                }
-                int i = 0;
-                for (; i < tableName.length(); i++) {
-                    if (tableName.charAt(i) != fileName.charAt(i)) {
-                        return false;
-                    }
-                }
-                if (fileName.charAt(i++) != '_') {
-                    return false;
-                }
-                for (; i < fileName.length(); i++) {
-                    if (fileName.charAt(i) == '.' || fileName.charAt(i) == '-') {
-                        // ignore suffix match after dot or hyphen
-                        break;
-                    }
-                    if (!Character.isDigit(fileName.charAt(i))) {
-                        return false;
-                    }
-                }
-                return true;
-            })
-            .collect(Collectors.toList());
-        return fileRecordList;
     }
 
     /**

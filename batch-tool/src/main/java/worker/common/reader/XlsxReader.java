@@ -85,7 +85,8 @@ public class XlsxReader extends FileBufferedBatchReader {
         };
 
         EasyExcel.read(inputStream, listener).sheet().doRead();
-        logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
+        logger.info("{} 读取完毕，读取行数：{}", fileList.get(localProcessingFileIndex).getPath(),
+            currentFileLineCount.get());
     }
 
     @Override

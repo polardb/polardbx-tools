@@ -22,12 +22,10 @@ import model.db.FieldMetaInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.Count;
 import worker.common.BaseDefaultConsumer;
 import worker.util.ImportUtil;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ImportConsumer extends BaseDefaultConsumer {
     private static final Logger logger = LoggerFactory.getLogger(ImportConsumer.class);
@@ -38,7 +36,6 @@ public class ImportConsumer extends BaseDefaultConsumer {
      */
     private String columns = null;
     private StringBuilder insertSqlBuilder;
-    private static AtomicInteger count = new AtomicInteger(0);
 
     @Override
     protected void initLocalVars() {
@@ -51,8 +48,6 @@ public class ImportConsumer extends BaseDefaultConsumer {
 
     @Override
     protected void fillLocalBuffer(StringBuilder stringBuilder, List<String> values) {
-        // 计数
-        count.getAndIncrement();
         stringBuilder.append("(");
         try {
             ImportUtil.appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList,
@@ -64,8 +59,6 @@ public class ImportConsumer extends BaseDefaultConsumer {
         }
 
         stringBuilder.append("),");
-        // 保存计数
-        Count.setCount(count);
     }
 
     @Override

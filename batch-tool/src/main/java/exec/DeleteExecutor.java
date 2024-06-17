@@ -25,7 +25,7 @@ import datasource.DataSourceConfig;
 import model.config.BenchmarkMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.Count;
+import util.CountStat;
 import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
@@ -66,7 +66,7 @@ public class DeleteExecutor extends WriteDbExecutor {
             } else {
                 doDefaultDelete(tableName);
             }
-            logger.info("删除 {} 数据完成,删除计数: {}", tableName, Count.getCount());
+            logger.info("删除 {} 数据完成，删除计数：{}", tableName, CountStat.getDbRowCount());
         }
     }
 

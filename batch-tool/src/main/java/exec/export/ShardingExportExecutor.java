@@ -30,7 +30,7 @@ import model.db.TableTopology;
 import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.Count;
+import util.CountStat;
 import util.DbUtil;
 import util.FileUtil;
 import util.SyncUtil;
@@ -69,6 +69,8 @@ public class ShardingExportExecutor extends BaseExportExecutor {
     void exportData() {
         List<String> tableNames = command.getTableNames();
         for (String tableName : tableNames) {
+            // TODO find a better way to reset stat
+            CountStat.clearDbRowCount();
             doExportWithSharding(tableName);
         }
     }
@@ -150,7 +152,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 throw new RuntimeException("Unsupported export exception: " + config.getExportWay());
             }
             executor.shutdown();
-            logger.info("导出 {} 数据完成,导出计数: {}", tableName, Count.getCount());
+            logger.info("导出 {} 数据完成，导出计数：{}", tableName, CountStat.getDbRowCount());
         } catch (DatabaseException | SQLException e) {
             logger.error(e.getMessage(), e);
         }

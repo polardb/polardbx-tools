@@ -29,7 +29,7 @@ import model.config.DdlMode;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.Count;
+import util.CountStat;
 import util.DbUtil;
 import util.SyncUtil;
 import worker.MyThreadPool;
@@ -167,7 +167,7 @@ public class ImportExecutor extends WriteDbExecutor {
                     consumerExecutionContext.getException().getMessage());
                 return;
             }
-            logger.info("导入数据到 {} 完成,导入计数: {}", tableName, Count.getCount());
+            logger.info("导入数据到 {} 完成，导入计数：{}", tableName, CountStat.getDbRowCount());
         }
     }
 
