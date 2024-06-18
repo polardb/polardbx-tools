@@ -141,8 +141,7 @@ public class DeleteUtil {
         int i;
         for (i = 0; i < pkList.size(); i++) {
             int idx = pkList.get(i).getOrdinalPosition() - 1;
-            if (fieldMetaInfoList.get(idx).getType() == FieldMetaInfo.Type.STRING ||
-                fieldMetaInfoList.get(idx).getType() == FieldMetaInfo.Type.OTHER) {
+            if (fieldMetaInfoList.get(idx).needQuote()) {
                 // 字符串和日期都需要单引号
                 localBuffer.append("'")
                     .append(StringEscapeUtils.escapeSql(pkValues[i]))
