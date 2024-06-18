@@ -29,6 +29,7 @@ import model.mask.DataMaskerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.DataSourceUtil;
 import util.FileUtil;
 import util.IOUtil;
@@ -154,6 +155,7 @@ public abstract class BaseExportWorker implements Runnable {
             logger.error("{} 导出发生错误: {}", topology, e.getMessage());
         } finally {
             IOUtil.close(os);
+            CountStat.addDbRowCount(rowCount);
             logger.info("{} 导出行数：{}", topology, rowCount);
         }
     }
