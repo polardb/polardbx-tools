@@ -66,6 +66,7 @@ public abstract class BaseExportWorker implements Runnable {
     protected int bufferedRowNum = 0;       // 已经缓存的行数
 
     protected boolean isWithLastSep = false;
+    protected long rowCount = 0;
 
     protected BaseExportWorker(DataSource druid, TableTopology topology,
                                TableFieldMetaInfo tableFieldMetaInfo,
@@ -118,6 +119,7 @@ public abstract class BaseExportWorker implements Runnable {
             int colNum = resultSet.getMetaData().getColumnCount();
             this.os = new ByteArrayOutputStream(colNum * 16);
             while (resultSet.next()) {
+
                 for (int i = 1; i < colNum; i++) {
                     value = resultSet.getBytes(i);
                     writeFieldValue(os, value, i - 1);
@@ -133,6 +135,7 @@ public abstract class BaseExportWorker implements Runnable {
                 // 附加换行符
                 os.write(FileUtil.SYS_NEW_LINE_BYTE);
                 bufferedRowNum++;
+                rowCount++;
 
                 if (bufferedRowNum == GlobalVar.EMIT_BATCH_SIZE) {
                     emitBatchData();
@@ -151,6 +154,7 @@ public abstract class BaseExportWorker implements Runnable {
             logger.error("{} 导出发生错误: {}", topology, e.getMessage());
         } finally {
             IOUtil.close(os);
+            logger.info("{} 导出行数：{}", topology, rowCount);
         }
     }
 

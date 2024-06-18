@@ -73,7 +73,6 @@ import static cmd.ConfigArgOption.ARG_SHORT_DIRECTORY;
 import static cmd.ConfigArgOption.ARG_SHORT_ENCRYPTION;
 import static cmd.ConfigArgOption.ARG_SHORT_FILE_FORMAT;
 import static cmd.ConfigArgOption.ARG_SHORT_FILE_NUM;
-import static cmd.ConfigArgOption.ARG_SHORT_FORCE_CONSUMER;
 import static cmd.ConfigArgOption.ARG_SHORT_FROM_FILE;
 import static cmd.ConfigArgOption.ARG_SHORT_HELP;
 import static cmd.ConfigArgOption.ARG_SHORT_HISTORY_FILE;
@@ -644,7 +643,6 @@ public class CommandUtil {
         consumerExecutionContext.setSeparator(getSep(result));
         consumerExecutionContext.setInsertIgnoreAndResumeEnabled(getInsertIgnoreAndResumeEnabled(result));
         consumerExecutionContext.setParallelism(getConsumerParallelism(result));
-        consumerExecutionContext.setForceParallelism(getForceParallelism(result));
         consumerExecutionContext.setTableNames(getTableNames(result));
         consumerExecutionContext.setSqlEscapeEnabled(getSqlEscapeEnabled(result));
         consumerExecutionContext.setReadProcessFileOnly(getReadAndProcessFileOnly(result));
@@ -744,14 +742,6 @@ public class CommandUtil {
             return Integer.parseInt(result.getOptionValue(ARG_SHORT_SCALE));
         } else {
             return 0;
-        }
-    }
-
-    private static boolean getForceParallelism(ConfigResult result) {
-        if (result.hasOption(ARG_SHORT_FORCE_CONSUMER)) {
-            return Boolean.parseBoolean(result.getOptionValue(ARG_SHORT_FORCE_CONSUMER));
-        } else {
-            return ConfigConstant.DEFAULT_FORCE_CONSUMER_PARALLELISM;
         }
     }
 

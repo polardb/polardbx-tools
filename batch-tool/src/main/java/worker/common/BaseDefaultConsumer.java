@@ -21,6 +21,7 @@ import com.alibaba.druid.util.StringUtils;
 import model.stat.SqlStat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.FileUtil;
 
 import java.sql.Connection;
@@ -64,6 +65,7 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
                 estimateLineSize = Math.min(estimateLineSize, lines[0].length());
             }
             StringBuilder stringBuilder = new StringBuilder(lines.length * estimateLineSize);
+            int rowCount = 0;
             for (String line : lines) {
                 if (StringUtils.isEmpty(line)) {
                     continue;
@@ -74,10 +76,12 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
                 List<String> values = FileUtil.splitWithEstimateCount(line, sep,
                     consumerContext.isWithLastSep(), estimateFieldCount, hasEscapedQuote);
                 fillLocalBuffer(stringBuilder, values);
+                rowCount++;
             }
 
             if (stringBuilder.length() > 0) {
                 execSql(stringBuilder);
+                CountStat.addDbRowCount(rowCount);
             }
         } catch (Exception e) {
             consumerContext.setException(e);

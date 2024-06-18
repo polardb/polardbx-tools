@@ -36,7 +36,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 /**
  * 按csv标准按行处理csv文本文件
  * 解压场景先通过解压文件来进行兜底处理
- * TODO 再套一层producer
  */
 public class ReadFileWithLineProducer extends ReadFileProducer {
 
@@ -61,8 +60,6 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
 
     @Override
     public void produce() {
-        // 并行度大小为文件数量
-        // todo 暂时与文件数量相同 如果文件数量太多将控制并发度
         ThreadPoolExecutor threadPool = context.getProducerExecutor();
 
         for (FileBufferedBatchReader reader : fileReaders) {

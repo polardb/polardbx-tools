@@ -18,7 +18,6 @@ package worker.export;
 
 import com.lmax.disruptor.RingBuffer;
 import model.config.QuoteEncloseMode;
-import model.db.FieldMetaInfo;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import org.slf4j.Logger;
@@ -26,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
@@ -67,8 +65,7 @@ public class ExportProducer extends BaseExportWorker {
         try {
             produceData();
         } catch (Exception e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         } finally {
             afterRun();
         }

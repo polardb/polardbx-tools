@@ -37,72 +37,26 @@ import java.util.zip.GZIPInputStream;
 
 public class BlockReader extends FileBufferedBatchReader {
 
-    private static class BlockByteBuffer {
-        byte[] buffer;
-        int len;
-
-        BlockByteBuffer(int size) {
-            this.buffer = new byte[size];
-            this.len = 0;
-        }
-
-        int getCapacity() {
-            return buffer.length;
-        }
-
-        void reload(byte[] data) {
-            this.buffer = data;
-            this.len = data.length;
-        }
-    }
-
-    private static class BlockPosMarker {
-        int curPos, curLen;
-
-        public BlockPosMarker() {
-            this.curPos = 0;
-            this.curLen = 0;
-        }
-
-        int getReadingPos() {
-            return curPos + curLen;
-        }
-
-        void reset() {
-            this.curPos = 0;
-            this.curLen = 0;
-        }
-
-        void resetPos(int newPos) {
-            this.curPos = newPos;
-            this.curLen = 0;
-        }
-    }
-
     private static final Logger logger = LoggerFactory.getLogger(BlockReader.class);
-
-    private RandomAccessFile curRandomAccessFile;
-
-    /**
-     * 默认2MB
-     */
-    private final long readBlockSize;
     /**
      * 4KB
      * 根据文本数据特征可适当调整
      */
     private static long READ_PADDING = 1024L * 4;
-    private boolean trimRight;
+    /**
+     * 默认2MB
+     */
+    private final long readBlockSize;
     private final BaseCipher cipher;
     private final FileBlockListRecord fileBlockListRecord;
-
     private final BlockByteBuffer byteBuffer;
     private final BlockPosMarker posMarker;
     private final byte[] gzipBuffer;
-
+    private RandomAccessFile curRandomAccessFile;
+    private boolean trimRight;
     public BlockReader(ProducerExecutionContext context,
                        FileBlockListRecord fileBlockListRecord,
-                       RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode)  {
+                       RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) {
         super(context, fileBlockListRecord.getFileList(), ringBuffer, compressMode);
         this.readBlockSize = context.getReadBlockSizeInMb() * 1024L * 1024;
         // set localProcessingFileIndex and startPosArr[localProcessingFileIndex]
@@ -128,7 +82,8 @@ public class BlockReader extends FileBufferedBatchReader {
                 throw new RuntimeException(context.getException());
             }
             try {
-                localProcessingBlockIndex = fileBlockListRecord.getStartPosArr()[localProcessingFileIndex].getAndIncrement();
+                localProcessingBlockIndex =
+                    fileBlockListRecord.getStartPosArr()[localProcessingFileIndex].getAndIncrement();
                 long pos = localProcessingBlockIndex * readBlockSize;
                 // 首次进入该block，开始处理 : counter++
                 context.getEventCounter().get(localProcessingFileIndex)
@@ -215,7 +170,7 @@ public class BlockReader extends FileBufferedBatchReader {
         }
         // trim right
         while (trimRight && (bytesEnd >= bytesOffset) &&
-            (tmpByteBuffer[bytesEnd] == ' ' ||  tmpByteBuffer[bytesEnd] == '\t' )) {
+            (tmpByteBuffer[bytesEnd] == ' ' || tmpByteBuffer[bytesEnd] == '\t')) {
             bytesEnd--;
         }
         if (bytesEnd < bytesOffset) {
@@ -265,6 +220,7 @@ public class BlockReader extends FileBufferedBatchReader {
 
     private boolean nextFile() {
         if (fileBlockListRecord.getFileDoneList()[localProcessingFileIndex].compareAndSet(false, true)) {
+            // 此处不一定实际完成了读取，可能还有几个block正在处理中
             logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
         }
         // 未处理足一个block就进入下一个文件 : counter--
@@ -272,7 +228,8 @@ public class BlockReader extends FileBufferedBatchReader {
             .get(localProcessingBlockIndex).getAndDecrement();
         // 进入下一个文件
         if (localProcessingFileIndex < fileList.size() - 1) {
-            fileBlockListRecord.getCurrentFileIndex().compareAndSet(localProcessingFileIndex, localProcessingFileIndex + 1);
+            fileBlockListRecord.getCurrentFileIndex()
+                .compareAndSet(localProcessingFileIndex, localProcessingFileIndex + 1);
             // 如果并发很大的话 可以考虑一次性跳过多个文件
             localProcessingFileIndex++;
             localProcessingBlockIndex = -1;
@@ -292,5 +249,47 @@ public class BlockReader extends FileBufferedBatchReader {
     @Override
     protected void close() {
         IOUtil.close(this.curRandomAccessFile);
+    }
+
+    private static class BlockByteBuffer {
+        byte[] buffer;
+        int len;
+
+        BlockByteBuffer(int size) {
+            this.buffer = new byte[size];
+            this.len = 0;
+        }
+
+        int getCapacity() {
+            return buffer.length;
+        }
+
+        void reload(byte[] data) {
+            this.buffer = data;
+            this.len = data.length;
+        }
+    }
+
+    private static class BlockPosMarker {
+        int curPos, curLen;
+
+        public BlockPosMarker() {
+            this.curPos = 0;
+            this.curLen = 0;
+        }
+
+        int getReadingPos() {
+            return curPos + curLen;
+        }
+
+        void reset() {
+            this.curPos = 0;
+            this.curLen = 0;
+        }
+
+        void resetPos(int newPos) {
+            this.curPos = newPos;
+            this.curLen = 0;
+        }
     }
 }

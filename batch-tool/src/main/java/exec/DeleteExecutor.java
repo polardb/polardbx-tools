@@ -25,6 +25,7 @@ import datasource.DataSourceConfig;
 import model.config.BenchmarkMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
@@ -65,7 +66,7 @@ public class DeleteExecutor extends WriteDbExecutor {
             } else {
                 doDefaultDelete(tableName);
             }
-            logger.info("删除 {} 数据完成", tableName);
+            logger.info("删除 {} 数据完成，删除计数：{}", tableName, CountStat.getDbRowCount());
         }
     }
 
@@ -91,12 +92,9 @@ public class DeleteExecutor extends WriteDbExecutor {
             throw new IllegalArgumentException("Use `-F` to set TPC-H rollback round");
         }
 
-        if (!consumerExecutionContext.isForceParallelism()) {
-            // TPC-H update parallelism has a default limit
-            int curParallelism = consumerExecutionContext.getParallelism();
-            consumerExecutionContext.setParallelism(Math.min(4, curParallelism));
-            consumerExecutionContext.setForceParallelism(true);
-        }
+        // TPC-H update parallelism has a default limit
+        int curParallelism = consumerExecutionContext.getParallelism();
+        consumerExecutionContext.setParallelism(Math.min(4, curParallelism));
 
         for (int curRound = 1; curRound <= totalRound; curRound++) {
             logger.info("Starting TPC-H rollback round-{}, total round: {}", curRound, totalRound);

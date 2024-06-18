@@ -65,7 +65,8 @@ public class CipherLineReader extends FileBufferedBatchReader {
                 appendToLineBuffer(line);
             }
             emitLineBuffer();
-            logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
+            logger.info("{} 读取完毕，读取行数：{}", fileList.get(localProcessingFileIndex).getPath(),
+                currentFileLineCount.get());
         } catch (IOException e) {
             logger.error(e.getMessage());
         } finally {

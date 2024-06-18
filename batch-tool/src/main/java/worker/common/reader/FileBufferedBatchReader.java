@@ -26,20 +26,25 @@ import worker.common.BatchLineEvent;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static model.config.GlobalVar.EMIT_BATCH_SIZE;
 
 public abstract class FileBufferedBatchReader implements Runnable {
 
     protected final RingBuffer<BatchLineEvent> ringBuffer;
-    protected int bufferedLineCount = 0;
     protected final FileReaderStat fileReaderStat = new FileReaderStat();
-    protected String[] lineBuffer;
-    protected volatile int localProcessingFileIndex;
-    protected long localProcessingBlockIndex = -1;
     protected final CompressMode compressMode;
     protected final ProducerExecutionContext context;
     protected final List<File> fileList;
+    protected int bufferedLineCount = 0;
+    protected String[] lineBuffer;
+    protected volatile int localProcessingFileIndex;
+    protected long localProcessingBlockIndex = -1;
+    /**
+     * Block read
+     */
+    protected AtomicLong currentFileLineCount = new AtomicLong(0);
 
     protected FileBufferedBatchReader(ProducerExecutionContext context,
                                       List<File> fileList,
@@ -58,6 +63,10 @@ public abstract class FileBufferedBatchReader implements Runnable {
         GlobalVar.DEBUG_INFO.addFileReaderStat(fileReaderStat);
     }
 
+    public AtomicLong getCurrentFileLineCount() {
+        return currentFileLineCount;
+    }
+
     protected void appendToLineBuffer(String line) {
         lineBuffer[bufferedLineCount++] = line;
         if (bufferedLineCount == EMIT_BATCH_SIZE) {
@@ -66,6 +75,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
             bufferedLineCount = 0;
         }
         fileReaderStat.increment();
+        currentFileLineCount.incrementAndGet();
     }
 
     protected void emitLineBuffer() {

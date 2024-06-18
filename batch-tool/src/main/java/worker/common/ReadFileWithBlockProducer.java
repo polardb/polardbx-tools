@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import worker.common.reader.BlockReader;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,6 +35,7 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
 
     private final CompressMode compressMode;
     private final FileBlockListRecord fileBlockListRecord;
+    private final List<BlockReader> blockReaderList = new ArrayList<>();
 
     public ReadFileWithBlockProducer(ProducerExecutionContext context,
                                      RingBuffer<BatchLineEvent> ringBuffer,
@@ -51,11 +53,20 @@ public class ReadFileWithBlockProducer extends ReadFileProducer {
         BlockReader readFileWorker = null;
         for (int i = 0; i < parallelism; i++) {
             readFileWorker = new BlockReader(context, fileBlockListRecord, ringBuffer, compressMode);
+            blockReaderList.add(readFileWorker);
             threadPool.submit(readFileWorker);
         }
     }
 
     public AtomicBoolean[] getFileDoneList() {
         return fileBlockListRecord.getFileDoneList();
+    }
+
+    public long getTotalReadLines() {
+        long lines = 0;
+        for (BlockReader blockReader : blockReaderList) {
+            lines += blockReader.getCurrentFileLineCount().get();
+        }
+        return lines;
     }
 }

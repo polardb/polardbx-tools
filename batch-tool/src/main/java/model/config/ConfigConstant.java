@@ -27,7 +27,16 @@ public class ConfigConstant {
 
     public static final String APP_NAME = "BatchTool";
 
-    public static final Signal DEBUG_SIGNAL = new Signal("USR2");
+    public static final Signal DEBUG_SIGNAL;
+
+    static {
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("linux") || osName.contains("mac") || osName.contains("darwin")) {
+            DEBUG_SIGNAL = new Signal("USR2");
+        } else {
+            DEBUG_SIGNAL = null; // windows 暂不处理
+        }
+    }
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**
@@ -64,7 +73,7 @@ public class ConfigConstant {
     /**
      * 默认消费者数量
      */
-    public static final int DEFAULT_CONSUMER_SIZE = CPU_NUM * 4;
+    public static final int DEFAULT_CONSUMER_SIZE = CPU_NUM;
 
     /**
      * 默认不强制使用指定并发度，考虑实际机器的core数目

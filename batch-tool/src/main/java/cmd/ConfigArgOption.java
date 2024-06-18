@@ -65,8 +65,6 @@ public class ConfigArgOption {
         of("pro", "producer", "Configure number of producer threads (export / import).", "producer count");
     public static final ConfigArgOption ARG_SHORT_CONSUMER =
         of("con", "consumer", "Configure number of consumer threads.", "consumer count");
-    public static final ConfigArgOption ARG_SHORT_FORCE_CONSUMER =
-        of("fcon", "forceConsumer", "Configure if allow force consumer parallelism.", "parallelism");
     public static final ConfigArgOption ARG_SHORT_MAX_CONN_NUM =
         of("maxConn", "maxConnection", "Max connection count (druid).", "max connection");
     public static final ConfigArgOption ARG_SHORT_MAX_WAIT =

@@ -70,11 +70,6 @@ public class ConsumerExecutionContext extends BaseConfig {
     private int parallelism;
 
     /**
-     * 是否强制使用指定的并发度，忽略cpu的实际core数目
-     */
-    private boolean forceParallelism;
-
-    /**
      * where 条件
      */
     private String whereCondition;
@@ -381,14 +376,6 @@ public class ConsumerExecutionContext extends BaseConfig {
 
     public void setParallelMerge(boolean parallelMerge) {
         isParallelMerge = parallelMerge;
-    }
-
-    public boolean isForceParallelism() {
-        return forceParallelism;
-    }
-
-    public void setForceParallelism(boolean forceParallelism) {
-        this.forceParallelism = forceParallelism;
     }
 
     public boolean isUseBlock() {
