@@ -54,6 +54,8 @@ public class Config implements Serializable{
 
     public static String insertIgnorePattern="^insert\\s+ignore";
 
+    public static String useDBPattern="^\\s*(U|u)(S|s)(E|e)\\s+(`|)[0-9a-zA-Z_]+(`|)(|;)$";
+
     public static Integer maxCaptureOutLength=30000;
 
     // all dml dql

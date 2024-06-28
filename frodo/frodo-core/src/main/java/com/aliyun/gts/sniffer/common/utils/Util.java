@@ -4,6 +4,7 @@ import com.alibaba.druid.DbType;
 import com.alibaba.druid.sql.visitor.ParameterizedOutputVisitorUtils;
 import com.alibaba.druid.sql.visitor.functions.Char;
 import com.alibaba.druid.util.JdbcConstants;
+import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -153,48 +154,68 @@ public class Util {
             }
             break;
         }
-        if(x=='/'){
-            i++;
-            if(i>=sql.length()){
-                return sql;
-            }
-            x=sql.charAt(i);
-            if(x=='*'){
-                multiLineCommented=true;
-            }else{
-                return sql;
-            }
-            i++;
-
-            for(;i<sql.length();i++){
+        //如果x 以任何空白字符或者'/' 开头，那么需要检查是否是注释hint
+        while(Character.isWhitespace(x) ||Character.isSpaceChar(x) || x=='/'){
+            if(x=='/'){
+                i++;
+                if(i>=sql.length()){
+                    return sql;
+                }
                 x=sql.charAt(i);
-                //判断是否是单引号开头
-                if(quoated==false && x=='\''){
-                    quoated=true;
-                    i++;
+                if(x=='*'){
+                    multiLineCommented=true;
+                }else{
+                    return sql;
+                }
+                i++;
+
+                for(;i<sql.length();i++){
+                    x=sql.charAt(i);
+                    //判断是否是单引号开头
+                    if(quoated==false && x=='\''){
+                        quoated=true;
+                        i++;
+                        //如果找不到注释的结尾，那么sql语法不对，返回整条sql
+                        if(i>=sql.length()){
+                            return sql;
+                        }
+                    }
+                    //如果是字符串，那么找到字符串的结尾
+                    if(quoated){
+                        for(;i<sql.length();i++){
+                            x=sql.charAt(i);
+                            //如果出现单引号，判断紧跟着是否有单引号
+                            if(x=='\''){
+                                i++;
+                                if(i>=sql.length()){
+                                    break;
+                                }
+                                x=sql.charAt(i);
+                                //说明是转义单引号,跳过继续
+                                if(x=='\''){
+                                    continue;
+                                }else{
+                                    quoated=false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     //如果找不到注释的结尾，那么sql语法不对，返回整条sql
                     if(i>=sql.length()){
                         return sql;
                     }
-                }
-                //如果是字符串，那么找到字符串的结尾
-                if(quoated){
-                    for(;i<sql.length();i++){
+                    x=sql.charAt(i);
+                    if(x=='*'){
+                        i++;
+                        //如果找不到注释的结尾，那么sql语法不对，返回整条sql
+                        if(i>=sql.length()){
+                            return sql;
+                        }
                         x=sql.charAt(i);
-                        //如果出现单引号，判断紧跟着是否有单引号
-                        if(x=='\''){
-                            i++;
-                            if(i>=sql.length()){
-                                break;
-                            }
-                            x=sql.charAt(i);
-                            //说明是转义单引号,跳过继续
-                            if(x=='\''){
-                                continue;
-                            }else{
-                                quoated=false;
-                                break;
-                            }
+                        if(x=='/'){
+                            multiLineCommented=false;
+                            break;
                         }
                     }
                 }
@@ -202,29 +223,14 @@ public class Util {
                 if(i>=sql.length()){
                     return sql;
                 }
+                i++;
                 x=sql.charAt(i);
-                if(x=='*'){
-                    i++;
-                    //如果找不到注释的结尾，那么sql语法不对，返回整条sql
-                    if(i>=sql.length()){
-                        return sql;
-                    }
-                    x=sql.charAt(i);
-                    if(x=='/'){
-                        multiLineCommented=false;
-                        break;
-                    }
-                }
+            }else{
+                i++;
+                x=sql.charAt(i);
             }
-            //如果找不到注释的结尾，那么sql语法不对，返回整条sql
-            if(i>=sql.length()){
-                return sql;
-            }
-            return sql.substring(i+1).trim();
-        }else{
-            return sql;
         }
-
+        return sql.substring(i).trim();
     }
 
 

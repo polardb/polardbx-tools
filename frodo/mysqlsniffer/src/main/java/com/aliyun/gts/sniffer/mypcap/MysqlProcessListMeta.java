@@ -25,7 +25,7 @@ public class MysqlProcessListMeta {
     private static MysqlProcessListMeta mysqlProcessListMeta=null;
     private MysqlProcessListMeta(){}
     private ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-//    private Lock r = rwl.readLock();
+    //    private Lock r = rwl.readLock();
 //    private Lock w = rwl.writeLock();
     private static Object x=new Object();
 
@@ -40,15 +40,18 @@ public class MysqlProcessListMeta {
     }
 
     public void updateHost(String host,int srcPort,String username,String db){
-        ProcessModel model=new ProcessModel();
-        model.setDB(db);
-        model.setUser(username);
         String key=host+":"+srcPort;
-        model.setHost(key);
 //        w.lock();
         if(processList.containsKey(key)){
-            processList.replace(key,model);
+            ProcessModel model=processList.get(key);
+            model.setDB(db);
+            model.setHost(key);
+            model.setUser(username);
         }else{
+            ProcessModel model=new ProcessModel();
+            model.setDB(db);
+            model.setUser(username);
+            model.setHost(key);
             processList.put(key,model);
         }
 

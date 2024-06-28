@@ -6,10 +6,12 @@ import com.alibaba.druid.sql.visitor.ParameterizedOutputVisitorUtils;
 import com.alibaba.druid.util.JdbcConstants;
 import com.alibaba.druid.util.StringUtils;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.aliyun.gts.sniffer.common.entity.MysqlBinaryValue;
 import com.aliyun.gts.sniffer.common.entity.MysqlPrepareStmtResponse;
 import com.aliyun.gts.sniffer.common.entity.ProcessModel;
 import com.aliyun.gts.sniffer.common.utils.JDBCUtils;
+import com.aliyun.gts.sniffer.common.utils.MysqlGLUtil;
 import com.aliyun.gts.sniffer.common.utils.NumberUtil;
 import com.aliyun.gts.sniffer.common.utils.TCPPacketUtil;
 import com.aliyun.gts.sniffer.core.Config;
@@ -94,7 +96,7 @@ public class SqlConsumerThread extends ConsumerThread {
                 }
                 db=new String(tcp.data,start,stop-start);
             }
-             meta.updateHost(tcp.src_ip.getHostAddress(),tcp.src_port,username,db);
+            meta.updateHost(tcp.src_ip.getHostAddress(),tcp.src_port,username,db);
 
         }catch (Exception e){
 
@@ -157,7 +159,13 @@ public class SqlConsumerThread extends ConsumerThread {
         }
 
         if(type==MysqlCmdType.COM_QUERY){
-            sqlList.add(new String(tcpPacket.data,index,length));
+            String sql=new String(tcpPacket.data,index,length);
+            sqlList.add(sql);
+            String tmpSql=sql.trim();
+            if(MysqlGLUtil.matchUseDB(tmpSql)){
+                String db=MysqlGLUtil.getDB(tmpSql);
+                meta.updateHost(tcpPacket.src_ip.getHostAddress(),tcpPacket.src_port,null,db);
+            }
         } else if(type==MysqlCmdType.COM_STMT_EXECUTE){
             int stmtId= NumberUtil.fourLEByte2Int(tcpPacket.data,index);
             index=index+4;
@@ -167,7 +175,7 @@ public class SqlConsumerThread extends ConsumerThread {
                 Set<String> set=prepareStmtInfoMap.keySet();
                 String first=set.iterator().next();
                 if(first!=null)
-                prepareStmtInfoMap.remove(first);
+                    prepareStmtInfoMap.remove(first);
             }
             if(stmtResponse==null){
                 return;
@@ -223,7 +231,7 @@ public class SqlConsumerThread extends ConsumerThread {
                 continue;
             }
             if(Config.replayTo.equals("file")){
-                fileResultLogger.info(getSqlJSON(sql,processModel).toJSONString());
+                fileResultLogger.info(JSONObject.toJSONString(getSqlJSON(sql,processModel),SerializerFeature.WriteNullStringAsEmpty));
                 continue;
             }
             if(Config.replayTo.equals("mysql")){
@@ -294,7 +302,7 @@ public class SqlConsumerThread extends ConsumerThread {
             //setString
             if(binaryValue.getType()== MysqlType.MYSQL_TYPE_STRING
                     || binaryValue.getType()== MysqlType.MYSQL_TYPE_VAR_STRING
-                        ||binaryValue.getType()==MysqlType.MYSQL_TYPE_VARCHAR){
+                    ||binaryValue.getType()==MysqlType.MYSQL_TYPE_VARCHAR){
                 int intLen= NumberUtil.lengthInt(tcpPacket.data[index]);
                 long len= NumberUtil.resolveEncodedInteger(tcpPacket.data,index);
                 int begin=0;
@@ -307,12 +315,12 @@ public class SqlConsumerThread extends ConsumerThread {
                 binaryValue.setBegin(begin);
                 binaryValue.setLength((int)len);
             }else if(binaryValue.getType()== MysqlType.MYSQL_TYPE_LONG
-                ||binaryValue.getType()== MysqlType.MYSQL_TYPE_INT24){
+                    ||binaryValue.getType()== MysqlType.MYSQL_TYPE_INT24){
                 binaryValue.setBegin(index);
                 index=index+4;
                 binaryValue.setLength(4);
             }else if(binaryValue.getType()== MysqlType.MYSQL_TYPE_SHORT
-                ||binaryValue.getType()== MysqlType.MYSQL_TYPE_YEAR){
+                    ||binaryValue.getType()== MysqlType.MYSQL_TYPE_YEAR){
                 binaryValue.setBegin(index);
                 index=index+2;
                 binaryValue.setLength(2);
@@ -346,9 +354,9 @@ public class SqlConsumerThread extends ConsumerThread {
                 binaryValue.setBegin(begin);
                 binaryValue.setLength((int)len);
             }else if(binaryValue.getType()==MysqlType.MYSQL_TYPE_DATE
-                ||binaryValue.getType()==MysqlType.MYSQL_TYPE_DATETIME
-                ||binaryValue.getType()==MysqlType.MYSQL_TYPE_TIMESTAMP
-                ||binaryValue.getType()==MysqlType.MYSQL_TYPE_DATETIME2){
+                    ||binaryValue.getType()==MysqlType.MYSQL_TYPE_DATETIME
+                    ||binaryValue.getType()==MysqlType.MYSQL_TYPE_TIMESTAMP
+                    ||binaryValue.getType()==MysqlType.MYSQL_TYPE_DATETIME2){
                 //第一位是长度标记位 0 4 7 11 4种长度
                 int len=NumberUtil.oneByte2Int(tcpPacket.data,index);
                 index++;
@@ -366,9 +374,9 @@ public class SqlConsumerThread extends ConsumerThread {
                 binaryValue.setLength(len);
             }
             else if(binaryValue.getType()==MysqlType.MYSQL_TYPE_BLOB
-            ||binaryValue.getType()==MysqlType.MYSQL_TYPE_LONG_BLOB
-            ||binaryValue.getType()==MysqlType.MYSQL_TYPE_MEDIUM_BLOB
-            ||binaryValue.getType()==MysqlType.MYSQL_TYPE_TINY_BLOB){
+                    ||binaryValue.getType()==MysqlType.MYSQL_TYPE_LONG_BLOB
+                    ||binaryValue.getType()==MysqlType.MYSQL_TYPE_MEDIUM_BLOB
+                    ||binaryValue.getType()==MysqlType.MYSQL_TYPE_TINY_BLOB){
                 logger.error("not support blob type");
                 return null;
             } else{

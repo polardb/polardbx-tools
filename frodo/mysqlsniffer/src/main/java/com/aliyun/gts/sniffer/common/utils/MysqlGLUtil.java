@@ -10,6 +10,7 @@ public class MysqlGLUtil {
     private static Pattern connPattern=Pattern.compile(Config.glConnectPattern);
     private static Pattern initDBPattern=Pattern.compile(Config.glInitDBPattern);
     private static Pattern insertIgnorePattern=Pattern.compile(Config.insertIgnorePattern);
+    private static Pattern useDBPattern=Pattern.compile(Config.useDBPattern);
 
     public static boolean matchEnd(String s){
         return endPattern.matcher(s).matches();
@@ -17,6 +18,19 @@ public class MysqlGLUtil {
 
     public static boolean matchStart(String s){
         return startPattern.matcher(s).matches();
+    }
+
+    public static String getDB(String sql){
+        String[] strArr=sql.split("(\\s+|;)");
+        if(strArr.length>1){
+            return strArr[1];
+        }else{
+            return null;
+        }
+    }
+
+    public static boolean matchUseDB(String s){
+        return useDBPattern.matcher(s).matches();
     }
 
     public static boolean matchConnect(String s){
