@@ -1,5 +1,14 @@
 # README
 ## usage
+### 安装jpcap
+
+yum install jpcap-0.7-19.fc26.x86_64.rpm
+
+#java.ext.dirs java扩展目录，该目录一般在$JAVA_HOME/jre/lib/ext
+ln -snf /usr/lib64/jpcap/jpcap.jar  $java.ext.dirs/jpcap.jar
+
+ln -snf /usr/lib64/jpcap/libjpcap.so  $java.ext.dirs/libjpcap.so
+
 ### replay to mysql
 java -Xms=2G -Xmx=4G -jar frodo.jar --file=/root/out.json --source-db=mysql --replay-to=mysql --port=3306 --host=172.25.132.163 --username=root --password=123456 --concurrency=64 --time=1000 --task=task1 --schema-map=test:test1,test2 --log-level=info --rate-factor=1 --database=test
 
