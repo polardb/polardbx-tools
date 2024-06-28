@@ -1,5 +1,5 @@
 #!/bin/sh
-version="1.1.30"
+version="1.1.33"
 cd mysqlsniffer
 sh build.sh $version
 cd ../
