@@ -66,6 +66,7 @@ import java.util.stream.Collectors;
 
 import static cmd.ConfigArgOption.ARG_DDL_PARALLELISM;
 import static cmd.ConfigArgOption.ARG_DDL_RETRY_COUNT;
+import static cmd.ConfigArgOption.ARG_NULL_STR;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
 import static cmd.ConfigArgOption.ARG_SHORT_BENCHMARK;
 import static cmd.ConfigArgOption.ARG_SHORT_CHARSET;
@@ -112,7 +113,6 @@ import static cmd.ConfigArgOption.ARG_SHORT_WHERE;
 import static cmd.ConfigArgOption.ARG_SHORT_WITH_DDL;
 import static cmd.ConfigArgOption.ARG_TBL_PART;
 import static cmd.FlagOption.ARG_DROP_TABLE_IF_EXISTS;
-import static cmd.FlagOption.ARG_EMPTY_AS_NULL;
 import static cmd.FlagOption.ARG_SHORT_ENABLE_SHARDING;
 import static cmd.FlagOption.ARG_SHORT_IGNORE_AND_RESUME;
 import static cmd.FlagOption.ARG_SHORT_LOAD_BALANCE;
@@ -444,10 +444,6 @@ public class CommandUtil {
         return result.getBooleanFlag(ARG_WITH_VIEW);
     }
 
-    private static boolean getEmptyAsNull(ConfigResult result) {
-        return result.getBooleanFlag(ARG_EMPTY_AS_NULL);
-    }
-
     private static boolean getDropTableIfExist(ConfigResult result) {
         return result.getBooleanFlag(ARG_DROP_TABLE_IF_EXISTS);
     }
@@ -622,6 +618,7 @@ public class CommandUtil {
         setBatchSize(result);
         setRingBufferSize(result);
         setPerfMode(result);
+        setNullStr(result);
     }
 
     private static void setUpdateBatchSize(ConfigResult result) {
@@ -688,7 +685,6 @@ public class CommandUtil {
         consumerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
         consumerExecutionContext.setUseColumns(getUseColumns(result));
-        consumerExecutionContext.setEmptyStrAsNull(getEmptyAsNull(result));
         consumerExecutionContext.setMaxRetry(getMaxErrorCount(result));
 
         consumerExecutionContext.validate();
@@ -970,6 +966,12 @@ public class CommandUtil {
 
     private static void setPerfMode(ConfigResult result) {
         GlobalVar.IN_PERF_MODE = result.getBooleanFlag(ARG_SHORT_PERF_MODE);
+    }
+
+    private static void setNullStr(ConfigResult result) {
+        if (result.hasOption(ARG_NULL_STR)) {
+            FileUtil.resetNullStrInQuote(result.getOptionValue(ARG_NULL_STR));
+        }
     }
     //endregion 全局相关设置
 

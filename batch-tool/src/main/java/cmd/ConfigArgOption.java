@@ -114,6 +114,8 @@ public class ConfigArgOption {
         of("part", "tblPart", "Partitions of the target tables, starting from 0 (both inclusive).", "start:end");
     public static final ConfigArgOption ARG_SHORT_FILE_SYSTEM =
         of("fs", "filesystem", "The filesystem for reading or writing files (default LOCAL).", "LOCAL | S3 | S3-AWS");
+    public static final ConfigArgOption ARG_NULL_STR =
+        of("nullStr", "nullStr", "Treat this value as NULL (default \\N).", "string value");
 
     protected final String argShort;
     protected final String argLong;

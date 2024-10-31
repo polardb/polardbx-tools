@@ -62,7 +62,6 @@ public class DirectImportWorker implements Runnable {
 
     private final int reportLine;
     private final boolean sqlEscapeEnabled;
-    private final boolean emptyStrAsNull;
 
     public DirectImportWorker(DataSource dataSource,
                               String tableName,
@@ -81,7 +80,6 @@ public class DirectImportWorker implements Runnable {
         this.maxErrorCount = producerContext.getMaxErrorCount();
         this.reportLine = GlobalVar.EMIT_BATCH_SIZE * 10;
         this.sqlEscapeEnabled = consumerContext.isSqlEscapeEnabled();
-        this.emptyStrAsNull = consumerContext.isEmptyStrAsNull();
     }
 
     @Override
@@ -109,7 +107,7 @@ public class DirectImportWorker implements Runnable {
                 for (String[] values; (values = reader.readNext()) != null; ) {
                     try {
                         ImportUtil.getDirectImportSql(insertSqlBuilder, tableName,
-                            fieldMetaInfoList, Arrays.asList(values), sqlEscapeEnabled, emptyStrAsNull);
+                            fieldMetaInfoList, Arrays.asList(values), sqlEscapeEnabled);
 
                         stmt.execute(insertSqlBuilder.toString());
                         importedLines++;

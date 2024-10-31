@@ -64,8 +64,6 @@ public class FlagOption extends ConfigArgOption {
         of("perf", "perfMode", "Use performance mode at the sacrifice of compatibility (default false).", false);
     public static final FlagOption ARG_TRIM_RIGHT =
         of("trimRight", "trimRight", "Remove trailing whitespaces in a line for BlockReader (default false).", false);
-    public static final FlagOption ARG_EMPTY_AS_NULL =
-        of("emptyAsNull", "emptyAsNull", "Treat an empty value for string-type as NULL (default false).", false);
     public static final FlagOption ARG_DROP_TABLE_IF_EXISTS =
         of("dropTableIfExists", "dropTableIfExists",
             "Add 'drop table if exists xxx' when exporting DDL (default false).",

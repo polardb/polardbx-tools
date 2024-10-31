@@ -75,8 +75,9 @@ c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 
 编写复杂格式的json文件建议参考 [使用yaml配置](#使用yaml配置)。
 
-### 导出到S3
-1. 使用环境变量配置S3的AK、SK、uri：(目前不支持其他方式传入)
+### 导出到 S3 或 OSS
+
+1. 使用环境变量配置S3的AK、SK、uri：(不支持其他方式传入)
 ```shell
 export S3_ACCESS_KEY_ID=<S3_ACCESS_KEY_ID>
 export S3_ACCESS_KEY_SECRET=<S3_ACCESS_KEY_SECRET>
@@ -85,7 +86,8 @@ export S3_ENDPOINT=<S3_ENDPOINT>
 ```
 
 2. 导出命令：`-D sbtest_auto  -t sbtest1 -o export -s , -fs S3 -dir /tmp`
-> 1. `-fs S3` 指定文件系统为S3（默认为LOCAL，即默认导出到本地；此处指定文件系统为S3，则会将文件导出到S3）
+
+> 1. `-fs S3` 指定文件系统为S3（可以取值为：LOCAL/S3/OSS，默认为LOCAL，即默认导出到本地；此处指定文件系统为S3，则会将文件导出到S3）
 > 2. `-dir /tmp` 指定临时文件的生成目录（该参数可为空，默认为当前运行目录），临时文件的大小会根据可用空间自动调整，文件上传完毕后会自动删除
 > 3. 如果对象存储上已有同名文件，新导出的文件会覆盖原文件
 
@@ -283,5 +285,11 @@ mask: >-
 16. 导入时，由于一些数据库侧的偶发报错，希望能自动重试
 
    **原因**：BatchTool 默认情况下，导入失败会直接退出，不会自动重试
-   
-   **解决**：自v1.4.1开始，可指定参数`-maxError 10`来指定最大错误重试次数为10次，目前暂不支持根据错误码来进行重试
+
+**解决**：自v1.4.1开始，可设置参数`-maxError 10`来指定最大错误重试次数为10次，目前暂不支持根据错误码来进行重试
+
+17. 文本数据里面，NULL值的表示是一些特殊的字符或字符串，比如空字符串
+
+    **原因**：BatchTool 默认情况下，是把`\N`作为NULL值的表示
+
+    **解决**：自v1.5.0开始，可设置参数`nullStr ""`来指定导入时，空字符串解析为NULL值

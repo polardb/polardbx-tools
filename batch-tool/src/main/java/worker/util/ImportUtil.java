@@ -69,14 +69,9 @@ public class ImportUtil {
     }
 
     public static void appendInsertStrValue(StringBuilder sqlStringBuilder, String rawValue,
-                                            boolean sqlEscapeEnabled, boolean emptyStrAsNull) {
+                                            boolean sqlEscapeEnabled) {
         if (rawValue.equals(FileUtil.NULL_ESC_STR_IN_QUOTE)) {
             // NULL字段处理
-            sqlStringBuilder.append("NULL");
-            return;
-        }
-        if (rawValue.isEmpty() && emptyStrAsNull) {
-            // 空字符串视作NULL
             sqlStringBuilder.append("NULL");
             return;
         }
@@ -131,8 +126,8 @@ public class ImportUtil {
 
     public static void appendValuesByFieldMetaInfo(StringBuilder stringBuilder,
                                                    List<FieldMetaInfo> fieldMetaInfoList,
-                                                   List<String> values, boolean sqlEscapeEnabled,
-                                                   boolean emptyStrAsNull) throws DatabaseException {
+                                                   List<String> values, boolean sqlEscapeEnabled)
+        throws DatabaseException {
         if (fieldMetaInfoList.size() != values.size()) {
             throw new DatabaseException(String.format("required field size %d, "
                 + "actual size %d", fieldMetaInfoList.size(), values.size()));
@@ -141,14 +136,14 @@ public class ImportUtil {
         for (int i = 0; i < fieldLen - 1; i++) {
             if (fieldMetaInfoList.get(i).needQuote()) {
                 // 字符串和日期都需要单引号
-                ImportUtil.appendInsertStrValue(stringBuilder, values.get(i), sqlEscapeEnabled, emptyStrAsNull);
+                ImportUtil.appendInsertStrValue(stringBuilder, values.get(i), sqlEscapeEnabled);
             } else {
                 ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(i));
             }
             stringBuilder.append(",");
         }
         if (fieldMetaInfoList.get(fieldLen - 1).needQuote()) {
-            ImportUtil.appendInsertStrValue(stringBuilder, values.get(fieldLen - 1), sqlEscapeEnabled, emptyStrAsNull);
+            ImportUtil.appendInsertStrValue(stringBuilder, values.get(fieldLen - 1), sqlEscapeEnabled);
         } else {
             ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(fieldLen - 1));
         }
@@ -157,11 +152,10 @@ public class ImportUtil {
     public static void getDirectImportSql(StringBuilder stringBuilder,
                                           String tableName,
                                           List<FieldMetaInfo> fieldMetaInfoList,
-                                          List<String> values, boolean sqlEscapeEnabled,
-                                          boolean emptyStrAsNull) throws DatabaseException {
+                                          List<String> values, boolean sqlEscapeEnabled) throws DatabaseException {
         stringBuilder.append("INSERT INTO `").append(tableName).append("` VALUES (");
         appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList, values,
-            sqlEscapeEnabled, emptyStrAsNull);
+            sqlEscapeEnabled);
         stringBuilder.append(");");
     }
 
