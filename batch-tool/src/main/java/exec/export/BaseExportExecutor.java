@@ -100,4 +100,9 @@ public abstract class BaseExportExecutor extends BaseExecutor {
     }
 
     abstract void exportData();
+
+    @Override
+    public void close() {
+        config.close();
+    }
 }

@@ -43,6 +43,10 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import store.FileStorage;
+import store.FileStorageUtil;
+import store.S3AwsFileStorage;
+import store.S3FileStorage;
 import util.FileUtil;
 import util.Version;
 
@@ -73,6 +77,7 @@ import static cmd.ConfigArgOption.ARG_SHORT_DIRECTORY;
 import static cmd.ConfigArgOption.ARG_SHORT_ENCRYPTION;
 import static cmd.ConfigArgOption.ARG_SHORT_FILE_FORMAT;
 import static cmd.ConfigArgOption.ARG_SHORT_FILE_NUM;
+import static cmd.ConfigArgOption.ARG_SHORT_FILE_SYSTEM;
 import static cmd.ConfigArgOption.ARG_SHORT_FROM_FILE;
 import static cmd.ConfigArgOption.ARG_SHORT_HELP;
 import static cmd.ConfigArgOption.ARG_SHORT_HISTORY_FILE;
@@ -403,6 +408,23 @@ public class CommandUtil {
         return ConfigConstant.DEFAULT_ENCRYPTION_CONFIG;
     }
 
+    private static FileStorage getFileStorage(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_FILE_SYSTEM)) {
+            String fs = result.getOptionValue(ARG_SHORT_FILE_SYSTEM);
+            if (fs.equalsIgnoreCase("S3")) {
+                FileStorage fileStorage = new S3FileStorage(FileStorageUtil.getS3ClientFromEnv());
+                return fileStorage;
+            } else if (fs.equalsIgnoreCase("S3-AWS")) {
+                FileStorage fileStorage = new S3AwsFileStorage(FileStorageUtil.getS3FileSystemFromEnv());
+                return fileStorage;
+            } else if (fs.equalsIgnoreCase("LOCAL")) {
+                return null;
+            }
+            throw new UnsupportedOperationException("Unsupported filesystem: " + fs);
+        }
+        return null;
+    }
+
     private static int getReadBlockSizeInMb(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_READ_BLOCK_SIZE)) {
             return Integer.parseInt(
@@ -452,6 +474,7 @@ public class CommandUtil {
         exportConfig.setEncryptionConfig(getEncryptionConfig(result));
         exportConfig.setFileFormat(getFileFormat(result));
         exportConfig.setCompressMode(getCompressMode(result));
+        exportConfig.setFileStorage(getFileStorage(result));
         exportConfig.setParallelism(getProducerParallelism(result));
         exportConfig.setQuoteEncloseMode(getQuoteEncloseMode(result));
         exportConfig.setWithLastSep(getWithLastSep(result));
@@ -622,6 +645,7 @@ public class CommandUtil {
         producerExecutionContext.setWithView(getWithView(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
+        producerExecutionContext.setFileStorage(getFileStorage(result));
         producerExecutionContext.setFileFormat(getFileFormat(result));
         producerExecutionContext.setMaxErrorCount(getMaxErrorCount(result));
         producerExecutionContext.setHistoryFileAndParse(getHistoryFile(result));

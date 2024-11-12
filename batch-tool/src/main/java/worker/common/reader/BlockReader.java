@@ -62,7 +62,6 @@ public class BlockReader extends FileBufferedBatchReader {
         // set localProcessingFileIndex and startPosArr[localProcessingFileIndex]
         this.localProcessingFileIndex = fileBlockListRecord.getCurrentFileIndex().get();
         this.fileBlockListRecord = fileBlockListRecord;
-        this.curRandomAccessFile = FileUtil.openRafForRead(fileList.get(localProcessingFileIndex));
         this.cipher = BaseCipher.getCipher(context.getEncryptionConfig(), false);
         if (this.compressMode != CompressMode.NONE) {
             this.gzipBuffer = new byte[(int) (readBlockSize + READ_PADDING)];
@@ -72,6 +71,11 @@ public class BlockReader extends FileBufferedBatchReader {
         this.byteBuffer = new BlockByteBuffer((int) (readBlockSize + READ_PADDING));
         this.posMarker = new BlockPosMarker();
         this.trimRight = context.isTrimRight();
+    }
+
+    @Override
+    protected void init() {
+        this.curRandomAccessFile = FileUtil.openRafForRead(fileList.get(localProcessingFileIndex));
     }
 
     @Override

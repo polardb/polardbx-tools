@@ -48,7 +48,7 @@ public class ExportWorkerFactory {
                 filename,
                 config.getSeparator(), config.isWithHeader(),
                 config.getQuoteEncloseMode(), config.getCompressMode(),
-                config.getFileFormat(), config.getCharset(), cipher);
+                config.getFileFormat(), config.getCharset(), cipher, config.getFileStorage());
             break;
         case DEFAULT:
             directExportWorker = new DirectExportWorker(druid,
@@ -56,7 +56,7 @@ public class ExportWorkerFactory {
                 filename,
                 config.getSeparator(), config.isWithHeader(),
                 config.getQuoteEncloseMode(), config.getCompressMode(),
-                config.getFileFormat(), config.getCharset(), cipher);
+                config.getFileFormat(), config.getCharset(), cipher, config.getFileStorage());
             break;
         case FIXED_FILE_NUM:
         default:

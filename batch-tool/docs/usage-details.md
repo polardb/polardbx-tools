@@ -75,6 +75,20 @@ c_custkey|c_name|c_address|c_nationkey|c_phone|c_acctbal|c_mktsegment|c_comment
 
 编写复杂格式的json文件建议参考 [使用yaml配置](#使用yaml配置)。
 
+### 导出到S3
+1. 使用环境变量配置S3的AK、SK、uri：(目前不支持其他方式传入)
+```shell
+export S3_ACCESS_KEY_ID=<S3_ACCESS_KEY_ID>
+export S3_ACCESS_KEY_SECRET=<S3_ACCESS_KEY_SECRET>
+export S3_URI=<S3_URI>
+export S3_ENDPOINT=<S3_ENDPOINT>
+```
+
+2. 导出命令：`-D sbtest_auto  -t sbtest1 -o export -s , -fs S3 -dir /tmp`
+> 1. `-fs S3` 指定文件系统为S3（默认为LOCAL，即默认导出到本地；此处指定文件系统为S3，则会将文件导出到S3）
+> 2. `-dir /tmp` 指定临时文件的生成目录（该参数可为空，默认为当前运行目录），临时文件的大小会根据可用空间自动调整，文件上传完毕后会自动删除
+
+
 ## 数据库表导入
 ### 单表导入
 `-D sbtest_auto -o import -s , -t sbtest2 -dir data-backup`

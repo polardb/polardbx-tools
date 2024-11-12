@@ -100,6 +100,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
     public void run() {
         try {
             fileReaderStat.start();
+            init();
             readData();
         } catch (Exception e) {
             context.setException(e);
@@ -108,6 +109,8 @@ public abstract class FileBufferedBatchReader implements Runnable {
             afterRun();
         }
     }
+
+    protected abstract void init();
 
     protected abstract void readData();
 

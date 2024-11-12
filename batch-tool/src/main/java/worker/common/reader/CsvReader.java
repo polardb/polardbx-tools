@@ -40,12 +40,18 @@ import java.util.List;
 public class CsvReader extends FileBufferedBatchReader {
     private static final Logger logger = LoggerFactory.getLogger(CsvReader.class);
 
-    private final CSVReader reader;
+    private CSVReader reader;
 
     public CsvReader(ProducerExecutionContext context,
                      List<File> fileList, int fileIndex,
                      RingBuffer<BatchLineEvent> ringBuffer) {
         super(context, fileList, ringBuffer);
+
+        this.localProcessingFileIndex = fileIndex;
+    }
+
+    @Override
+    protected void init() {
         String sep = context.getSeparator();
         if (sep.length() != 1) {
             throw new IllegalArgumentException("CSV reader only support one-char separator");
@@ -54,12 +60,11 @@ public class CsvReader extends FileBufferedBatchReader {
         RFC4180Parser parser = new RFC4180ParserBuilder().withSeparator(sepChar).build();
         try {
             this.reader = new CSVReaderBuilder(new InputStreamReader(
-                new FileInputStream(fileList.get(fileIndex).getAbsolutePath()), context.getCharset()))
+                new FileInputStream(fileList.get(localProcessingFileIndex).getAbsolutePath()), context.getCharset()))
                 .withCSVParser(parser).withMultilineLimit(GlobalVar.MAX_CSV_MULTI_LINE).build();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e.getMessage());
         }
-        this.localProcessingFileIndex = fileIndex;
     }
 
     @Override

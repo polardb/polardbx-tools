@@ -33,6 +33,7 @@ import worker.factory.ExportWorkerFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
 import static model.config.ConfigConstant.APP_NAME;
@@ -50,16 +51,23 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
     void exportData() {
         List<String> tableNames = command.getTableNames();
         ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, tableNames.size());
+        CountDownLatch countDownLatch = new CountDownLatch(tableNames.size());
         for (String tableName : tableNames) {
-            doDefaultExport(tableName, executor);
+            doDefaultExport(tableName, executor, countDownLatch);
         }
-        executor.shutdown();
+        try {
+            countDownLatch.await();
+            executor.shutdown();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
      * 使用单条长连接导出数据
      */
-    private void doDefaultExport(String tableName, ExecutorService executor) {
+    private void doDefaultExport(String tableName, ExecutorService executor,
+                                 CountDownLatch countDownLatch) {
         String fileName = FileUtil.getFilePathPrefix(config.getPath(),
             config.getFilenamePrefix(), tableName) + 0;
         try (Connection connection = dataSource.getConnection()) {
@@ -68,6 +76,7 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
             DirectExportWorker directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
                 new TableTopology(tableName), tableFieldMetaInfo,
                 fileName, config);
+            directExportWorker.setCountDownLatch(countDownLatch);
             executor.submit(directExportWorker);
             logger.info("开始导出表 {} 到文件 {}", tableName, fileName);
         } catch (DatabaseException | SQLException e) {

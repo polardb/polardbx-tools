@@ -36,7 +36,7 @@ public class CipherLineReader extends FileBufferedBatchReader {
     private static final Logger logger = LoggerFactory.getLogger(CipherLineReader.class);
 
     private final BaseCipher cipher;
-    private final BufferedInputStream inputStream;
+    private BufferedInputStream inputStream;
     private final ByteBuffer byteBuffer;
 
     public CipherLineReader(ProducerExecutionContext context,
@@ -47,6 +47,10 @@ public class CipherLineReader extends FileBufferedBatchReader {
         this.cipher = cipher;
         this.localProcessingFileIndex = fileIndex;
         this.byteBuffer = ByteBuffer.allocate(4);
+    }
+
+    @Override
+    protected void init() {
         try {
             this.inputStream = new BufferedInputStream(new FileInputStream(fileList.get(localProcessingFileIndex).getPath()));
         } catch (FileNotFoundException e) {
