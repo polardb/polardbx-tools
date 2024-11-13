@@ -403,8 +403,12 @@ public class FileUtil {
     }
 
     public static String getFileAbsPath(String filename) {
+        return getFileAbsPath(filename, true);
+    }
+
+    public static String getFileAbsPath(String filename, boolean checkExist) {
         File file = new File(filename);
-        if (!file.exists() || !file.isFile() || !file.canRead()) {
+        if (checkExist && (!file.exists() || !file.isFile() || !file.canRead())) {
             throw new IllegalArgumentException("Failed to read from " + filename);
         }
         return file.getAbsolutePath();

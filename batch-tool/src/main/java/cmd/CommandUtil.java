@@ -40,6 +40,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -631,9 +632,15 @@ public class CommandUtil {
         producerExecutionContext.setCharset(getCharset(result));
         producerExecutionContext.setSeparator(getSep(result));
         producerExecutionContext.setDdlMode(getDdlMode(result));
+        producerExecutionContext.setFileStorage(getFileStorage(result));
 
         if (producerExecutionContext.getDdlMode() != DdlMode.DDL_ONLY) {
-            producerExecutionContext.setDataFileLineRecordList(getDataFileRecordList(result));
+            if (producerExecutionContext.getFileStorage() != null) {
+                producerExecutionContext.setDataFileLineRecordList(
+                    getDataFileRecordListFromFileStorage(result, producerExecutionContext.getFileStorage()));
+            } else {
+                producerExecutionContext.setDataFileLineRecordList(getDataFileRecordList(result));
+            }
         }
         if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
             producerExecutionContext.setDdlFileLineRecordList(getDdlFileRecordList(result));
@@ -766,6 +773,46 @@ public class CommandUtil {
             return Integer.parseInt(result.getOptionValue(ARG_SHORT_SCALE));
         } else {
             return 0;
+        }
+    }
+
+    private static List<FileLineRecord> getDataFileRecordListFromFileStorage(ConfigResult result,
+                                                                             FileStorage fileStorage) {
+
+        if (result.hasOption(ARG_SHORT_FROM_FILE)) {
+            // did not check whether these files exist on file storage
+            String filePathListStr = result.getOptionValue(ARG_SHORT_FROM_FILE);
+            return Arrays.stream(StringUtils.split(filePathListStr, ConfigConstant.CMD_SEPARATOR))
+                .filter(s -> StringUtils.isNotBlank(s) && !StringUtils.endsWith(s, ConfigConstant.DDL_FILE_SUFFIX))
+                .map(s -> {
+                    String[] strs = StringUtils.split(s, ConfigConstant.CMD_FILE_LINE_SEPARATOR);
+                    if (strs.length == 1) {
+                        String fileAbsPath = FileUtil.getFileAbsPath(strs[0], false);
+                        return new FileLineRecord(fileAbsPath);
+                    } else if (strs.length == 2) {
+                        String fileAbsPath = FileUtil.getFileAbsPath(strs[0], false);
+                        int startLine = Integer.parseInt(strs[1]);
+                        return new FileLineRecord(fileAbsPath, startLine);
+                    } else {
+                        throw new IllegalArgumentException("Illegal file: " + s);
+                    }
+                }).collect(Collectors.toList());
+        } else {
+            // ignore the usage of ARG_SHORT_DIRECTORY
+
+            String prefix = getPrefix(result);
+            if (StringUtils.isBlank(prefix)) {
+                List<String> tableNames = getTableNames(result);
+                prefix = CollectionUtils.isEmpty(tableNames) ? "" : tableNames.get(0);
+            }
+            List<String> filenames = FileStorageUtil.listFiles(fileStorage, prefix);
+            if (CollectionUtils.isEmpty(filenames)) {
+                throw new IllegalArgumentException("Cannot find target files");
+            }
+            List<String> filePaths = filenames.stream()
+                .map(s -> FileUtil.getFileAbsPath(s, false))
+                .collect(Collectors.toList());
+            return FileLineRecord.fromFilePaths(filePaths);
         }
     }
 

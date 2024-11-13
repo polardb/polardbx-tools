@@ -16,6 +16,8 @@
 
 package store;
 
+import java.util.List;
+
 public interface FileStorage {
 
     void put(String localFile, String targetPath);
@@ -23,4 +25,6 @@ public interface FileStorage {
     void get(String targetFile, String localPath);
 
     void close();
+
+    List<String> listFiles(String prefix);
 }

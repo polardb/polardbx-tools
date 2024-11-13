@@ -22,6 +22,7 @@ import model.config.CompressMode;
 import model.config.ConfigConstant;
 import model.config.GlobalVar;
 import model.stat.FileReaderStat;
+import store.FileStorage;
 import worker.common.BatchLineEvent;
 
 import java.io.File;
@@ -46,6 +47,8 @@ public abstract class FileBufferedBatchReader implements Runnable {
      */
     protected AtomicLong currentFileLineCount = new AtomicLong(0);
 
+    protected FileStorage fileStorage;
+
     protected FileBufferedBatchReader(ProducerExecutionContext context,
                                       List<File> fileList,
                                       RingBuffer<BatchLineEvent> ringBuffer) {
@@ -61,6 +64,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
         this.lineBuffer = new String[EMIT_BATCH_SIZE];
         this.compressMode = compressMode;
         GlobalVar.DEBUG_INFO.addFileReaderStat(fileReaderStat);
+        this.fileStorage = context.getFileStorage();
     }
 
     public AtomicLong getCurrentFileLineCount() {
@@ -129,5 +133,19 @@ public abstract class FileBufferedBatchReader implements Runnable {
 
     public FileReaderStat getFileReaderStat() {
         return fileReaderStat;
+    }
+
+    protected File getLocalFile() {
+        File file = fileList.get(localProcessingFileIndex);
+        if (fileStorage != null) {
+            // check file exists
+            if (!file.exists() || !file.isFile()) {
+                // download to local disk synchronously
+                // should not reach here
+//                fileStorage.get(file.getName(), file.getAbsolutePath());
+                throw new IllegalStateException("File should be fetched already");
+            }
+        }
+        return file;
     }
 }

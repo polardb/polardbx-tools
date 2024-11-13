@@ -52,7 +52,7 @@ public class CipherLineReader extends FileBufferedBatchReader {
     @Override
     protected void init() {
         try {
-            this.inputStream = new BufferedInputStream(new FileInputStream(fileList.get(localProcessingFileIndex).getPath()));
+            this.inputStream = new BufferedInputStream(new FileInputStream(getLocalFile().getPath()));
         } catch (FileNotFoundException e) {
             throw new IllegalArgumentException(e.getMessage());
         }
@@ -69,7 +69,7 @@ public class CipherLineReader extends FileBufferedBatchReader {
                 appendToLineBuffer(line);
             }
             emitLineBuffer();
-            logger.info("{} 读取完毕，读取行数：{}", fileList.get(localProcessingFileIndex).getPath(),
+            logger.info("{} 读取完毕，读取行数：{}", getLocalFile().getPath(),
                 currentFileLineCount.get());
         } catch (IOException e) {
             logger.error(e.getMessage());
@@ -107,7 +107,7 @@ public class CipherLineReader extends FileBufferedBatchReader {
             decryptedData = cipher.decrypt(data);
         } catch (Exception e) {
             logger.error("Failed to decrypted file {}: {}",
-                fileList.get(localProcessingFileIndex).getName(), e.getMessage());
+                getLocalFile().getName(), e.getMessage());
             throw new RuntimeException(e);
         }
         // todo charset

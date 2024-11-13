@@ -20,18 +20,27 @@ import com.aliyun.oss.ClientBuilderConfiguration;
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.common.comm.Protocol;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import exception.S3Exception;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
-import java.net.URI;
-
-import static com.alibaba.polardbx.common.oss.filesystem.Constants.S3_ACCESS_KEY;
-import static com.alibaba.polardbx.common.oss.filesystem.Constants.S3_SECRET_KEY;
+import java.util.List;
 
 public class FileStorageUtil {
+
+    static {
+        init();
+    }
+
+    private static void init() {
+        System.setProperty("aws.java.v1.disableDeprecationAnnouncement", "true");
+    }
 
     public static OSSClient getS3ClientFromEnv() {
         String accessKeyId = System.getenv("S3_ACCESS_KEY_ID");
@@ -59,32 +68,32 @@ public class FileStorageUtil {
         return ossClient;
     }
 
-    public static FileSystem getS3AwsFileSystem(String accessKeyId, String accessKeySecret,
-                                                String endPoint, String fileUri) {
-        S3AFileSystem fileSystem = new S3AFileSystem();
-        Configuration fsConf = new Configuration();
-        fsConf.set(S3_ACCESS_KEY, accessKeyId);
-        fsConf.set(S3_SECRET_KEY, accessKeySecret);
-        fsConf.set("fs.s3a.endpoint", endPoint);
-        try {
-            URI s3FileUri = URI.create(fileUri);
-            fileSystem.initialize(s3FileUri, fsConf);
-            Path workingDirectory =
-                new Path(URI.create(fileUri + "/"));
-            fileSystem.setWorkingDirectory(workingDirectory);
-        } catch (Throwable t) {
-            try {
-                fileSystem.close();
-            } catch (Throwable t1) {
-                // ignore
-            }
-            t.printStackTrace();
-            throw new S3Exception("bad fileUri = " + fileUri, t);
+    public static AmazonS3 getS3AwsFileSystem(String accessKeyId, String accessKeySecret,
+                                              String endPoint, String bucketName) {
+
+        ClientConfiguration config = new ClientConfiguration();
+        AwsClientBuilder.EndpointConfiguration endpointConfig =
+            new AwsClientBuilder.EndpointConfiguration(endPoint, null);
+
+        AWSCredentials awsCredentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider(awsCredentials);
+
+        AmazonS3 s3 = AmazonS3Client.builder()
+            .withEndpointConfiguration(endpointConfig)
+            .withClientConfiguration(config)
+            .withCredentials(awsCredentialsProvider)
+            .disableChunkedEncoding()
+            .withPathStyleAccessEnabled(false)
+            .build();
+
+        // check bucket exists
+        if (!s3.doesBucketExistV2(bucketName)) {
+            throw new S3Exception("Bucket " + bucketName + " does not exist");
         }
-        return fileSystem;
+        return s3;
     }
 
-    public static FileSystem getS3FileSystemFromEnv() {
+    public static AmazonS3 getS3FileSystemFromEnv() {
         String accessKeyId = System.getenv("S3_ACCESS_KEY_ID");
         if (accessKeyId == null) {
             throw new IllegalArgumentException("S3_ACCESS_KEY_ID must be set");
@@ -93,15 +102,19 @@ public class FileStorageUtil {
         if (accessKeySecret == null) {
             throw new IllegalArgumentException("S3_ACCESS_KEY_SECRET must be set");
         }
-        String fileUri = System.getenv("S3_URI");
-        if (fileUri == null) {
-            throw new IllegalArgumentException("S3_URI must be set");
+        String bucket = System.getenv("S3_BUCKET");
+        if (bucket == null) {
+            throw new IllegalArgumentException("S3_BUCKET must be set");
         }
         String endPoint = System.getenv("S3_ENDPOINT");
         if (endPoint == null) {
             throw new IllegalArgumentException("S3_ENDPOINT must be set");
         }
-        return getS3AwsFileSystem(accessKeyId, accessKeySecret, endPoint, fileUri);
+        return getS3AwsFileSystem(accessKeyId, accessKeySecret, endPoint, bucket);
     }
 
+    public static List<String> listFiles(FileStorage fileStorage, String prefix) {
+        List<String> filenames = fileStorage.listFiles(prefix);
+        return filenames;
+    }
 }

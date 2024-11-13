@@ -60,7 +60,7 @@ public class CsvReader extends FileBufferedBatchReader {
         RFC4180Parser parser = new RFC4180ParserBuilder().withSeparator(sepChar).build();
         try {
             this.reader = new CSVReaderBuilder(new InputStreamReader(
-                new FileInputStream(fileList.get(localProcessingFileIndex).getAbsolutePath()), context.getCharset()))
+                new FileInputStream(getLocalFile().getAbsolutePath()), context.getCharset()))
                 .withCSVParser(parser).withMultilineLimit(GlobalVar.MAX_CSV_MULTI_LINE).build();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e.getMessage());
@@ -80,7 +80,7 @@ public class CsvReader extends FileBufferedBatchReader {
                 appendToLineBuffer(line);
             }
             emitLineBuffer();
-            logger.info("{} 读取完毕，读取行数：{}", fileList.get(localProcessingFileIndex).getPath(),
+            logger.info("{} 读取完毕，读取行数：{}", getLocalFile().getPath(),
                 currentFileLineCount.get());
         } catch (IOException e) {
             logger.error(e.getMessage());

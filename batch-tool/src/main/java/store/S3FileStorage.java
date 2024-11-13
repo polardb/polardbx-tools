@@ -18,6 +18,8 @@ package store;
 
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.GetObjectRequest;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.aliyun.oss.model.PutObjectResult;
 import com.google.common.base.Preconditions;
@@ -26,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class S3FileStorage implements FileStorage {
 
@@ -37,9 +41,9 @@ public class S3FileStorage implements FileStorage {
     public S3FileStorage(OSSClient ossClient) {
         Preconditions.checkNotNull(ossClient);
         this.ossClient = ossClient;
-        String bucketName = System.getenv("S3_URI");
+        String bucketName = System.getenv("S3_BUCKET");
         if (bucketName == null) {
-            throw new IllegalArgumentException("S3_URI must be set");
+            throw new IllegalArgumentException("S3_BUCKET must be set");
         }
         this.bucketName = bucketName;
     }
@@ -77,5 +81,18 @@ public class S3FileStorage implements FileStorage {
             // ignore
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public List<String> listFiles(String prefix) {
+        ObjectListing objectListing = ossClient.listObjects(bucketName, prefix);
+        if (objectListing.isTruncated()) {
+            throw new UnsupportedOperationException("The number of files exceeds " + objectListing.getMaxKeys());
+        }
+        List<OSSObjectSummary> sums = objectListing.getObjectSummaries();
+        List<String> filenames = sums.stream()
+            .map(OSSObjectSummary::getKey)
+            .collect(Collectors.toList());
+        return filenames;
     }
 }

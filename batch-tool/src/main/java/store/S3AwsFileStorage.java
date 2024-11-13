@@ -16,55 +16,55 @@
 
 package store;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import exception.S3Exception;
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.File;
+import java.util.List;
 
 public class S3AwsFileStorage implements FileStorage {
 
     private static final Logger logger = LoggerFactory.getLogger(S3AwsFileStorage.class);
 
-    private final FileSystem fileSystem;
+    private final AmazonS3 s3Client;
+    private final String bucketName;
 
-    public S3AwsFileStorage(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
+    public S3AwsFileStorage(AmazonS3 s3Client) {
+        this.s3Client = s3Client;
+        String bucketName = System.getenv("S3_BUCKET");
+        if (bucketName == null) {
+            throw new IllegalArgumentException("S3_BUCKET must be set");
+        }
+        this.bucketName = bucketName;
     }
 
     @Override
     public void put(String localFile, String targetPath) {
-        Path path = new Path(targetPath);
-        logger.info("Start uploading file {} to {}", localFile, targetPath);
-
-        try (OutputStream outputStream = fileSystem.create(path);
-            InputStream inputStream = Files.newInputStream(Paths.get(localFile))) {
-
-            IOUtils.copy(inputStream, outputStream);
-            logger.info("File {} is uploaded to {} successfully", localFile, path);
-        } catch (IOException e) {
+        try {
+            logger.info("开始上传文件 {} 至 {}/{}", localFile, bucketName, targetPath);
+            PutObjectResult putObjectResult = s3Client.putObject(bucketName, targetPath, new File(localFile));
+            logger.info("文件 {} 上传成功", localFile);
+        } catch (Exception e) {
+            e.printStackTrace();
             throw new S3Exception(e);
         }
     }
 
     @Override
     public void get(String targetFile, String localPath) {
-        Path path = new Path(targetFile);
-        logger.info("Start fetching file {} to {}", targetFile, localPath);
-
-        try (InputStream inputStream = fileSystem.open(path);
-            OutputStream outputStream = Files.newOutputStream(Paths.get(localPath))) {
-
-            IOUtils.copy(inputStream, outputStream);
-            logger.info("Fetching file {} to {} is done", targetFile, localPath);
-        } catch (IOException e) {
+        try {
+            logger.info("开始加载文件 {}/{} 至 {}", bucketName, targetFile, localPath);
+            s3Client.getObject(new GetObjectRequest(bucketName, targetFile), new File(localPath));
+            logger.info("文件 {} 缓冲完成", localPath);
+        } catch (Exception e) {
+            e.printStackTrace();
             throw new S3Exception(e);
         }
     }
@@ -72,5 +72,21 @@ public class S3AwsFileStorage implements FileStorage {
     @Override
     public void close() {
 
+    }
+
+    @Override
+    public List<String> listFiles(String prefix) {
+        ListObjectsRequest request = new ListObjectsRequest();
+        request.setBucketName(bucketName);
+        request.setPrefix(prefix);
+
+        ObjectListing objects = s3Client.listObjects(request);
+        if (objects.isTruncated()) {
+            throw new UnsupportedOperationException("The number of files exceeds " + objects.getMaxKeys());
+        }
+        List<String> filenames = objects.getObjectSummaries().stream()
+            .map(S3ObjectSummary::getKey)
+            .collect(java.util.stream.Collectors.toList());
+        return filenames;
     }
 }

@@ -51,7 +51,7 @@ public class XlsxReader extends FileBufferedBatchReader {
 
     @Override
     protected void init() {
-        String filePath = fileList.get(localProcessingFileIndex).getAbsolutePath();
+        String filePath = getLocalFile().getAbsolutePath();
         try {
             inputStream = new BufferedInputStream(new FileInputStream(filePath));
         } catch (FileNotFoundException e) {
@@ -88,7 +88,7 @@ public class XlsxReader extends FileBufferedBatchReader {
         };
 
         EasyExcel.read(inputStream, listener).sheet().doRead();
-        logger.info("{} 读取完毕，读取行数：{}", fileList.get(localProcessingFileIndex).getPath(),
+        logger.info("{} 读取完毕，读取行数：{}", getLocalFile().getPath(),
             currentFileLineCount.get());
     }
 
