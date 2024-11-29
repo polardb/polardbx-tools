@@ -42,6 +42,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import store.FileStorage;
@@ -56,6 +57,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -494,28 +496,32 @@ public class CommandUtil {
     private static void setPartitions(ConfigResult result, ExportConfig exportConfig) {
         if (result.hasOption(ARG_TBL_PART)) {
             String partOpt = result.getOptionValue(ARG_TBL_PART);
-            if (StringUtils.isNotEmpty(partOpt)) {
-                String[] parts = StringUtils.split(partOpt, ":");
-                if (parts.length == 2) {
-                    int startPart = Integer.parseInt(parts[0]);
-                    int endPart = Integer.parseInt(parts[1]);
-                    if (startPart < 0) {
-                        throw new IllegalArgumentException("Illegal start partition: " + startPart);
-                    }
-                    if (endPart < 0) {
-                        throw new IllegalArgumentException("Illegal end partition: " + endPart);
-                    }
-                    if (endPart < startPart) {
-                        throw new IllegalArgumentException(
-                            "End partition should be greater than start partition: " + endPart);
-                    }
-                    exportConfig.setStartPart(startPart);
-                    exportConfig.setEndPart(endPart);
-                    return;
-                }
-            }
-            throw new IllegalArgumentException("Illegal table part option: " + partOpt);
+            Pair<Integer, Integer> tablePart = getTablePart(partOpt);
+            exportConfig.setStartPart(tablePart.getFirst());
+            exportConfig.setEndPart(tablePart.getSecond());
         }
+    }
+
+    private static Pair<Integer, Integer> getTablePart(String partOpt) {
+        if (StringUtils.isNotEmpty(partOpt)) {
+            String[] parts = StringUtils.split(partOpt, ":");
+            if (parts.length == 2) {
+                int startPart = Integer.parseInt(parts[0]);
+                int endPart = Integer.parseInt(parts[1]);
+                if (startPart < 0) {
+                    throw new IllegalArgumentException("Illegal start partition: " + startPart);
+                }
+                if (endPart < 0) {
+                    throw new IllegalArgumentException("Illegal end partition: " + endPart);
+                }
+                if (endPart < startPart) {
+                    throw new IllegalArgumentException(
+                        "End partition should be greater than start partition: " + endPart);
+                }
+                return new Pair<>(startPart, endPart);
+            }
+        }
+        throw new IllegalArgumentException("Illegal table part option: " + partOpt);
     }
 
     private static void setDir(ConfigResult result, ExportConfig exportConfig) {
@@ -805,7 +811,19 @@ public class CommandUtil {
                 List<String> tableNames = getTableNames(result);
                 prefix = CollectionUtils.isEmpty(tableNames) ? "" : tableNames.get(0);
             }
-            List<String> filenames = FileStorageUtil.listFiles(fileStorage, prefix);
+            List<String> filenames;
+            if (result.hasOption(ARG_TBL_PART)) {
+                String partOpt = result.getOptionValue(ARG_TBL_PART);
+                Pair<Integer, Integer> tablePart = getTablePart(partOpt);
+                int start = tablePart.getFirst();
+                int end = tablePart.getSecond();
+                filenames = new ArrayList<>(end - start + 1);
+                for (int i = start; i <= end; i++) {
+                    filenames.add(prefix + "_" + i);
+                }
+            } else {
+                filenames = FileStorageUtil.listFiles(fileStorage, prefix);
+            }
             if (CollectionUtils.isEmpty(filenames)) {
                 throw new IllegalArgumentException("Cannot find target files");
             }

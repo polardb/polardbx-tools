@@ -18,6 +18,7 @@ package store;
 
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.GetObjectRequest;
+import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.PutObjectRequest;
@@ -28,8 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class S3FileStorage implements FileStorage {
 
@@ -85,14 +86,22 @@ public class S3FileStorage implements FileStorage {
 
     @Override
     public List<String> listFiles(String prefix) {
-        ObjectListing objectListing = ossClient.listObjects(bucketName, prefix);
-        if (objectListing.isTruncated()) {
-            throw new UnsupportedOperationException("The number of files exceeds " + objectListing.getMaxKeys());
-        }
-        List<OSSObjectSummary> sums = objectListing.getObjectSummaries();
-        List<String> filenames = sums.stream()
-            .map(OSSObjectSummary::getKey)
-            .collect(Collectors.toList());
+        String nextMarker = null;
+        ObjectListing objectListing;
+        List<String> filenames = new ArrayList<>();
+
+        do {
+            objectListing = ossClient.listObjects(new ListObjectsRequest(bucketName).withPrefix(prefix)
+                .withMarker(nextMarker).withMaxKeys(1000));
+
+            List<OSSObjectSummary> sums = objectListing.getObjectSummaries();
+            for (OSSObjectSummary sum : sums) {
+                filenames.add(sum.getKey());
+            }
+            nextMarker = objectListing.getNextMarker();
+
+        } while (objectListing.isTruncated());
+
         return filenames;
     }
 }
