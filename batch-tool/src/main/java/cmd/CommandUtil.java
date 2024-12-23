@@ -47,8 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import store.FileStorage;
 import store.FileStorageUtil;
+import store.OssFileStorage;
 import store.S3AwsFileStorage;
-import store.S3FileStorage;
 import util.FileUtil;
 import util.Version;
 
@@ -414,10 +414,10 @@ public class CommandUtil {
     private static FileStorage getFileStorage(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_FILE_SYSTEM)) {
             String fs = result.getOptionValue(ARG_SHORT_FILE_SYSTEM);
-            if (fs.equalsIgnoreCase("S3")) {
-                FileStorage fileStorage = new S3FileStorage(FileStorageUtil.getS3ClientFromEnv());
+            if (fs.equalsIgnoreCase("OSS")) {
+                FileStorage fileStorage = new OssFileStorage(FileStorageUtil.getOssClientFromEnv());
                 return fileStorage;
-            } else if (fs.equalsIgnoreCase("S3-AWS")) {
+            } else if (fs.equalsIgnoreCase("S3")) {
                 FileStorage fileStorage = new S3AwsFileStorage(FileStorageUtil.getS3FileSystemFromEnv());
                 return fileStorage;
             } else if (fs.equalsIgnoreCase("LOCAL")) {

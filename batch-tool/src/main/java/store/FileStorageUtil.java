@@ -34,6 +34,16 @@ import java.util.List;
 
 public class FileStorageUtil {
 
+    public static final String S3_AK_ID = "S3_ACCESS_KEY_ID";
+    public static final String S3_AK_SECRET = "S3_ACCESS_KEY_SECRET";
+    public static final String S3_ENDPOINT = "S3_ENDPOINT";
+    public static final String S3_BUCKET = "S3_BUCKET";
+
+    public static final String OSS_AK_ID = "OSS_ACCESS_KEY_ID";
+    public static final String OSS_AK_SECRET = "OSS_ACCESS_KEY_SECRET";
+    public static final String OSS_ENDPOINT = "OSS_ENDPOINT";
+    public static final String OSS_BUCKET = "OSS_BUCKET";
+
     static {
         init();
     }
@@ -42,18 +52,18 @@ public class FileStorageUtil {
         System.setProperty("aws.java.v1.disableDeprecationAnnouncement", "true");
     }
 
-    public static OSSClient getS3ClientFromEnv() {
-        String accessKeyId = System.getenv("S3_ACCESS_KEY_ID");
+    public static OSSClient getOssClientFromEnv() {
+        String accessKeyId = System.getenv(OSS_AK_ID);
         if (accessKeyId == null) {
-            throw new IllegalArgumentException("S3_ACCESS_KEY_ID must be set");
+            notSetException(OSS_AK_ID);
         }
-        String accessKeySecret = System.getenv("S3_ACCESS_KEY_SECRET");
+        String accessKeySecret = System.getenv(OSS_AK_SECRET);
         if (accessKeySecret == null) {
-            throw new IllegalArgumentException("S3_ACCESS_KEY_SECRET must be set");
+            notSetException(OSS_AK_SECRET);
         }
-        String endPoint = System.getenv("S3_ENDPOINT");
+        String endPoint = System.getenv(OSS_ENDPOINT);
         if (endPoint == null) {
-            throw new IllegalArgumentException("S3_ENDPOINT must be set");
+            notSetException(OSS_ENDPOINT);
         }
 
         ClientBuilderConfiguration clientConf = new ClientBuilderConfiguration();
@@ -66,6 +76,10 @@ public class FileStorageUtil {
         OSSClient ossClient =
             (OSSClient) new OSSClientBuilder().build(endPoint, accessKeyId, accessKeySecret, null, clientConf);
         return ossClient;
+    }
+
+    private static void notSetException(String varName) {
+        throw new IllegalArgumentException(varName + " must be set");
     }
 
     public static AmazonS3 getS3AwsFileSystem(String accessKeyId, String accessKeySecret,
@@ -94,21 +108,21 @@ public class FileStorageUtil {
     }
 
     public static AmazonS3 getS3FileSystemFromEnv() {
-        String accessKeyId = System.getenv("S3_ACCESS_KEY_ID");
+        String accessKeyId = System.getenv(S3_AK_ID);
         if (accessKeyId == null) {
-            throw new IllegalArgumentException("S3_ACCESS_KEY_ID must be set");
+            notSetException(S3_AK_ID);
         }
-        String accessKeySecret = System.getenv("S3_ACCESS_KEY_SECRET");
+        String accessKeySecret = System.getenv(S3_AK_SECRET);
         if (accessKeySecret == null) {
-            throw new IllegalArgumentException("S3_ACCESS_KEY_SECRET must be set");
+            notSetException(S3_AK_SECRET);
         }
-        String bucket = System.getenv("S3_BUCKET");
-        if (bucket == null) {
-            throw new IllegalArgumentException("S3_BUCKET must be set");
-        }
-        String endPoint = System.getenv("S3_ENDPOINT");
+        String endPoint = System.getenv(S3_ENDPOINT);
         if (endPoint == null) {
-            throw new IllegalArgumentException("S3_ENDPOINT must be set");
+            notSetException(S3_ENDPOINT);
+        }
+        String bucket = System.getenv(S3_BUCKET);
+        if (bucket == null) {
+            notSetException(S3_BUCKET);
         }
         return getS3AwsFileSystem(accessKeyId, accessKeySecret, endPoint, bucket);
     }

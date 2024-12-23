@@ -32,17 +32,17 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class S3FileStorage implements FileStorage {
+public class OssFileStorage implements FileStorage {
 
-    private static final Logger logger = LoggerFactory.getLogger(S3FileStorage.class);
+    private static final Logger logger = LoggerFactory.getLogger(OssFileStorage.class);
 
     private final OSSClient ossClient;
     private final String bucketName;
 
-    public S3FileStorage(OSSClient ossClient) {
+    public OssFileStorage(OSSClient ossClient) {
         Preconditions.checkNotNull(ossClient);
         this.ossClient = ossClient;
-        String bucketName = System.getenv("S3_BUCKET");
+        String bucketName = System.getenv(FileStorageUtil.OSS_BUCKET);
         if (bucketName == null) {
             throw new IllegalArgumentException("S3_BUCKET must be set");
         }
