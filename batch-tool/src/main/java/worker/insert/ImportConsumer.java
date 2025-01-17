@@ -51,7 +51,7 @@ public class ImportConsumer extends BaseDefaultConsumer {
         stringBuilder.append("(");
         try {
             ImportUtil.appendValuesByFieldMetaInfo(stringBuilder, fieldMetaInfoList,
-                values, consumerContext.isSqlEscapeEnabled(), consumerContext.isEmptyStrAsNull());
+                values, consumerContext.isSqlEscapeEnabled());
         } catch (DatabaseException e) {
             // 在split预处理过后仍存在的问题
             logger.error(StringUtils.join(values, ConfigConstant.MAGIC_CSV_SEP1));

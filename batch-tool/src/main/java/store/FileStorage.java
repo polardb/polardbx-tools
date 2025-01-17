@@ -14,27 +14,17 @@
  * limitations under the License.
  */
 
-package worker.common.writer;
+package store;
 
-import java.io.Closeable;
+import java.util.List;
 
-public interface IFileWriter extends Closeable {
+public interface FileStorage {
 
-    void nextFile(String fileName);
+    void put(String localFile, String targetPath);
 
-    default void write(byte[] data) {
-        throw new UnsupportedOperationException(getClass() + " does not support write raw bytes");
-    }
-
-    default void writeLine(String[] values) {
-        throw new UnsupportedOperationException(getClass() + " does not support write line with values");
-    }
-
-    boolean produceByBlock();
+    void get(String targetFile, String localPath);
 
     void close();
 
-    default void finishLastFile() {
-
-    }
+    List<String> listFiles(String prefix);
 }

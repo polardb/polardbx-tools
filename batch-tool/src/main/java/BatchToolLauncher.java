@@ -61,7 +61,11 @@ public class BatchToolLauncher {
             throw e;
         }
 
-        BaseOperateCommand command = CommandUtil.getOperateCommandFromCmd(commandLine);
-        BATCH_TOOL_INSTANCE.doBatchOp(command, dataSourceConfig);
+        try {
+            BaseOperateCommand command = CommandUtil.getOperateCommandFromCmd(commandLine);
+            BATCH_TOOL_INSTANCE.doBatchOp(command, dataSourceConfig);
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
     }
 }

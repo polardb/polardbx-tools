@@ -40,9 +40,15 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import store.FileStorage;
+import store.FileStorageUtil;
+import store.OssFileStorage;
+import store.S3AwsFileStorage;
 import util.FileUtil;
 import util.Version;
 
@@ -51,6 +57,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -59,6 +66,7 @@ import java.util.stream.Collectors;
 
 import static cmd.ConfigArgOption.ARG_DDL_PARALLELISM;
 import static cmd.ConfigArgOption.ARG_DDL_RETRY_COUNT;
+import static cmd.ConfigArgOption.ARG_NULL_STR;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
 import static cmd.ConfigArgOption.ARG_SHORT_BENCHMARK;
 import static cmd.ConfigArgOption.ARG_SHORT_CHARSET;
@@ -73,6 +81,7 @@ import static cmd.ConfigArgOption.ARG_SHORT_DIRECTORY;
 import static cmd.ConfigArgOption.ARG_SHORT_ENCRYPTION;
 import static cmd.ConfigArgOption.ARG_SHORT_FILE_FORMAT;
 import static cmd.ConfigArgOption.ARG_SHORT_FILE_NUM;
+import static cmd.ConfigArgOption.ARG_SHORT_FILE_SYSTEM;
 import static cmd.ConfigArgOption.ARG_SHORT_FROM_FILE;
 import static cmd.ConfigArgOption.ARG_SHORT_HELP;
 import static cmd.ConfigArgOption.ARG_SHORT_HISTORY_FILE;
@@ -104,7 +113,6 @@ import static cmd.ConfigArgOption.ARG_SHORT_WHERE;
 import static cmd.ConfigArgOption.ARG_SHORT_WITH_DDL;
 import static cmd.ConfigArgOption.ARG_TBL_PART;
 import static cmd.FlagOption.ARG_DROP_TABLE_IF_EXISTS;
-import static cmd.FlagOption.ARG_EMPTY_AS_NULL;
 import static cmd.FlagOption.ARG_SHORT_ENABLE_SHARDING;
 import static cmd.FlagOption.ARG_SHORT_IGNORE_AND_RESUME;
 import static cmd.FlagOption.ARG_SHORT_LOAD_BALANCE;
@@ -403,6 +411,23 @@ public class CommandUtil {
         return ConfigConstant.DEFAULT_ENCRYPTION_CONFIG;
     }
 
+    private static FileStorage getFileStorage(ConfigResult result) {
+        if (result.hasOption(ARG_SHORT_FILE_SYSTEM)) {
+            String fs = result.getOptionValue(ARG_SHORT_FILE_SYSTEM);
+            if (fs.equalsIgnoreCase("OSS")) {
+                FileStorage fileStorage = new OssFileStorage(FileStorageUtil.getOssClientFromEnv());
+                return fileStorage;
+            } else if (fs.equalsIgnoreCase("S3")) {
+                FileStorage fileStorage = new S3AwsFileStorage(FileStorageUtil.getS3FileSystemFromEnv());
+                return fileStorage;
+            } else if (fs.equalsIgnoreCase("LOCAL")) {
+                return null;
+            }
+            throw new UnsupportedOperationException("Unsupported filesystem: " + fs);
+        }
+        return null;
+    }
+
     private static int getReadBlockSizeInMb(ConfigResult result) {
         if (result.hasOption(ARG_SHORT_READ_BLOCK_SIZE)) {
             return Integer.parseInt(
@@ -417,10 +442,6 @@ public class CommandUtil {
 
     private static boolean getWithView(ConfigResult result) {
         return result.getBooleanFlag(ARG_WITH_VIEW);
-    }
-
-    private static boolean getEmptyAsNull(ConfigResult result) {
-        return result.getBooleanFlag(ARG_EMPTY_AS_NULL);
     }
 
     private static boolean getDropTableIfExist(ConfigResult result) {
@@ -452,6 +473,7 @@ public class CommandUtil {
         exportConfig.setEncryptionConfig(getEncryptionConfig(result));
         exportConfig.setFileFormat(getFileFormat(result));
         exportConfig.setCompressMode(getCompressMode(result));
+        exportConfig.setFileStorage(getFileStorage(result));
         exportConfig.setParallelism(getProducerParallelism(result));
         exportConfig.setQuoteEncloseMode(getQuoteEncloseMode(result));
         exportConfig.setWithLastSep(getWithLastSep(result));
@@ -470,28 +492,32 @@ public class CommandUtil {
     private static void setPartitions(ConfigResult result, ExportConfig exportConfig) {
         if (result.hasOption(ARG_TBL_PART)) {
             String partOpt = result.getOptionValue(ARG_TBL_PART);
-            if (StringUtils.isNotEmpty(partOpt)) {
-                String[] parts = StringUtils.split(partOpt, ":");
-                if (parts.length == 2) {
-                    int startPart = Integer.parseInt(parts[0]);
-                    int endPart = Integer.parseInt(parts[1]);
-                    if (startPart < 0) {
-                        throw new IllegalArgumentException("Illegal start partition: " + startPart);
-                    }
-                    if (endPart < 0) {
-                        throw new IllegalArgumentException("Illegal end partition: " + endPart);
-                    }
-                    if (endPart < startPart) {
-                        throw new IllegalArgumentException(
-                            "End partition should be greater than start partition: " + endPart);
-                    }
-                    exportConfig.setStartPart(startPart);
-                    exportConfig.setEndPart(endPart);
-                    return;
-                }
-            }
-            throw new IllegalArgumentException("Illegal table part option: " + partOpt);
+            Pair<Integer, Integer> tablePart = getTablePart(partOpt);
+            exportConfig.setStartPart(tablePart.getFirst());
+            exportConfig.setEndPart(tablePart.getSecond());
         }
+    }
+
+    private static Pair<Integer, Integer> getTablePart(String partOpt) {
+        if (StringUtils.isNotEmpty(partOpt)) {
+            String[] parts = StringUtils.split(partOpt, ":");
+            if (parts.length == 2) {
+                int startPart = Integer.parseInt(parts[0]);
+                int endPart = Integer.parseInt(parts[1]);
+                if (startPart < 0) {
+                    throw new IllegalArgumentException("Illegal start partition: " + startPart);
+                }
+                if (endPart < 0) {
+                    throw new IllegalArgumentException("Illegal end partition: " + endPart);
+                }
+                if (endPart < startPart) {
+                    throw new IllegalArgumentException(
+                        "End partition should be greater than start partition: " + endPart);
+                }
+                return new Pair<>(startPart, endPart);
+            }
+        }
+        throw new IllegalArgumentException("Illegal table part option: " + partOpt);
     }
 
     private static void setDir(ConfigResult result, ExportConfig exportConfig) {
@@ -592,6 +618,7 @@ public class CommandUtil {
         setBatchSize(result);
         setRingBufferSize(result);
         setPerfMode(result);
+        setNullStr(result);
     }
 
     private static void setUpdateBatchSize(ConfigResult result) {
@@ -608,9 +635,15 @@ public class CommandUtil {
         producerExecutionContext.setCharset(getCharset(result));
         producerExecutionContext.setSeparator(getSep(result));
         producerExecutionContext.setDdlMode(getDdlMode(result));
+        producerExecutionContext.setFileStorage(getFileStorage(result));
 
         if (producerExecutionContext.getDdlMode() != DdlMode.DDL_ONLY) {
-            producerExecutionContext.setDataFileLineRecordList(getDataFileRecordList(result));
+            if (producerExecutionContext.getFileStorage() != null) {
+                producerExecutionContext.setDataFileLineRecordList(
+                    getDataFileRecordListFromFileStorage(result, producerExecutionContext.getFileStorage()));
+            } else {
+                producerExecutionContext.setDataFileLineRecordList(getDataFileRecordList(result));
+            }
         }
         if (producerExecutionContext.getDdlMode() != DdlMode.NO_DDL) {
             producerExecutionContext.setDdlFileLineRecordList(getDdlFileRecordList(result));
@@ -622,6 +655,7 @@ public class CommandUtil {
         producerExecutionContext.setWithView(getWithView(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
+        producerExecutionContext.setFileStorage(getFileStorage(result));
         producerExecutionContext.setFileFormat(getFileFormat(result));
         producerExecutionContext.setMaxErrorCount(getMaxErrorCount(result));
         producerExecutionContext.setHistoryFileAndParse(getHistoryFile(result));
@@ -651,7 +685,6 @@ public class CommandUtil {
         consumerExecutionContext.setQuoteEncloseMode(getQuoteEncloseMode(result));
         consumerExecutionContext.setTpsLimit(getTpsLimit(result));
         consumerExecutionContext.setUseColumns(getUseColumns(result));
-        consumerExecutionContext.setEmptyStrAsNull(getEmptyAsNull(result));
         consumerExecutionContext.setMaxRetry(getMaxErrorCount(result));
 
         consumerExecutionContext.validate();
@@ -742,6 +775,58 @@ public class CommandUtil {
             return Integer.parseInt(result.getOptionValue(ARG_SHORT_SCALE));
         } else {
             return 0;
+        }
+    }
+
+    private static List<FileLineRecord> getDataFileRecordListFromFileStorage(ConfigResult result,
+                                                                             FileStorage fileStorage) {
+
+        if (result.hasOption(ARG_SHORT_FROM_FILE)) {
+            // did not check whether these files exist on file storage
+            String filePathListStr = result.getOptionValue(ARG_SHORT_FROM_FILE);
+            return Arrays.stream(StringUtils.split(filePathListStr, ConfigConstant.CMD_SEPARATOR))
+                .filter(s -> StringUtils.isNotBlank(s) && !StringUtils.endsWith(s, ConfigConstant.DDL_FILE_SUFFIX))
+                .map(s -> {
+                    String[] strs = StringUtils.split(s, ConfigConstant.CMD_FILE_LINE_SEPARATOR);
+                    if (strs.length == 1) {
+                        String fileAbsPath = FileUtil.getFileAbsPath(strs[0], false);
+                        return new FileLineRecord(fileAbsPath);
+                    } else if (strs.length == 2) {
+                        String fileAbsPath = FileUtil.getFileAbsPath(strs[0], false);
+                        int startLine = Integer.parseInt(strs[1]);
+                        return new FileLineRecord(fileAbsPath, startLine);
+                    } else {
+                        throw new IllegalArgumentException("Illegal file: " + s);
+                    }
+                }).collect(Collectors.toList());
+        } else {
+            // ignore the usage of ARG_SHORT_DIRECTORY
+
+            String prefix = getPrefix(result);
+            if (StringUtils.isBlank(prefix)) {
+                List<String> tableNames = getTableNames(result);
+                prefix = CollectionUtils.isEmpty(tableNames) ? "" : tableNames.get(0);
+            }
+            List<String> filenames;
+            if (result.hasOption(ARG_TBL_PART)) {
+                String partOpt = result.getOptionValue(ARG_TBL_PART);
+                Pair<Integer, Integer> tablePart = getTablePart(partOpt);
+                int start = tablePart.getFirst();
+                int end = tablePart.getSecond();
+                filenames = new ArrayList<>(end - start + 1);
+                for (int i = start; i <= end; i++) {
+                    filenames.add(prefix + "_" + i);
+                }
+            } else {
+                filenames = FileStorageUtil.listFiles(fileStorage, prefix);
+            }
+            if (CollectionUtils.isEmpty(filenames)) {
+                throw new IllegalArgumentException("Cannot find target files");
+            }
+            List<String> filePaths = filenames.stream()
+                .map(s -> FileUtil.getFileAbsPath(s, false))
+                .collect(Collectors.toList());
+            return FileLineRecord.fromFilePaths(filePaths);
         }
     }
 
@@ -881,6 +966,12 @@ public class CommandUtil {
 
     private static void setPerfMode(ConfigResult result) {
         GlobalVar.IN_PERF_MODE = result.getBooleanFlag(ARG_SHORT_PERF_MODE);
+    }
+
+    private static void setNullStr(ConfigResult result) {
+        if (result.hasOption(ARG_NULL_STR)) {
+            FileUtil.resetNullStrInQuote(result.getOptionValue(ARG_NULL_STR));
+        }
     }
     //endregion 全局相关设置
 

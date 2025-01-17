@@ -54,6 +54,7 @@ public class BlockReader extends FileBufferedBatchReader {
     private final byte[] gzipBuffer;
     private RandomAccessFile curRandomAccessFile;
     private boolean trimRight;
+
     public BlockReader(ProducerExecutionContext context,
                        FileBlockListRecord fileBlockListRecord,
                        RingBuffer<BatchLineEvent> ringBuffer, CompressMode compressMode) {
@@ -62,7 +63,6 @@ public class BlockReader extends FileBufferedBatchReader {
         // set localProcessingFileIndex and startPosArr[localProcessingFileIndex]
         this.localProcessingFileIndex = fileBlockListRecord.getCurrentFileIndex().get();
         this.fileBlockListRecord = fileBlockListRecord;
-        this.curRandomAccessFile = FileUtil.openRafForRead(fileList.get(localProcessingFileIndex));
         this.cipher = BaseCipher.getCipher(context.getEncryptionConfig(), false);
         if (this.compressMode != CompressMode.NONE) {
             this.gzipBuffer = new byte[(int) (readBlockSize + READ_PADDING)];
@@ -72,6 +72,11 @@ public class BlockReader extends FileBufferedBatchReader {
         this.byteBuffer = new BlockByteBuffer((int) (readBlockSize + READ_PADDING));
         this.posMarker = new BlockPosMarker();
         this.trimRight = context.isTrimRight();
+    }
+
+    @Override
+    protected void init() {
+        this.curRandomAccessFile = FileUtil.openRafForRead(getLocalFile());
     }
 
     @Override
@@ -221,7 +226,7 @@ public class BlockReader extends FileBufferedBatchReader {
     private boolean nextFile() {
         if (fileBlockListRecord.getFileDoneList()[localProcessingFileIndex].compareAndSet(false, true)) {
             // 此处不一定实际完成了读取，可能还有几个block正在处理中
-            logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
+            logger.info("{} 读取完毕", getLocalFile().getPath());
         }
         // 未处理足一个block就进入下一个文件 : counter--
         context.getEventCounter().get(localProcessingFileIndex)
@@ -233,7 +238,7 @@ public class BlockReader extends FileBufferedBatchReader {
             // 如果并发很大的话 可以考虑一次性跳过多个文件
             localProcessingFileIndex++;
             localProcessingBlockIndex = -1;
-            curRandomAccessFile = FileUtil.openRafForRead(fileList.get(localProcessingFileIndex));
+            curRandomAccessFile = FileUtil.openRafForRead(getLocalFile());
             return true;
         }
         return false;

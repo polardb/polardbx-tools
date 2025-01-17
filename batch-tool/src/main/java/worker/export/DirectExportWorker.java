@@ -26,11 +26,13 @@ import model.db.TableTopology;
 import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import store.FileStorage;
 import util.DataSourceUtil;
 import util.FileUtil;
 import worker.common.writer.CipherLineFileWriter;
 import worker.common.writer.IFileWriter;
 import worker.common.writer.NioFileWriter;
+import worker.common.writer.S3FileWriter;
 import worker.common.writer.XlsxFileWriter;
 import worker.util.ExportUtil;
 
@@ -92,10 +94,11 @@ public class DirectExportWorker extends BaseExportWorker {
                               CompressMode compressMode,
                               FileFormat fileFormat,
                               Charset charset,
-                              BaseCipher cipher) {
+                              BaseCipher cipher,
+                              FileStorage fileStorage) {
         this(dataSource, topology,  tableFieldMetaInfo, 0,
             filename, separator, isWithHeader, quoteEncloseMode,
-            compressMode, fileFormat, charset, cipher);
+            compressMode, fileFormat, charset, cipher, fileStorage);
     }
 
     /**
@@ -111,14 +114,15 @@ public class DirectExportWorker extends BaseExportWorker {
                               CompressMode compressMode,
                               FileFormat fileFormat,
                               Charset charset,
-                              BaseCipher cipher) {
+                              BaseCipher cipher,
+                              FileStorage fileStorage) {
         super(dataSource, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;
         this.cipher = cipher;
         initFileSeq();
-        this.fileWriter = initFileWriter(charset);
+        this.fileWriter = initFileWriter(charset, fileStorage);
         createNewFile();
     }
 
@@ -134,17 +138,29 @@ public class DirectExportWorker extends BaseExportWorker {
         }
     }
 
-    private IFileWriter initFileWriter(Charset charset) {
+    private IFileWriter initFileWriter(Charset charset, FileStorage fileStorage) {
+        IFileWriter iFileWriter;
+
         switch (fileFormat) {
         case XLSX:
         case XLS:
         case ET:
-            return new XlsxFileWriter();
+            iFileWriter = new XlsxFileWriter();
+            break;
+        default:
+            if (cipher == null || cipher.supportBlock()) {
+                iFileWriter = new  NioFileWriter(compressMode, charset);
+            } else {
+                iFileWriter = new CipherLineFileWriter(cipher, separator, quoteEncloseMode);
+            }
+            break;
         }
-        if (cipher == null || cipher.supportBlock()) {
-            return new NioFileWriter(compressMode, charset);
+
+        if (fileStorage != null) {
+            // support S3 only for now
+            return new S3FileWriter(iFileWriter, fileStorage);
         }
-        return new CipherLineFileWriter(cipher, separator, quoteEncloseMode);
+        return iFileWriter;
     }
 
     /**
@@ -216,13 +232,17 @@ public class DirectExportWorker extends BaseExportWorker {
     }
 
     private void afterRun() {
-        if (countDownLatch != null) {
-            countDownLatch.countDown();
+        try {
+            fileWriter.finishLastFile();
+            fileWriter.close();
+        } finally {
+            if (countDownLatch != null) {
+                countDownLatch.countDown();
+            }
+            if (permitted != null) {
+                permitted.release();
+            }
         }
-        if (permitted != null) {
-            permitted.release();
-        }
-        fileWriter.close();
     }
 
     @Override
@@ -304,6 +324,7 @@ public class DirectExportWorker extends BaseExportWorker {
 
     private void createNewPartFile() {
         curFileSeq++;
+        fileWriter.finishLastFile();
         createNewFile();
         curLineNum = 0;
     }

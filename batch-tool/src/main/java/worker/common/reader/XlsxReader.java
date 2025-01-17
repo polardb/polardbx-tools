@@ -40,15 +40,18 @@ import java.util.Map;
 public class XlsxReader extends FileBufferedBatchReader {
     private static final Logger logger = LoggerFactory.getLogger(XlsxReader.class);
 
-    private final InputStream inputStream;
+    private InputStream inputStream;
 
     public XlsxReader(ProducerExecutionContext context,
                       List<File> fileList, int fileIndex,
                       RingBuffer<BatchLineEvent> ringBuffer) {
         super(context, fileList, ringBuffer);
         this.localProcessingFileIndex = fileIndex;
+    }
 
-        String filePath = fileList.get(fileIndex).getAbsolutePath();
+    @Override
+    protected void init() {
+        String filePath = getLocalFile().getAbsolutePath();
         try {
             inputStream = new BufferedInputStream(new FileInputStream(filePath));
         } catch (FileNotFoundException e) {
@@ -85,7 +88,7 @@ public class XlsxReader extends FileBufferedBatchReader {
         };
 
         EasyExcel.read(inputStream, listener).sheet().doRead();
-        logger.info("{} 读取完毕，读取行数：{}", fileList.get(localProcessingFileIndex).getPath(),
+        logger.info("{} 读取完毕，读取行数：{}", getLocalFile().getPath(),
             currentFileLineCount.get());
     }
 

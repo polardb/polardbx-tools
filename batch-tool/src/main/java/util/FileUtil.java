@@ -48,15 +48,24 @@ public class FileUtil {
     public static final ByteBuffer NULL_STR_BYTE_BUFFER = ByteBuffer.wrap(NULL_STR_BYTE);
     public static final String NULL_ESC_STR = "\\N";
     // CSV读取转义后仍为\N
-    public static final String NULL_ESC_STR_IN_QUOTE = "\\\\N";
+    public static String NULL_ESC_STR_IN_QUOTE = "\\N";
     public static final byte[] DOUBLE_QUOTE_BYTE = "\"".getBytes();
     public static final byte[] BACK_SLASH_BYTE = "\\".getBytes();
     public static final byte[] NULL_ESC_BYTE = NULL_ESC_STR.getBytes();
-    public static final byte[] NULL_ESC_BYTE_IN_QUOTE = NULL_ESC_STR_IN_QUOTE.getBytes();
+    public static byte[] NULL_ESC_BYTE_IN_QUOTE = NULL_ESC_STR_IN_QUOTE.getBytes();
     public static final byte[] LF_BYTE = "\n".getBytes();
     public static final byte[] CR_BYTE = "\r".getBytes();
     public static final byte[] SYS_NEW_LINE_BYTE = System.lineSeparator().getBytes();
     public static final ByteBuffer NEW_LINE_BYTE_BUFFER = ByteBuffer.wrap(SYS_NEW_LINE_BYTE);
+
+    /**
+     * 自定义 NULL值 的转义表示（导入时使用）
+     * 此处未进行非法值的校验
+     */
+    public static void resetNullStrInQuote(String nullStr) {
+        NULL_ESC_STR_IN_QUOTE = nullStr;
+        NULL_ESC_BYTE_IN_QUOTE = NULL_ESC_STR_IN_QUOTE.getBytes();
+    }
 
     public static void writeToByteArrayStream(ByteArrayOutputStream os, byte[] value) throws IOException {
         if (value != null) {
@@ -403,8 +412,12 @@ public class FileUtil {
     }
 
     public static String getFileAbsPath(String filename) {
+        return getFileAbsPath(filename, true);
+    }
+
+    public static String getFileAbsPath(String filename, boolean checkExist) {
         File file = new File(filename);
-        if (!file.exists() || !file.isFile() || !file.canRead()) {
+        if (checkExist && (!file.exists() || !file.isFile() || !file.canRead())) {
             throw new IllegalArgumentException("Failed to read from " + filename);
         }
         return file.getAbsolutePath();

@@ -523,28 +523,28 @@ public class DbUtil {
     public static String getShowCreateDatabase(Connection conn, String dbName) throws DatabaseException {
         try (Statement stmt = conn.createStatement()) {
             // FIXME show create database does not contain charset, collation and mode
-            ResultSet rs = stmt.executeQuery("show create database " + dbName);
+            ResultSet rs = stmt.executeQuery("show create database " + surroundWithBacktick(dbName));
 
             if (!rs.next()) {
-                throw new DatabaseException("Failed to show create database:" + dbName);
+                throw new DatabaseException("Failed to show create database: " + dbName);
             }
             return rs.getString(2);
         } catch (SQLException e) {
-            throw new DatabaseException("Failed to show create database:" + dbName, e);
+            throw new DatabaseException("Failed to show create database: " + dbName, e);
         }
     }
 
     public static String getShowCreateTable(Connection conn, String tableName) throws DatabaseException {
         try (Statement stmt = conn.createStatement()) {
             // FIXME show create database does not contain GSI
-            ResultSet rs = stmt.executeQuery(String.format("show create table `%s`", tableName));
+            ResultSet rs = stmt.executeQuery("show create database " + surroundWithBacktick(tableName));
 
             if (!rs.next()) {
-                throw new DatabaseException("Failed to show create table:" + tableName);
+                throw new DatabaseException("Failed to show create table: " + tableName);
             }
             return rs.getString(2);
         } catch (SQLException e) {
-            throw new DatabaseException("Failed to show create table:" + tableName, e);
+            throw new DatabaseException("Failed to show create table: " + tableName, e);
         }
     }
 
@@ -571,6 +571,13 @@ public class DbUtil {
             }
         }
         return true;
+    }
+
+    public static String surroundWithBacktick(String identifier) {
+        if (identifier.contains("`")) {
+            return "`" + identifier.replaceAll("`", "``") + "`";
+        }
+        return "`" + identifier + "`";
     }
 
     /**

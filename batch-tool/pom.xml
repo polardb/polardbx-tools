@@ -6,7 +6,7 @@
 
     <groupId>com.alibaba.polardbx</groupId>
     <artifactId>batch-tool</artifactId>
-    <version>1.4.2</version>
+    <version>1.5.0</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,6 +19,7 @@
         <file_encoding>UTF-8</file_encoding>
         <!-- Log libs -->
         <slf4j_version>1.7.36</slf4j_version>
+        <logback_version>1.2.3</logback_version>
         <!-- db -->
         <mysql_connector_version>8.0.16</mysql_connector_version>
         <druid.version>1.2.8</druid.version>
@@ -35,7 +36,8 @@
         <bouncycastle.version>1.60</bouncycastle.version>
         <easy-excel.version>3.0.5</easy-excel.version>
         <snakeyaml.version>1.30</snakeyaml.version>
-
+        <aws-s3.version>2.28.29</aws-s3.version>
+        <oss.version>3.17.4</oss.version>
     </properties>
 
     <repositories>
@@ -78,10 +80,26 @@
 
         <!-- Log libs -->
         <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback_version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
+            <artifactId>jcl-over-slf4j</artifactId>
             <version>${slf4j_version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j_version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${slf4j_version}</version>
+        </dependency>
+
         <!-- Disruptor -->
         <dependency>
             <groupId>com.lmax</groupId>
@@ -161,6 +179,20 @@
             <artifactId>snakeyaml</artifactId>
             <version>${snakeyaml.version}</version>
         </dependency>
+
+        <!-- s3 -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>1.12.772</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>${oss.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

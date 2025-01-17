@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,27 +14,22 @@
  * limitations under the License.
  */
 
-package worker.common.writer;
+package exception;
 
-import java.io.Closeable;
-
-public interface IFileWriter extends Closeable {
-
-    void nextFile(String fileName);
-
-    default void write(byte[] data) {
-        throw new UnsupportedOperationException(getClass() + " does not support write raw bytes");
+public class S3Exception extends RuntimeException {
+    public S3Exception() {
+        super();
     }
 
-    default void writeLine(String[] values) {
-        throw new UnsupportedOperationException(getClass() + " does not support write line with values");
+    public S3Exception(String message) {
+        super(message);
     }
 
-    boolean produceByBlock();
+    public S3Exception(String message, Throwable cause) {
+        super(message, cause);
+    }
 
-    void close();
-
-    default void finishLastFile() {
-
+    public S3Exception(Throwable cause) {
+        super(cause);
     }
 }

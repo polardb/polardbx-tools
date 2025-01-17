@@ -101,6 +101,5 @@ public class CipherLineFileWriter implements IFileWriter {
 
     @Override
     public void close() {
-
     }
 }

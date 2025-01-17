@@ -68,7 +68,7 @@ public class ConfigArgOption {
     public static final ConfigArgOption ARG_SHORT_MAX_CONN_NUM =
         of("maxConn", "maxConnection", "Max connection count (druid).", "max connection");
     public static final ConfigArgOption ARG_SHORT_MAX_WAIT =
-        of("maxWait", "connMaxWait", "Max wait time when getting a connection.", "wait time(ms)");
+        of("maxWait", "connMaxWait", "Max wait time when getting a connection (druid).", "wait time(ms)");
     public static final ConfigArgOption ARG_SHORT_MIN_CONN_NUM =
         of("minConn", "minConnection", "Min connection count (druid).", "min connection");
     public static final ConfigArgOption ARG_SHORT_CONN_PARAM =
@@ -112,6 +112,10 @@ public class ConfigArgOption {
         of("scale", "scale", "The size scale benchmark data (GB for tpch).", "size");
     public static final ConfigArgOption ARG_TBL_PART =
         of("part", "tblPart", "Partitions of the target tables, starting from 0 (both inclusive).", "start:end");
+    public static final ConfigArgOption ARG_SHORT_FILE_SYSTEM =
+        of("fs", "filesystem", "The filesystem for reading or writing files (default LOCAL).", "LOCAL | S3 | S3-AWS");
+    public static final ConfigArgOption ARG_NULL_STR =
+        of("nullStr", "nullStr", "Treat this value as NULL (default \\N).", "string value");
 
     protected final String argShort;
     protected final String argLong;

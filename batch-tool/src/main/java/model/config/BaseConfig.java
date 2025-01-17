@@ -16,6 +16,8 @@
 
 package model.config;
 
+import store.FileStorage;
+
 import java.nio.charset.Charset;
 
 /**
@@ -59,6 +61,11 @@ public class BaseConfig {
     private boolean isWithView = false;
     private int startPart = -1;
     private int endPart = -1;
+
+    /**
+     * null means LOCAL
+     */
+    protected FileStorage fileStorage = null;
 
     public BaseConfig(boolean shardingEnabled) {
         this.shardingEnabled = shardingEnabled;
@@ -201,6 +208,14 @@ public class BaseConfig {
         this.dropTableIfExists = dropTableIfExists;
     }
 
+    public FileStorage getFileStorage() {
+        return fileStorage;
+    }
+
+    public void setFileStorage(FileStorage fileStorage) {
+        this.fileStorage = fileStorage;
+    }
+
     @Override
     public String toString() {
         return "BaseConfig{" +
@@ -215,6 +230,15 @@ public class BaseConfig {
             ", dropTableIfExists='" + dropTableIfExists + '\'' +
             ", encryptionConfig='" + encryptionConfig + '\'' +
             '}';
+    }
+
+    /**
+     * consider a better design
+     */
+    public void close() {
+        if (fileStorage != null) {
+            fileStorage.close();
+        }
     }
 
     private static class FileMode {

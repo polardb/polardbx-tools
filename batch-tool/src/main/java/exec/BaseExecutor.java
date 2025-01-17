@@ -281,6 +281,11 @@ public abstract class BaseExecutor {
         workerPool.drainAndHalt();
         producerThreadPool.shutdownNow();
         consumerThreadPool.shutdownNow();
+        try {
+            producer.close();
+        } catch (Exception e) {
+            logger.warn(e.getMessage());
+        }
 
         if (usingBlockReader) {
             logger.info("{} 总文件读取行数：{}", tableName, ((ReadFileWithBlockProducer) producer).getTotalReadLines());
