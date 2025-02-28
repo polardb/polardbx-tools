@@ -77,6 +77,8 @@ public class ConfigArgOption {
         of("initSqls", "initSqls", "Connection init sqls (druid).", "sqls");
     public static final ConfigArgOption ARG_SHORT_BATCH_SIZE =
         of("batchsize", "batchSize", "Batch size of insert.", "size");
+    public static final ConfigArgOption ARG_SHORT_BATCH_SIZE_IN_BYTES =
+        of("batchBytes", "batchBytes", "Batch memory size (in bytes) of insert.", "size");
     public static final ConfigArgOption ARG_SHORT_READ_BLOCK_SIZE =
         of("readsize", "readSize", "Read block size.", "size(MB)");
     public static final ConfigArgOption ARG_SHORT_RING_BUFFER_SIZE =

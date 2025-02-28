@@ -68,6 +68,7 @@ import static cmd.ConfigArgOption.ARG_DDL_PARALLELISM;
 import static cmd.ConfigArgOption.ARG_DDL_RETRY_COUNT;
 import static cmd.ConfigArgOption.ARG_NULL_STR;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
+import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE_IN_BYTES;
 import static cmd.ConfigArgOption.ARG_SHORT_BENCHMARK;
 import static cmd.ConfigArgOption.ARG_SHORT_CHARSET;
 import static cmd.ConfigArgOption.ARG_SHORT_COLUMNS;
@@ -961,6 +962,10 @@ public class CommandUtil {
         if (result.hasOption(ARG_SHORT_BATCH_SIZE)) {
             GlobalVar.EMIT_BATCH_SIZE = Integer.parseInt(
                 result.getOptionValue(ARG_SHORT_BATCH_SIZE));
+        }
+        if (result.hasOption(ARG_SHORT_BATCH_SIZE_IN_BYTES)) {
+            GlobalVar.EMIT_BATCH_SIZE_IN_BYTES = Long.parseLong(
+                result.getOptionValue(ARG_SHORT_BATCH_SIZE_IN_BYTES));
         }
     }
 

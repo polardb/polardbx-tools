@@ -39,6 +39,7 @@ public abstract class FileBufferedBatchReader implements Runnable {
     protected final ProducerExecutionContext context;
     protected final List<File> fileList;
     protected int bufferedLineCount = 0;
+    protected long bufferedLineSize = 0;
     protected String[] lineBuffer;
     protected volatile int localProcessingFileIndex;
     protected long localProcessingBlockIndex = -1;
@@ -73,13 +74,27 @@ public abstract class FileBufferedBatchReader implements Runnable {
 
     protected void appendToLineBuffer(String line) {
         lineBuffer[bufferedLineCount++] = line;
-        if (bufferedLineCount == EMIT_BATCH_SIZE) {
+        bufferedLineSize += line.length();
+        if (shouldEmit()) {
             emitLineBuffer();
-            lineBuffer = new String[EMIT_BATCH_SIZE];
-            bufferedLineCount = 0;
+            renewLineBuffer();
         }
         fileReaderStat.increment();
         currentFileLineCount.incrementAndGet();
+    }
+
+    private void renewLineBuffer() {
+        lineBuffer = new String[EMIT_BATCH_SIZE];
+        bufferedLineCount = 0;
+        bufferedLineSize = 0;
+    }
+
+    private boolean shouldEmit() {
+        if (GlobalVar.EMIT_BATCH_SIZE_IN_BYTES <= 0) {
+            return bufferedLineCount == EMIT_BATCH_SIZE;
+        }
+        return bufferedLineSize >= GlobalVar.EMIT_BATCH_SIZE_IN_BYTES
+            || bufferedLineCount == EMIT_BATCH_SIZE;
     }
 
     protected void emitLineBuffer() {

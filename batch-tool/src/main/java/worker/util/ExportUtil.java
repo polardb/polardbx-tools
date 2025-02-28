@@ -17,9 +17,11 @@
 package worker.util;
 
 import model.config.CompressMode;
+import model.config.GlobalVar;
 import model.db.FieldMetaInfo;
 import model.db.TableTopology;
 import org.apache.commons.lang.StringUtils;
+import util.DbUtil;
 import util.FileUtil;
 import worker.export.order.OrderByExportEvent;
 import worker.export.order.ParallelOrderByExportEvent;
@@ -73,7 +75,27 @@ public class ExportUtil {
         StringBuilder stringBuilder = new StringBuilder(fieldLen * 8);
         for (FieldMetaInfo metaInfo : fieldMetaInfoList) {
             fieldMetaInfo = metaInfo;
-            /*
+            String fieldName = getExportFieldName(fieldMetaInfo);
+            stringBuilder.append(fieldName);
+            stringBuilder.append(',');
+        }
+        if (stringBuilder.length() > 0) {
+            stringBuilder.setLength(stringBuilder.length() - 1);
+        }
+        return stringBuilder.toString();
+    }
+
+    private static String getExportFieldName(FieldMetaInfo fieldMetaInfo) {
+        String fieldName = fieldMetaInfo.getName();
+        fieldName = DbUtil.surroundWithBacktick(fieldName);
+        switch (fieldMetaInfo.getType()) {
+        case BINARY:
+            if (GlobalVar.BINARY_AS_HEX) {
+                fieldName = String.format("hex(%s)", fieldName);
+            }
+            break;
+        case DATETIME:
+             /*
                 后期再支持如时间日期字段值的格式化
              */
 //            if (fieldMetaInfo.getType() == FieldMetaInfo.Type.DATE) {
@@ -81,13 +103,12 @@ public class ExportUtil {
 //                stringBuilder.append("DATE_FORMAT(`").append(fieldMetaInfo.getName())
 //                    .append("`, \"%%Y%%m%%d\")");
 //            }
-            stringBuilder.append('`').append(fieldMetaInfo.getName()).append('`');
-            stringBuilder.append(',');
+            break;
+        default:
+            // do nothing
+            break;
         }
-        if (stringBuilder.length() > 0) {
-            stringBuilder.setLength(stringBuilder.length() - 1);
-        }
-        return stringBuilder.toString();
+        return fieldName;
     }
 
     public static String getOrderBySql(TableTopology topology,

@@ -27,6 +27,11 @@ public class GlobalVar {
     public static int EMIT_BATCH_SIZE = 200;
 
     /**
+     * 发送一批数据的内存大小
+     */
+    public static long EMIT_BATCH_SIZE_IN_BYTES = -1;
+
+    /**
      * RingBuffer 缓冲区大小
      */
     public static int DEFAULT_RING_BUFFER_SIZE = 1024;
@@ -60,6 +65,8 @@ public class GlobalVar {
      * max line count for single csv row
      */
     public static int MAX_CSV_MULTI_LINE = 500;
+
+    public static boolean BINARY_AS_HEX = true;
 
     public static void setTpchUpdateBatchSize(int batchSize) {
         if (batchSize >= BaseOrderLineUpdateGenerator.SCALE_BASE) {
