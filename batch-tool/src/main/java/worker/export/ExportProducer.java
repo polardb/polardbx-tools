@@ -45,14 +45,14 @@ public class ExportProducer extends BaseExportWorker {
 
     private Semaphore permitted;
 
-    public ExportProducer(DataSource druid, TableTopology topology,
+    public ExportProducer(DataSource druid, String tableName, TableTopology topology,
                           TableFieldMetaInfo tableFieldMetaInfo,
                           RingBuffer<ExportEvent> ringBuffer,
                           String separator, CountDownLatch countDownLatch,
                           AtomicInteger emittedDataCounter,
                           boolean collectFragmentEnabled,
                           QuoteEncloseMode quoteEncloseMode) {
-        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode);
+        super(druid, tableName, topology, tableFieldMetaInfo, separator, quoteEncloseMode);
         this.ringBuffer = ringBuffer;
         this.countDownLatch = countDownLatch;
         this.emittedDataCounter = emittedDataCounter;

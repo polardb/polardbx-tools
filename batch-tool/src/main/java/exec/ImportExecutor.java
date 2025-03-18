@@ -60,6 +60,28 @@ public class ImportExecutor extends WriteDbExecutor {
     }
 
     @Override
+    protected void handleSingleTableInner(String tableName) throws Exception {
+        if (producerExecutionContext.isSingleThread()
+            && consumerExecutionContext.isSingleThread()) {
+            // 使用按行读取insert模式
+            doSingleThreadImport(tableName);
+        } else {
+            if (command.isShardingEnabled()) {
+                doShardingImport(tableName);
+            } else {
+                doDefaultImport(tableName);
+            }
+        }
+
+        if (producerExecutionContext.getException() != null) {
+            throw producerExecutionContext.getException();
+        }
+        if (consumerExecutionContext.getException() != null) {
+            throw consumerExecutionContext.getException();
+        }
+    }
+
+    @Override
     public void preCheck() {
         if (producerExecutionContext.getDdlMode() == DdlMode.NO_DDL) {
             if (command.isDbOperation()) {
@@ -145,29 +167,12 @@ public class ImportExecutor extends WriteDbExecutor {
 
         for (String tableName : tableNames) {
             logger.info("开始导入表：{}", tableName);
-            if (producerExecutionContext.isSingleThread()
-                && consumerExecutionContext.isSingleThread()) {
-                // 使用按行读取insert模式
-                doSingleThreadImport(tableName);
-            } else {
-                if (command.isShardingEnabled()) {
-                    doShardingImport(tableName);
-                } else {
-                    doDefaultImport(tableName);
-                }
+            try {
+                handleSingleTable(tableName);
+                logger.info("导入数据到 {} 完成，导入计数：{}", tableName, CountStat.getDbRowCount());
+            } catch (Exception e) {
+                logger.error("导入数据到 {} 失败：{}", tableName, e.getMessage());
             }
-
-            if (producerExecutionContext.getException() != null) {
-                logger.error("导入数据到 {} 失败：{}", tableName,
-                    producerExecutionContext.getException().getMessage());
-                return;
-            }
-            if (consumerExecutionContext.getException() != null) {
-                logger.error("导入数据到 {} 失败：{}", tableName,
-                    consumerExecutionContext.getException().getMessage());
-                return;
-            }
-            logger.info("导入数据到 {} 完成，导入计数：{}", tableName, CountStat.getDbRowCount());
         }
     }
 

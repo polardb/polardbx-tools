@@ -39,10 +39,12 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.DbUtil;
 import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
+import worker.NamedThreadFactory;
 import worker.common.BaseDefaultConsumer;
 import worker.common.BaseWorkHandler;
 import worker.common.BatchLineEvent;
@@ -58,8 +60,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -68,6 +73,8 @@ public abstract class BaseExecutor {
     protected final DataSource dataSource;
     protected final BaseOperateCommand command;
     private final DataSourceConfig dataSourceConfig;
+    protected AtomicBoolean enableStatLogging = new AtomicBoolean(false);
+    private ScheduledExecutorService scheduler = null;
 
     public BaseExecutor(DataSourceConfig dataSourceConfig,
                         DataSource dataSource,
@@ -75,6 +82,19 @@ public abstract class BaseExecutor {
         this.dataSourceConfig = dataSourceConfig;
         this.dataSource = dataSource;
         this.command = baseCommand;
+        initStatLog();
+    }
+
+    private void initStatLog() {
+        if (GlobalVar.LOG_INTERVAL > 0) {
+            this.scheduler = Executors.newScheduledThreadPool(1,
+                new NamedThreadFactory("stat-log", true));
+            this.scheduler.scheduleAtFixedRate(() -> {
+                if (enableStatLogging.get()) {
+                    printStatLog();
+                }
+            }, 1, GlobalVar.LOG_INTERVAL, TimeUnit.SECONDS);
+        }
     }
 
     public static BaseExecutor getExecutor(BaseOperateCommand command, DataSourceConfig dataSourceConfig,
@@ -158,6 +178,38 @@ public abstract class BaseExecutor {
     public void preCheck() {
 
     }
+
+    protected void startStatLog() {
+        if (GlobalVar.LOG_INTERVAL > 0) {
+            this.enableStatLogging.set(true);
+        }
+    }
+
+    protected void stopStatLog() {
+        this.enableStatLogging.set(false);
+    }
+
+    protected abstract void handleSingleTableInner(String tableName) throws Exception;
+
+    protected void handleSingleTable(String tableName) throws Exception {
+        beforeSingleTable(tableName);
+        try {
+            handleSingleTableInner(tableName);
+        } finally {
+            afterSingleTable(tableName);
+        }
+    }
+
+    protected void beforeSingleTable(String tableName) {
+        startStatLog();
+        CountStat.clearDbRowCount();
+    }
+
+    protected void afterSingleTable(String tableName) {
+        stopStatLog();
+    }
+
+    protected abstract void printStatLog();
 
     protected void checkTableExists(List<String> tableNames) {
         for (String tableName : tableNames) {
@@ -348,7 +400,9 @@ public abstract class BaseExecutor {
     }
 
     public void close() {
-
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
     }
 
     public boolean hasFatalException() {

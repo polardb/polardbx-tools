@@ -66,6 +66,7 @@ import java.util.stream.Collectors;
 
 import static cmd.ConfigArgOption.ARG_DDL_PARALLELISM;
 import static cmd.ConfigArgOption.ARG_DDL_RETRY_COUNT;
+import static cmd.ConfigArgOption.ARG_LOG_INTERVAL;
 import static cmd.ConfigArgOption.ARG_NULL_STR;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE;
 import static cmd.ConfigArgOption.ARG_SHORT_BATCH_SIZE_IN_BYTES;
@@ -113,6 +114,7 @@ import static cmd.ConfigArgOption.ARG_SHORT_VERSION;
 import static cmd.ConfigArgOption.ARG_SHORT_WHERE;
 import static cmd.ConfigArgOption.ARG_SHORT_WITH_DDL;
 import static cmd.ConfigArgOption.ARG_TBL_PART;
+import static cmd.FlagOption.ARG_BINARY_AS_HEX;
 import static cmd.FlagOption.ARG_DROP_TABLE_IF_EXISTS;
 import static cmd.FlagOption.ARG_SHORT_ENABLE_SHARDING;
 import static cmd.FlagOption.ARG_SHORT_IGNORE_AND_RESUME;
@@ -314,6 +316,8 @@ public class CommandUtil {
         if (result.hasOption(ARG_SHORT_ENABLE_SHARDING)) {
             command.setShardingEnabled(result.getBooleanFlag(ARG_SHORT_ENABLE_SHARDING));
         }
+        setBinaryAsHex(result);
+        setLogInterval(result);
     }
 
     private static List<String> getTableNames(ConfigResult result) {
@@ -607,7 +611,7 @@ public class CommandUtil {
     private static void configureCommonContext(ConfigResult result,
                                                ProducerExecutionContext producerExecutionContext,
                                                ConsumerExecutionContext consumerExecutionContext) {
-        configureGlobalVar(result);
+        configureWriteDbGlobalVar(result);
         configureProducerContext(result, producerExecutionContext);
         configureConsumerContext(result, consumerExecutionContext);
     }
@@ -615,11 +619,27 @@ public class CommandUtil {
     /**
      * 设置全局可调参数
      */
-    private static void configureGlobalVar(ConfigResult result) {
+    private static void configureWriteDbGlobalVar(ConfigResult result) {
         setBatchSize(result);
         setRingBufferSize(result);
         setPerfMode(result);
         setNullStr(result);
+    }
+
+    private static void setLogInterval(ConfigResult result) {
+        if (result.hasOption(ARG_LOG_INTERVAL)) {
+            int logInterval = Integer.parseInt(result.getOptionValue(ARG_LOG_INTERVAL));
+            if (logInterval < 0) {
+                throw new IllegalArgumentException("Illegal log interval: " + logInterval);
+            }
+            GlobalVar.LOG_INTERVAL = logInterval;
+        }
+    }
+
+    private static void setBinaryAsHex(ConfigResult result) {
+        if (result.hasOption(ARG_BINARY_AS_HEX)) {
+            GlobalVar.BINARY_AS_HEX = result.getBooleanFlag(ARG_BINARY_AS_HEX);
+        }
     }
 
     private static void setUpdateBatchSize(ConfigResult result) {

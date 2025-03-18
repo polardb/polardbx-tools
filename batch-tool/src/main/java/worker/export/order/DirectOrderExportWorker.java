@@ -48,7 +48,8 @@ public class DirectOrderExportWorker extends DirectExportWorker {
                                    int maxLine, Charset charset, String separator, boolean isAscending,
                                    boolean isWithHeader, QuoteEncloseMode quoteEncloseMode,
                                    CompressMode compressMode, FileFormat fileFormat, BaseCipher cipher) {
-        super(dataSource, new TableTopology(tableName), tableFieldMetaInfo, maxLine, filename, separator, isWithHeader,
+        super(dataSource, tableName, new TableTopology(tableName),
+            tableFieldMetaInfo, maxLine, filename, separator, isWithHeader,
             quoteEncloseMode, compressMode, fileFormat, charset, cipher, null);
         this.orderByColumnName = orderByColumnName;
         this.isAscending = isAscending;

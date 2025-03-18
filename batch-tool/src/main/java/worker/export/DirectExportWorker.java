@@ -85,7 +85,7 @@ public class DirectExportWorker extends BaseExportWorker {
     private Semaphore permitted;
 
     public DirectExportWorker(DataSource dataSource,
-                              TableTopology topology,
+                              String logicalTableName, TableTopology topology,
                               TableFieldMetaInfo tableFieldMetaInfo,
                               String filename,
                               String separator,
@@ -96,7 +96,7 @@ public class DirectExportWorker extends BaseExportWorker {
                               Charset charset,
                               BaseCipher cipher,
                               FileStorage fileStorage) {
-        this(dataSource, topology,  tableFieldMetaInfo, 0,
+        this(dataSource, logicalTableName, topology, tableFieldMetaInfo, 0,
             filename, separator, isWithHeader, quoteEncloseMode,
             compressMode, fileFormat, charset, cipher, fileStorage);
     }
@@ -104,7 +104,8 @@ public class DirectExportWorker extends BaseExportWorker {
     /**
      * @param maxLine 单个文件最大行数
      */
-    public DirectExportWorker(DataSource dataSource, TableTopology topology,
+    public DirectExportWorker(DataSource dataSource, String logicalTableName,
+                              TableTopology topology,
                               TableFieldMetaInfo tableFieldMetaInfo,
                               int maxLine,
                               String filename,
@@ -116,7 +117,8 @@ public class DirectExportWorker extends BaseExportWorker {
                               Charset charset,
                               BaseCipher cipher,
                               FileStorage fileStorage) {
-        super(dataSource, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
+        super(dataSource, logicalTableName, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode,
+            fileFormat);
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;

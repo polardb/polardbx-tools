@@ -68,6 +68,8 @@ public class GlobalVar {
 
     public static boolean BINARY_AS_HEX = true;
 
+    public static int LOG_INTERVAL = 0;
+
     public static void setTpchUpdateBatchSize(int batchSize) {
         if (batchSize >= BaseOrderLineUpdateGenerator.SCALE_BASE) {
             throw new IllegalArgumentException(

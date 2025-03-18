@@ -26,6 +26,7 @@ import model.config.BenchmarkMode;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.SyncUtil;
 import worker.MyThreadPool;
 import worker.MyWorkerPool;
@@ -57,6 +58,27 @@ public class UpdateExecutor extends WriteDbExecutor {
     }
 
     @Override
+    protected void handleSingleTableInner(String tableName) {
+        if (consumerExecutionContext.isFuncSqlForUpdateEnabled()) {
+            // 启用函数则优先
+            doUpdateWithFunc(tableName);
+            return;
+        }
+        if (!StringUtils.isEmpty(consumerExecutionContext.getWhereCondition())) {
+            // 有where子句用默认方法
+            doDefaultUpdate(UpdateConsumer.class, tableName);
+            return;
+        }
+
+        if (command.isShardingEnabled()) {
+            doShardingUpdate(tableName);
+        } else {
+            // 禁用sharding则默认
+            doDefaultUpdate(ReplaceConsumer.class, tableName);
+        }
+    }
+
+    @Override
     public void execute() {
         if (producerExecutionContext.getBenchmarkMode() != BenchmarkMode.NONE) {
             handleBenchmark();
@@ -66,26 +88,15 @@ public class UpdateExecutor extends WriteDbExecutor {
         configureFieldMetaInfo();
         configurePkList();
 
-        if (consumerExecutionContext.isFuncSqlForUpdateEnabled()) {
-            // 启用函数则优先
-            doUpdateWithFunc();
-            logger.info("更新 {} 数据完成", tableNames);
-            return;
+        for (String tableName : tableNames) {
+            logger.info("开始更新表数据：{}", tableName);
+            try {
+                handleSingleTable(tableName);
+                logger.info("更新 {} 数据完成，更新计数：{}", tableName, CountStat.getDbRowCount());
+            } catch (Exception e) {
+                logger.error("更新 {} 表数据出现异常：{}", tableName, e.getMessage());
+            }
         }
-        if (!StringUtils.isEmpty(consumerExecutionContext.getWhereCondition())) {
-            // 有where子句用默认方法
-            doDefaultUpdate(UpdateConsumer.class);
-            logger.info("更新 {} 数据完成", tableNames);
-            return;
-        }
-
-        if (command.isShardingEnabled()) {
-            doShardingUpdate();
-        } else {
-            // 禁用sharding则默认
-            doDefaultUpdate(ReplaceConsumer.class);
-        }
-        logger.info("更新 {} 数据完成", tableNames);
     }
 
     private void handleBenchmark() {
@@ -222,35 +233,31 @@ public class UpdateExecutor extends WriteDbExecutor {
             workerPool);
     }
 
-    private void doShardingUpdate() {
+    private void doShardingUpdate(String tableName) {
         configureTopology();
         configurePartitionKey();
-        for (String tableName : tableNames) {
-            String toUpdateColumns =
-                UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
-            consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
-            configureCommonContextAndRun(ShardedReplaceConsumer.class, producerExecutionContext,
-                consumerExecutionContext, tableName, useBlockReader());
-        }
+        String toUpdateColumns =
+            UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
+        consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
+        configureCommonContextAndRun(ShardedReplaceConsumer.class, producerExecutionContext,
+            consumerExecutionContext, tableName, useBlockReader());
     }
 
     /**
      * 使用mysql函数进行字段更新
      */
-    private void doUpdateWithFunc() {
-        for (String tableName : tableNames) {
-            String updateWithFuncSqlPattern = UpdateUtil.getUpdateWithFuncSqlPattern(tableName,
-                consumerExecutionContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList(),
-                consumerExecutionContext.getTablePkIndexSet(tableName));
-            consumerExecutionContext.setUpdateWithFuncPattern(updateWithFuncSqlPattern);
+    private void doUpdateWithFunc(String tableName) {
+        String updateWithFuncSqlPattern = UpdateUtil.getUpdateWithFuncSqlPattern(tableName,
+            consumerExecutionContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList(),
+            consumerExecutionContext.getTablePkIndexSet(tableName));
+        consumerExecutionContext.setUpdateWithFuncPattern(updateWithFuncSqlPattern);
 
-            if (consumerExecutionContext.isWhereInEnabled()) {
-                configureCommonContextAndRun(UpdateWithFuncInConsumer.class, producerExecutionContext,
-                    consumerExecutionContext, tableName, useBlockReader());
-            } else {
-                configureCommonContextAndRun(UpdateWithFuncConsumer.class, producerExecutionContext,
-                    consumerExecutionContext, tableName, useBlockReader());
-            }
+        if (consumerExecutionContext.isWhereInEnabled()) {
+            configureCommonContextAndRun(UpdateWithFuncInConsumer.class, producerExecutionContext,
+                consumerExecutionContext, tableName, useBlockReader());
+        } else {
+            configureCommonContextAndRun(UpdateWithFuncConsumer.class, producerExecutionContext,
+                consumerExecutionContext, tableName, useBlockReader());
         }
     }
 
@@ -259,14 +266,12 @@ public class UpdateExecutor extends WriteDbExecutor {
      *
      * @param clazz 决定实际的worker是使用update还是replace
      */
-    private void doDefaultUpdate(Class<? extends BaseWorkHandler> clazz) {
-        for (String tableName : tableNames) {
-            String toUpdateColumns =
-                UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
-            consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
+    private void doDefaultUpdate(Class<? extends BaseWorkHandler> clazz, String tableName) {
+        String toUpdateColumns =
+            UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
+        consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
 
-            configureCommonContextAndRun(clazz, producerExecutionContext,
-                consumerExecutionContext, tableName, useBlockReader());
-        }
+        configureCommonContextAndRun(clazz, producerExecutionContext,
+            consumerExecutionContext, tableName, useBlockReader());
     }
 }

@@ -53,11 +53,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static model.config.ConfigConstant.APP_NAME;
 
 public class ShardingExportExecutor extends BaseExportExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ShardingExportExecutor.class);
+
+    private final AtomicReference<String> curTableName = new AtomicReference<>(null);
 
     public ShardingExportExecutor(DataSourceConfig dataSourceConfig,
                                   DruidDataSource druid,
@@ -69,9 +72,11 @@ public class ShardingExportExecutor extends BaseExportExecutor {
     void exportData() {
         List<String> tableNames = command.getTableNames();
         for (String tableName : tableNames) {
-            // TODO find a better way to reset stat
-            CountStat.clearDbRowCount();
-            doExportWithSharding(tableName);
+            try {
+                handleSingleTable(tableName);
+            } catch (Exception e) {
+                logger.error("导出 {} 数据失败：{}", tableName, e.getMessage());
+            }
         }
     }
 
@@ -103,9 +108,9 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             // topologyList is in order
             List<TableTopology> newTopologyList = new ArrayList<>(topologyList.subList(startPart, endPart + 1));
             topologyList = newTopologyList;
-            logger.info("Exporting partitions {}~{} of table {}", startPart, endPart, tableName);
+            logger.info("导出表 {} 分片 {} ~ {}", tableName, startPart, endPart);
         } else {
-            logger.info("Exporting all partitions of table {}, total part count: {}", tableName, topologyList.size());
+            logger.info("导出表 {} 所有分片，总分片数：{}", tableName, topologyList.size());
         }
 
         try (Connection connection = dataSource.getConnection()) {
@@ -132,6 +137,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 for (int i = 0; i < shardSize; i++) {
                     int suffix = startOffset + i;
                     directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
+                        tableName,
                         topologyList.get(i), tableFieldMetaInfo,
                         filePathPrefix + suffix, config);
                     directExportWorker.setCountDownLatch(countDownLatch);
@@ -145,7 +151,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 }
                 break;
             case FIXED_FILE_NUM:
-                shardingExportWithFixedFile(topologyList, tableFieldMetaInfo, shardSize, filePathPrefix,
+                shardingExportWithFixedFile(tableName, topologyList, tableFieldMetaInfo, shardSize, filePathPrefix,
                     executor, permitted, countDownLatch);
                 break;
             default:
@@ -158,7 +164,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         }
     }
 
-    private void shardingExportWithFixedFile(List<TableTopology> topologyList,
+    private void shardingExportWithFixedFile(String tableName, List<TableTopology> topologyList,
                                              TableFieldMetaInfo tableFieldMetaInfo,
                                              int shardSize,
                                              String filePathPrefix,
@@ -198,7 +204,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         if (producerCount >= consumerCount * 2 || consumerCount <= 4) {
             // 当生产者数量略大于消费者时 没必要轮询分配碎片
             for (TableTopology topology : topologyList) {
-                ExportProducer producer = new ExportProducer(dataSource, topology,
+                ExportProducer producer = new ExportProducer(dataSource, tableName, topology,
                     tableFieldMetaInfo, ringBuffer, config.getSeparator(),
                     countDownLatch, emittedDataCounter, false, config.getQuoteEncloseMode());
                 producer.setPermitted(permitted);
@@ -212,7 +218,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             Queue<ExportEvent> fragmentQueue = new ArrayBlockingQueue<>(producerCount);
             // 将碎片放入缓冲队列
             for (TableTopology topology : topologyList) {
-                ExportProducer producer = new ExportProducer(dataSource, topology,
+                ExportProducer producer = new ExportProducer(dataSource, tableName, topology,
                     tableFieldMetaInfo, ringBuffer, config.getSeparator(),
                     countDownLatch, emittedDataCounter,
                     true, config.getQuoteEncloseMode());
@@ -243,5 +249,19 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             consumer.close();
         }
         producerExecutor.shutdown();
+    }
+
+    @Override
+    protected void handleSingleTableInner(String tableName) throws Exception {
+        this.curTableName.set(tableName);
+        doExportWithSharding(tableName);
+    }
+
+    @Override
+    protected void printStatLog() {
+        String tableName = curTableName.get();
+        if (tableName != null) {
+            logger.info("表 {} 当前导出行数：{}", tableName, CountStat.getTableRowCount(tableName));
+        }
     }
 }

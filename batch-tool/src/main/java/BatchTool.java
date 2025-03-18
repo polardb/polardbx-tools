@@ -39,7 +39,7 @@ public class BatchTool {
     private static final Logger logger = LoggerFactory.getLogger(BatchTool.class);
 
     private DruidDataSource druid;
-    private BaseOperateCommand command = null;
+    private volatile BaseOperateCommand command = null;
 
     private static final BatchTool instance = new BatchTool();
 

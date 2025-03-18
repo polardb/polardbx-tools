@@ -32,6 +32,7 @@ import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.DbUtil;
 import worker.common.BaseWorkHandler;
 import worker.common.ReadFileWithBlockProducer;
@@ -85,6 +86,11 @@ public abstract class WriteDbExecutor extends BaseExecutor {
             }
         }
         consumerExecutionContext.setTablePkList(tablePkList);
+    }
+
+    @Override
+    protected void printStatLog() {
+        logger.info("当前导入行数：{}", CountStat.getDbRowCount());
     }
 
     /**

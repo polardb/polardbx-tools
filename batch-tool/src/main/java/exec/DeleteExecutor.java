@@ -53,6 +53,15 @@ public class DeleteExecutor extends WriteDbExecutor {
     }
 
     @Override
+    protected void handleSingleTableInner(String tableName) {
+        if (command.isShardingEnabled()) {
+            doShardingDelete(tableName);
+        } else {
+            doDefaultDelete(tableName);
+        }
+    }
+
+    @Override
     public void execute() {
         if (producerExecutionContext.getBenchmarkMode() != BenchmarkMode.NONE) {
             handleBenchmark();
@@ -61,12 +70,13 @@ public class DeleteExecutor extends WriteDbExecutor {
 
         configurePkList();
         for (String tableName : tableNames) {
-            if (command.isShardingEnabled()) {
-                doShardingDelete(tableName);
-            } else {
-                doDefaultDelete(tableName);
+            logger.info("开始删除表数据：{}", tableName);
+            try {
+                handleSingleTable(tableName);
+                logger.info("删除 {} 数据完成，删除计数：{}", tableName, CountStat.getDbRowCount());
+            } catch (Exception e) {
+                logger.error("删除 {} 表数据出现异常：{}", tableName, e.getMessage());
             }
-            logger.info("删除 {} 数据完成，删除计数：{}", tableName, CountStat.getDbRowCount());
         }
     }
 

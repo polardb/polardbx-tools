@@ -33,6 +33,7 @@ import java.sql.SQLException;
 public class ExportWorkerFactory {
 
     public static DirectExportWorker buildDefaultDirectExportWorker(DataSource druid,
+                                                                    String logicalTableName,
                                                                     TableTopology topology,
                                                                     TableFieldMetaInfo tableFieldMetaInfo,
                                                                     String filename,
@@ -43,17 +44,16 @@ public class ExportWorkerFactory {
         switch (config.getExportWay()) {
         case MAX_LINE_NUM_IN_SINGLE_FILE:
             directExportWorker = new DirectExportWorker(druid,
-                topology, tableFieldMetaInfo,
-                config.getLimitNum(),
-                filename,
+                logicalTableName, topology, tableFieldMetaInfo,
+                config.getLimitNum(), filename,
                 config.getSeparator(), config.isWithHeader(),
                 config.getQuoteEncloseMode(), config.getCompressMode(),
                 config.getFileFormat(), config.getCharset(), cipher, config.getFileStorage());
             break;
         case DEFAULT:
             directExportWorker = new DirectExportWorker(druid,
-                topology, tableFieldMetaInfo,
-                filename,
+                logicalTableName, topology, tableFieldMetaInfo,
+                config.getLimitNum(), filename,
                 config.getSeparator(), config.isWithHeader(),
                 config.getQuoteEncloseMode(), config.getCompressMode(),
                 config.getFileFormat(), config.getCharset(), cipher, config.getFileStorage());
@@ -84,7 +84,6 @@ public class ExportWorkerFactory {
             try {
                 totalRowCount = DbUtil.getTableRowCount(druid.getConnection(), tableName);
             } catch (DatabaseException | SQLException e) {
-                e.printStackTrace();
                 throw new RuntimeException(e);
             }
             int fileNum = config.getLimitNum();

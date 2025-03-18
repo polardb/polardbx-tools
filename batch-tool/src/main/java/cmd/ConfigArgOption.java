@@ -118,6 +118,8 @@ public class ConfigArgOption {
         of("fs", "filesystem", "The filesystem for reading or writing files (default LOCAL).", "LOCAL | S3 | S3-AWS");
     public static final ConfigArgOption ARG_NULL_STR =
         of("nullStr", "nullStr", "Treat this value as NULL (default \\N).", "string value");
+    public static final ConfigArgOption ARG_LOG_INTERVAL =
+        of("logInterval", "logInterval", "Realtime statistics log output interval (default 0, no output).", "seconds");
 
     protected final String argShort;
     protected final String argLong;
