@@ -6,7 +6,7 @@
 
     <groupId>com.alibaba.polardbx</groupId>
     <artifactId>batch-tool</artifactId>
-    <version>1.5.0</version>
+    <version>1.5.1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -14,8 +14,8 @@
         <maven.test.skip>false</maven.test.skip>
         <downloadSources>true</downloadSources>
         <!-- compiler settings properties -->
-        <java_source_version>1.8</java_source_version>
-        <java_target_version>1.8</java_target_version>
+        <java_source_version>11</java_source_version>
+        <java_target_version>11</java_target_version>
         <file_encoding>UTF-8</file_encoding>
         <!-- Log libs -->
         <slf4j_version>1.7.36</slf4j_version>
@@ -200,11 +200,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.8.1</version>
                 <configuration>
                     <source>${java_source_version}</source>
                     <target>${java_target_version}</target>
                     <encoding>${file_encoding}</encoding>
+                    <compilerArgs>
+                        <arg>--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
