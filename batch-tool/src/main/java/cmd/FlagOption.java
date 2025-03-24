@@ -69,5 +69,7 @@ public class FlagOption extends ConfigArgOption {
             "Add 'drop table if exists xxx' when exporting DDL (default false).",
             false);
     public static final FlagOption ARG_WITH_VIEW =
-        of("withView", "withView", "Export views into files, or (default false).", false);
+        of("withView", "withView", "Export views into files (default false).", false);
+    public static final FlagOption ARG_BINARY_AS_HEX =
+        of("hex", "binaryAsHex", "Export or import binary values in hex format (default true).", true);
 }

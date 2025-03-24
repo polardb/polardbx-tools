@@ -74,16 +74,12 @@ public class OrderByExportExecutor extends BaseExportExecutor {
      * 按指定字段排序排序导出
      */
     private void handleExportOrderBy() {
-        if (!config.isLocalMerge()) {
-            handleExportWithOrderByFromDb();
-            return;
-        }
-
-        // 在本地进行多流归并排序
-        if (config.isParallelMerge()) {
-            handleExportWithOrderByParallelMerge();
-        } else {
-            doExportWithOrderByLocal();
+        for (String tableName : command.getTableNames()) {
+            try {
+                handleSingleTable(tableName);
+            } catch (Exception e) {
+                logger.error("导出 {} 数据失败：{}", tableName, e.getMessage());
+            }
         }
     }
 
@@ -91,64 +87,62 @@ public class OrderByExportExecutor extends BaseExportExecutor {
      * 带有order by的导出命令处理
      * 在本地进行merge
      */
-    private void doExportWithOrderByLocal() {
+    private void doExportWithOrderByLocal(String tableName) {
         List<TableTopology> topologyList;
         List<FieldMetaInfo> orderByColumnInfoList;
-        for (String tableName : command.getTableNames()) {
-            String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
-                config.getFilenamePrefix(), tableName);
-            try (Connection connection = dataSource.getConnection()) {
-                topologyList = DbUtil.getTopology(connection, tableName);
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
-                    getSchemaName(), tableName);
-                orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(connection, getSchemaName(),
-                    tableName, config.getOrderByColumnNameList());
-                // 分片数
-                final int shardSize = topologyList.size();
-                ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
-                OrderByExportProducer orderByExportProducer;
-                LinkedBlockingQueue[] orderedQueues = new LinkedBlockingQueue[shardSize];
-                AtomicBoolean[] finishedList = new AtomicBoolean[shardSize];
-                for (int i = 0; i < shardSize; i++) {
-                    orderedQueues[i] = new LinkedBlockingQueue<OrderByExportEvent>(GlobalVar.DEFAULT_RING_BUFFER_SIZE);
-                    finishedList[i] = new AtomicBoolean(false);
-                    orderByExportProducer = new OrderByExportProducer(dataSource, topologyList.get(i),
-                        tableFieldMetaInfo, orderedQueues[i], i, config.getOrderByColumnNameList(),
-                        finishedList[i]);
-                    executor.submit(orderByExportProducer);
-                }
-                OrderByMergeExportConsumer consumer;
-                switch (config.getExportWay()) {
-                case MAX_LINE_NUM_IN_SINGLE_FILE:
-                    consumer = new OrderByMergeExportConsumer(filePathPrefix,
-                        config.getSeparator(), orderByColumnInfoList, orderedQueues, finishedList, config.getLimitNum());
-                    break;
-                case FIXED_FILE_NUM:
-                    // 固定文件数的情况 先拿到全部的行数
-                    double totalRowCount = DbUtil.getTableRowCount(connection, tableName);
-                    int fileNum = config.getLimitNum();
-                    int singleLineLimit = (int) Math.ceil(totalRowCount / fileNum);
-                    // 再转为限制单文件行数的形式
-                    consumer = new OrderByMergeExportConsumer(filePathPrefix,
-                        config.getSeparator(), orderByColumnInfoList, orderedQueues, finishedList, singleLineLimit);
-                    break;
-                case DEFAULT:
-                    consumer = new OrderByMergeExportConsumer(filePathPrefix,
-                        config.getSeparator(), orderByColumnInfoList, orderedQueues, finishedList, 0);
-                    break;
-                default:
-                    throw new RuntimeException("Unsupported export exception");
-                }
-                try {
-                    consumer.consume();
-                } catch (InterruptedException e) {
-                    logger.error("Interrupted when waiting for finish", e);
-                }
-                executor.shutdown();
-                logger.info("导出 {} 数据完成", tableName);
-            } catch (DatabaseException | SQLException e) {
-                logger.error(e.getMessage(), e);
+        String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
+            config.getFilenamePrefix(), tableName);
+        try (Connection connection = dataSource.getConnection()) {
+            topologyList = DbUtil.getTopology(connection, tableName);
+            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
+                getSchemaName(), tableName);
+            orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(connection, getSchemaName(),
+                tableName, config.getOrderByColumnNameList());
+            // 分片数
+            final int shardSize = topologyList.size();
+            ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
+            OrderByExportProducer orderByExportProducer;
+            LinkedBlockingQueue[] orderedQueues = new LinkedBlockingQueue[shardSize];
+            AtomicBoolean[] finishedList = new AtomicBoolean[shardSize];
+            for (int i = 0; i < shardSize; i++) {
+                orderedQueues[i] = new LinkedBlockingQueue<OrderByExportEvent>(GlobalVar.DEFAULT_RING_BUFFER_SIZE);
+                finishedList[i] = new AtomicBoolean(false);
+                orderByExportProducer = new OrderByExportProducer(dataSource, topologyList.get(i),
+                    tableFieldMetaInfo, orderedQueues[i], i, config.getOrderByColumnNameList(),
+                    finishedList[i]);
+                executor.submit(orderByExportProducer);
             }
+            OrderByMergeExportConsumer consumer;
+            switch (config.getExportWay()) {
+            case MAX_LINE_NUM_IN_SINGLE_FILE:
+                consumer = new OrderByMergeExportConsumer(filePathPrefix,
+                    config.getSeparator(), orderByColumnInfoList, orderedQueues, finishedList, config.getLimitNum());
+                break;
+            case FIXED_FILE_NUM:
+                // 固定文件数的情况 先拿到全部的行数
+                double totalRowCount = DbUtil.getTableRowCount(connection, tableName);
+                int fileNum = config.getLimitNum();
+                int singleLineLimit = (int) Math.ceil(totalRowCount / fileNum);
+                // 再转为限制单文件行数的形式
+                consumer = new OrderByMergeExportConsumer(filePathPrefix,
+                    config.getSeparator(), orderByColumnInfoList, orderedQueues, finishedList, singleLineLimit);
+                break;
+            case DEFAULT:
+                consumer = new OrderByMergeExportConsumer(filePathPrefix,
+                    config.getSeparator(), orderByColumnInfoList, orderedQueues, finishedList, 0);
+                break;
+            default:
+                throw new RuntimeException("Unsupported export exception");
+            }
+            try {
+                consumer.consume();
+            } catch (InterruptedException e) {
+                logger.error("Interrupted when waiting for finish", e);
+            }
+            executor.shutdown();
+            logger.info("导出 {} 数据完成", tableName);
+        } catch (DatabaseException | SQLException e) {
+            logger.error(e.getMessage(), e);
         }
 
     }
@@ -158,84 +152,95 @@ public class OrderByExportExecutor extends BaseExportExecutor {
      * 交给DB全局排序
      * TODO 多线程导出多表
      */
-    private void handleExportWithOrderByFromDb() {
-        for (String tableName : command.getTableNames()) {
-            try (Connection connection = dataSource.getConnection()) {
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
-                    getSchemaName(), tableName);
-                DirectOrderExportWorker directOrderByExportWorker = ExportWorkerFactory
-                    .buildDirectOrderExportWorker(dataSource, tableFieldMetaInfo, (ExportCommand) command, tableName);
-                // 就单线程地写入
-                directOrderByExportWorker.exportSerially();
-                logger.info("导出 {} 数据完成", tableName);
-            } catch (DatabaseException | SQLException e) {
-                logger.error(e.getMessage(), e);
-            }
+    private void handleExportWithOrderByFromDb(String tableName) {
+        try (Connection connection = dataSource.getConnection()) {
+            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
+                getSchemaName(), tableName);
+            DirectOrderExportWorker directOrderByExportWorker = ExportWorkerFactory
+                .buildDirectOrderExportWorker(dataSource, tableFieldMetaInfo, (ExportCommand) command, tableName);
+            // 就单线程地写入
+            directOrderByExportWorker.exportSerially();
+            logger.info("导出 {} 数据完成", tableName);
+        } catch (DatabaseException | SQLException e) {
+            logger.error(e.getMessage(), e);
         }
     }
 
     /**
      * 在本地进行多线程的归并
      */
-    private void handleExportWithOrderByParallelMerge() {
-        for (String tableName : command.getTableNames()) {
-            List<TableTopology> topologyList;
-            List<FieldMetaInfo> orderByColumnInfoList;
-            try (Connection connection = dataSource.getConnection()) {
-                String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
-                    config.getFilenamePrefix(), tableName);
-                topologyList = DbUtil.getTopology(connection, tableName);
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
-                    getSchemaName(), tableName);
-                orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(connection, getSchemaName(),
-                    tableName, config.getOrderByColumnNameList());
-                // 分片数
-                final int shardSize = topologyList.size();
-                ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
-                LocalOrderByExportProducer orderByExportProducer;
-                LinkedList[] orderedLists = new LinkedList[shardSize];
-                CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(shardSize);
-                for (int i = 0; i < shardSize; i++) {
-                    orderedLists[i] = new LinkedList<ParallelOrderByExportEvent>();
-                    orderByExportProducer = new LocalOrderByExportProducer(dataSource, topologyList.get(i),
-                        tableFieldMetaInfo, orderedLists[i], config.getOrderByColumnNameList(),
-                        countDownLatch);
-                    executor.submit(orderByExportProducer);
-                }
-                ParallelMergeExportConsumer consumer;
-                switch (config.getExportWay()) {
-                case MAX_LINE_NUM_IN_SINGLE_FILE:
-                    consumer = new ParallelMergeExportConsumer(filePathPrefix,
-                        config.getSeparator(), orderByColumnInfoList, orderedLists, config.getLimitNum());
-                    break;
-                case FIXED_FILE_NUM:
-                    // 固定文件数的情况 先拿到全部的行数
-                    double totalRowCount = DbUtil.getTableRowCount(connection, tableName);
-                    int fileNum = config.getLimitNum();
-                    int singleLineLimit = (int) Math.ceil(totalRowCount / fileNum);
-                    // 再转为限制单文件行数的形式
-                    consumer = new ParallelMergeExportConsumer(filePathPrefix,
-                        config.getSeparator(), orderByColumnInfoList, orderedLists, singleLineLimit);
-                    break;
-                case DEFAULT:
-                    consumer = new ParallelMergeExportConsumer(filePathPrefix,
-                        config.getSeparator(), orderByColumnInfoList, orderedLists, 0);
-                    break;
-                default:
-                    throw new RuntimeException("Unsupported export exception");
-                }
-                try {
-                    // 等待生产者把数据全部buffer到内存
-                    countDownLatch.await();
-                    consumer.consume();
-                } catch (InterruptedException e) {
-                    logger.error("Interrupted when waiting for finish", e);
-                }
-                executor.shutdown();
-                logger.info("导出 {} 数据完成", tableName);
-            } catch (DatabaseException | SQLException e) {
-                logger.error(e.getMessage(), e);
+    private void handleExportWithOrderByParallelMerge(String tableName) {
+        List<TableTopology> topologyList;
+        List<FieldMetaInfo> orderByColumnInfoList;
+        try (Connection connection = dataSource.getConnection()) {
+            String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
+                config.getFilenamePrefix(), tableName);
+            topologyList = DbUtil.getTopology(connection, tableName);
+            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
+                getSchemaName(), tableName);
+            orderByColumnInfoList = DbUtil.getFieldMetaInfoListByColNames(connection, getSchemaName(),
+                tableName, config.getOrderByColumnNameList());
+            // 分片数
+            final int shardSize = topologyList.size();
+            ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
+            LocalOrderByExportProducer orderByExportProducer;
+            LinkedList[] orderedLists = new LinkedList[shardSize];
+            CountDownLatch countDownLatch = SyncUtil.newMainCountDownLatch(shardSize);
+            for (int i = 0; i < shardSize; i++) {
+                orderedLists[i] = new LinkedList<ParallelOrderByExportEvent>();
+                orderByExportProducer = new LocalOrderByExportProducer(dataSource, topologyList.get(i),
+                    tableFieldMetaInfo, orderedLists[i], config.getOrderByColumnNameList(),
+                    countDownLatch);
+                executor.submit(orderByExportProducer);
             }
+            ParallelMergeExportConsumer consumer;
+            switch (config.getExportWay()) {
+            case MAX_LINE_NUM_IN_SINGLE_FILE:
+                consumer = new ParallelMergeExportConsumer(filePathPrefix,
+                    config.getSeparator(), orderByColumnInfoList, orderedLists, config.getLimitNum());
+                break;
+            case FIXED_FILE_NUM:
+                // 固定文件数的情况 先拿到全部的行数
+                double totalRowCount = DbUtil.getTableRowCount(connection, tableName);
+                int fileNum = config.getLimitNum();
+                int singleLineLimit = (int) Math.ceil(totalRowCount / fileNum);
+                // 再转为限制单文件行数的形式
+                consumer = new ParallelMergeExportConsumer(filePathPrefix,
+                    config.getSeparator(), orderByColumnInfoList, orderedLists, singleLineLimit);
+                break;
+            case DEFAULT:
+                consumer = new ParallelMergeExportConsumer(filePathPrefix,
+                    config.getSeparator(), orderByColumnInfoList, orderedLists, 0);
+                break;
+            default:
+                throw new RuntimeException("Unsupported export exception");
+            }
+            try {
+                // 等待生产者把数据全部buffer到内存
+                countDownLatch.await();
+                consumer.consume();
+            } catch (InterruptedException e) {
+                logger.error("Interrupted when waiting for finish", e);
+            }
+            executor.shutdown();
+            logger.info("导出 {} 数据完成", tableName);
+        } catch (DatabaseException | SQLException e) {
+            logger.error(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    protected void handleSingleTableInner(String tableName) throws Exception {
+        if (!config.isLocalMerge()) {
+            handleExportWithOrderByFromDb(tableName);
+            return;
+        }
+
+        // 在本地进行多流归并排序
+        if (config.isParallelMerge()) {
+            handleExportWithOrderByParallelMerge(tableName);
+        } else {
+            doExportWithOrderByLocal(tableName);
         }
     }
 }

@@ -23,6 +23,9 @@ import datasource.DataSourceConfig;
 import exception.DatabaseException;
 import exec.BaseExecutor;
 import model.config.ExportConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.DbUtil;
 import worker.ddl.DdlExportWorker;
 
@@ -31,7 +34,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 public abstract class BaseExportExecutor extends BaseExecutor {
-
+    private static final Logger logger = LoggerFactory.getLogger(BaseExecutor.class);
     protected ExportConfig config;
 
     public BaseExportExecutor(DataSourceConfig dataSourceConfig, DruidDataSource druid,
@@ -85,6 +88,11 @@ public abstract class BaseExportExecutor extends BaseExecutor {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    protected void printStatLog() {
+        logger.info("当前导出行数：{}", CountStat.getDbRowCount());
     }
 
     private Thread exportDDL() {

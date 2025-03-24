@@ -22,7 +22,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.Version;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.sql.SQLException;
+import java.util.List;
 
 public class BatchToolLauncher {
     private static final Logger logger = LoggerFactory.getLogger(BatchTool.class);
@@ -40,7 +45,7 @@ public class BatchToolLauncher {
             return;
         }
 
-        logger.info("BatchTool version: {}", Version.getVersion());
+        printStartInfo();
         try {
             handleCmd(commandLine);
         } catch (Throwable e) {
@@ -50,6 +55,28 @@ public class BatchToolLauncher {
         }
     }
 
+    private static void printStartInfo() {
+        logger.info("BatchTool version: {}", Version.getVersion());
+        try {
+            MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+            MemoryUsage heapUsage = memoryMXBean.getHeapMemoryUsage();
+            logger.info("Max heap size: {} MB. Initial heap size: {} MB", heapUsage.getMax() / (1024 * 1024),
+                heapUsage.getInit() / (1024 * 1024));
+
+            if (logger.isDebugEnabled()) {
+                StringBuilder stringBuilder = new StringBuilder(256);
+                List<MemoryPoolMXBean> memoryPools = ManagementFactory.getMemoryPoolMXBeans();
+                for (MemoryPoolMXBean memoryPool : memoryPools) {
+                    String name = memoryPool.getName();
+                    stringBuilder.append(name).append(": ").append(memoryPool.getUsage().getMax() / (1024 * 1024))
+                        .append(" MB").append(". ");
+                }
+                logger.debug(stringBuilder.toString());
+            }
+        } catch (Exception e) {
+            logger.debug(e.getMessage(), e);
+        }
+    }
 
     private static void handleCmd(ConfigResult commandLine) throws SQLException {
         DataSourceConfig dataSourceConfig;

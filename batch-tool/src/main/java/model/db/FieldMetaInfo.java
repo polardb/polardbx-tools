@@ -62,12 +62,20 @@ public class FieldMetaInfo {
         "timestamp"
     );
 
+    public static final ImmutableSet<String> BINARY_TYPE_SET = ImmutableSet.of(
+        "blob",
+        "binary",
+        "varbinary",
+        "bit"
+    );
+
     public enum Type {
         STRING,
         INT,
         FLOAT,
         DATE,
         DATETIME,
+        BINARY,
         OTHER
     }
 
@@ -89,6 +97,7 @@ public class FieldMetaInfo {
         case DATE:
         case DATETIME:
         case OTHER:
+        case BINARY:
             return true;
         case INT:
         case FLOAT:
@@ -119,6 +128,8 @@ public class FieldMetaInfo {
             this.type = Type.FLOAT;
         } else if (DATE_TYPE_SET.contains(typeStr)) {
             this.type = Type.DATE;
+        } else if (BINARY_TYPE_SET.contains(typeStr)) {
+            this.type = Type.BINARY;
         } else {
             this.type = Type.OTHER;
         }

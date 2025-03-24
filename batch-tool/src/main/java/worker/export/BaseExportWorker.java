@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 public abstract class BaseExportWorker implements Runnable {
@@ -57,6 +58,12 @@ public abstract class BaseExportWorker implements Runnable {
 
     protected final List<byte[]> specialCharList;
     protected final QuoteEncloseMode quoteEncloseMode;
+    protected final String logicalTableName;
+    /**
+     * 逻辑表的行数统计
+     */
+    protected final AtomicLong rowCountStat;
+
     protected CompressMode compressMode;
     protected FileFormat fileFormat;
 
@@ -66,16 +73,23 @@ public abstract class BaseExportWorker implements Runnable {
     protected ByteArrayOutputStream os;
     protected int bufferedRowNum = 0;       // 已经缓存的行数
 
+
     protected boolean isWithLastSep = false;
+    /**
+     * 物理分片的行数统计
+     */
     protected long rowCount = 0;
 
-    protected BaseExportWorker(DataSource druid, TableTopology topology,
+    protected BaseExportWorker(DataSource druid, String logicalTableName,
+                               TableTopology topology,
                                TableFieldMetaInfo tableFieldMetaInfo,
                                String separator, QuoteEncloseMode quoteEncloseMode) {
-        this(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, CompressMode.NONE, FileFormat.NONE);
+        this(druid, logicalTableName, topology, tableFieldMetaInfo,
+            separator, quoteEncloseMode, CompressMode.NONE, FileFormat.NONE);
     }
 
-    protected BaseExportWorker(DataSource druid, TableTopology topology,
+    protected BaseExportWorker(DataSource druid, String logicalTableName,
+                               TableTopology topology,
                                TableFieldMetaInfo tableFieldMetaInfo,
                                String separator, QuoteEncloseMode quoteEncloseMode,
                                CompressMode compressMode, FileFormat fileFormat) {
@@ -105,6 +119,8 @@ public abstract class BaseExportWorker implements Runnable {
             throw new IllegalArgumentException("Unsupported compression mode: " + compressMode.name());
         }
         this.fileFormat = fileFormat;
+        this.logicalTableName = logicalTableName;
+        this.rowCountStat = CountStat.getTableRowCount(logicalTableName);
     }
 
     protected void produceData() {
@@ -139,12 +155,14 @@ public abstract class BaseExportWorker implements Runnable {
                 rowCount++;
 
                 if (bufferedRowNum == GlobalVar.EMIT_BATCH_SIZE) {
+                    rowCountStat.addAndGet(bufferedRowNum);
                     emitBatchData();
                     os.reset();
                     bufferedRowNum = 0;
                 }
             }
             if (bufferedRowNum != 0) {
+                rowCountStat.addAndGet(bufferedRowNum);
                 // 最后剩余的元组
                 dealWithRemainData();
                 os.reset();

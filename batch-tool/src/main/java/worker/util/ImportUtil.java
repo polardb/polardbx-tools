@@ -68,6 +68,25 @@ public class ImportUtil {
         insertSqlBuilder.append("VALUES ").append(values).append(";");
     }
 
+    public static void appendInsertBinaryValue(StringBuilder sqlStringBuilder, String rawValue,
+                                               boolean sqlEscapeEnabled) {
+        if (rawValue.equals(FileUtil.NULL_ESC_STR_IN_QUOTE)) {
+            // NULL字段处理
+            sqlStringBuilder.append("NULL");
+            return;
+        }
+        if (GlobalVar.IN_PERF_MODE) {
+            // 预设csv文件中的值可以直接插入
+            sqlStringBuilder.append(rawValue);
+            return;
+        }
+        if (GlobalVar.BINARY_AS_HEX) {
+            sqlStringBuilder.append("unhex('").append(rawValue).append("')");
+        } else {
+            sqlStringBuilder.append(rawValue);
+        }
+    }
+
     public static void appendInsertStrValue(StringBuilder sqlStringBuilder, String rawValue,
                                             boolean sqlEscapeEnabled) {
         if (rawValue.equals(FileUtil.NULL_ESC_STR_IN_QUOTE)) {
@@ -134,7 +153,10 @@ public class ImportUtil {
         }
         int fieldLen = fieldMetaInfoList.size();
         for (int i = 0; i < fieldLen - 1; i++) {
-            if (fieldMetaInfoList.get(i).needQuote()) {
+            FieldMetaInfo fieldMetaInfo = fieldMetaInfoList.get(i);
+            if (fieldMetaInfo.getType() == FieldMetaInfo.Type.BINARY) {
+                ImportUtil.appendInsertBinaryValue(stringBuilder, values.get(i), sqlEscapeEnabled);
+            } else if (fieldMetaInfo.needQuote()) {
                 // 字符串和日期都需要单引号
                 ImportUtil.appendInsertStrValue(stringBuilder, values.get(i), sqlEscapeEnabled);
             } else {

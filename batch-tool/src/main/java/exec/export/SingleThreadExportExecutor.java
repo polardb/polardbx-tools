@@ -24,6 +24,7 @@ import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.CountStat;
 import util.DbUtil;
 import util.FileUtil;
 import worker.MyThreadPool;
@@ -41,19 +42,33 @@ import static model.config.ConfigConstant.APP_NAME;
 public class SingleThreadExportExecutor extends BaseExportExecutor {
     private static final Logger logger = LoggerFactory.getLogger(SingleThreadExportExecutor.class);
 
+    private ExecutorService executor = null;
+    private CountDownLatch countDownLatch = null;
+
     public SingleThreadExportExecutor(DataSourceConfig dataSourceConfig,
                                       DruidDataSource druid,
                                       BaseOperateCommand baseCommand) {
         super(dataSourceConfig, druid, baseCommand);
     }
 
+    /**
+     * 每张表对应一个线程进行导出
+     */
     @Override
     void exportData() {
         List<String> tableNames = command.getTableNames();
-        ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, tableNames.size());
-        CountDownLatch countDownLatch = new CountDownLatch(tableNames.size());
+        this.executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, tableNames.size());
+        this.countDownLatch = new CountDownLatch(tableNames.size());
         for (String tableName : tableNames) {
-            doDefaultExport(tableName, executor, countDownLatch);
+            CountStat.getTableRowCount(tableName);
+        }
+        startStatLog();
+        for (String tableName : tableNames) {
+            try {
+                handleSingleTable(tableName);
+            } catch (Exception e) {
+                logger.error("导出 {} 数据失败：{}", tableName, e.getMessage());
+            }
         }
         try {
             countDownLatch.await();
@@ -61,6 +76,7 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        stopStatLog();
     }
 
     /**
@@ -74,13 +90,36 @@ public class SingleThreadExportExecutor extends BaseExportExecutor {
             TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(connection,
                 getSchemaName(), tableName, command.getColumnNames());
             DirectExportWorker directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
-                new TableTopology(tableName), tableFieldMetaInfo,
+                tableName, new TableTopology(tableName), tableFieldMetaInfo,
                 fileName, config);
             directExportWorker.setCountDownLatch(countDownLatch);
             executor.submit(directExportWorker);
             logger.info("开始导出表 {} 到文件 {}", tableName, fileName);
         } catch (DatabaseException | SQLException e) {
             logger.error(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    protected void handleSingleTableInner(String tableName) {
+        doDefaultExport(tableName, executor, countDownLatch);
+    }
+
+    @Override
+    protected void beforeSingleTable(String tableName) {
+        // do nothing since it is async
+    }
+
+    @Override
+    protected void afterSingleTable(String tableName) {
+        // do nothing since it is async
+    }
+
+    @Override
+    protected void printStatLog() {
+        List<String> tableNames = command.getTableNames();
+        for (String tableName : tableNames) {
+            logger.info("表 {} 当前导出行数：{}", tableName, CountStat.getTableRowCount(tableName));
         }
     }
 }

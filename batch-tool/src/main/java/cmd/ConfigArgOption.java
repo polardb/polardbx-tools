@@ -77,6 +77,8 @@ public class ConfigArgOption {
         of("initSqls", "initSqls", "Connection init sqls (druid).", "sqls");
     public static final ConfigArgOption ARG_SHORT_BATCH_SIZE =
         of("batchsize", "batchSize", "Batch size of insert.", "size");
+    public static final ConfigArgOption ARG_SHORT_BATCH_SIZE_IN_BYTES =
+        of("batchBytes", "batchBytes", "Batch memory size (in bytes) of insert.", "size");
     public static final ConfigArgOption ARG_SHORT_READ_BLOCK_SIZE =
         of("readsize", "readSize", "Read block size.", "size(MB)");
     public static final ConfigArgOption ARG_SHORT_RING_BUFFER_SIZE =
@@ -116,6 +118,8 @@ public class ConfigArgOption {
         of("fs", "filesystem", "The filesystem for reading or writing files (default LOCAL).", "LOCAL | S3 | S3-AWS");
     public static final ConfigArgOption ARG_NULL_STR =
         of("nullStr", "nullStr", "Treat this value as NULL (default \\N).", "string value");
+    public static final ConfigArgOption ARG_LOG_INTERVAL =
+        of("logInterval", "logInterval", "Realtime statistics log output interval (default 0, no output).", "seconds");
 
     protected final String argShort;
     protected final String argLong;
