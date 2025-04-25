@@ -38,7 +38,6 @@ import static model.config.ConfigConstant.DDL_FILE_SUFFIX;
 public class DdlExportWorker implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DdlExportWorker.class);
-    private final String filename;
     private BufferedWriter bufferedWriter = null;
 
     private final DataSource druid;
@@ -48,11 +47,12 @@ public class DdlExportWorker implements Runnable {
      * 是否导出整个数据库与其中的所有表
      */
     private final boolean isExportWholeDb;
+    private final boolean filePerTable;
     private final ExportConfig config;
 
     private static final Pattern DB_MODE_PATTERN = Pattern.compile("/\\* MODE = '(.*)' \\*/$");
 
-    public DdlExportWorker(DataSource druid, String dbName, ExportConfig config) {
+    public DdlExportWorker(DataSource druid, String dbName, ExportConfig config, boolean filePerTable) {
         this.druid = druid;
         this.dbName = dbName;
         this.config = config;
@@ -63,16 +63,17 @@ public class DdlExportWorker implements Runnable {
             throw new RuntimeException(e);
         }
         this.isExportWholeDb = true;
-        this.filename = dbName + DDL_FILE_SUFFIX;
+        this.filePerTable = filePerTable;
     }
 
-    public DdlExportWorker(DataSource druid, String dbName, List<String> tableNames, ExportConfig config) {
+    public DdlExportWorker(DataSource druid, String dbName, List<String> tableNames, ExportConfig config,
+                           boolean filePerTable) {
         this.druid = druid;
         this.dbName = dbName;
         this.config = config;
         this.tableNames = tableNames;
         this.isExportWholeDb = false;
-        this.filename = dbName + DDL_FILE_SUFFIX;
+        this.filePerTable = filePerTable;
     }
 
     @Override
@@ -124,8 +125,18 @@ public class DdlExportWorker implements Runnable {
     }
 
     private void beforeCreateTable(String tableName) throws IOException {
+        if (filePerTable) {
+            refreshFileWriter(tableName);
+        }
         writeCommentForTable(tableName);
         writeDropTableIfExists(tableName);
+    }
+
+    private void refreshFileWriter(String tableName) throws IOException {
+        if (bufferedWriter != null) {
+            IOUtil.close(bufferedWriter);
+        }
+        bufferedWriter = new BufferedWriter(new FileWriter(getFilepath(tableName)));
     }
 
     private void writeCommentForDatabase(String dbName) throws IOException {
@@ -157,7 +168,11 @@ public class DdlExportWorker implements Runnable {
     }
 
     private String getFilepath() {
-        return config.getPath() + filename;
+        return config.getPath() + dbName + DDL_FILE_SUFFIX;
+    }
+
+    private String getFilepath(String tableFileName) {
+        return config.getPath() + tableFileName + DDL_FILE_SUFFIX;
     }
 
     private void afterRun() {

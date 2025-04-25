@@ -90,7 +90,8 @@ public class ConfigArgOption {
     public static final ConfigArgOption ARG_SHORT_TPS_LIMIT =
         of("tps", "tpsLimit", "Configure of tps limit (default -1: no limit).", "tps limit");
     public static final ConfigArgOption ARG_SHORT_WITH_DDL =
-        of("DDL", "DDL", "Export or import with DDL sql mode (default NONE).", "NONE | ONLY | WITH");
+        of("DDL", "DDL", "Export or import with DDL sql mode (default NONE).",
+            "NONE | ONLY | WITH | ONLY-PER-TABLE | WITH-PER-TABLE");
     public static final ConfigArgOption ARG_SHORT_COMPRESS =
         of("comp", "compress", "Export or import compressed file (default NONE).", "NONE | GZIP");
     public static final ConfigArgOption ARG_SHORT_ENCRYPTION =
