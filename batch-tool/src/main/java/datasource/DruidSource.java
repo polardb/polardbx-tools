@@ -23,6 +23,8 @@ import org.apache.commons.lang.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
+import static datasource.DatasourceConstant.PHYSICAL_TIMEOUT_MILLIS;
+
 public class DruidSource {
 
     private static volatile DruidDataSource instance;
@@ -49,6 +51,7 @@ public class DruidSource {
                     instance.setMaxActive(dataSourceConfig.getMaxConnectionNum());
                     instance.setConnectionInitSqls(initSqlStrToList(dataSourceConfig.getInitSqls()));
                     instance.setMaxWait(dataSourceConfig.getMaxWait());
+                    instance.setPhyTimeoutMillis(PHYSICAL_TIMEOUT_MILLIS);
                 }
             }
         }
