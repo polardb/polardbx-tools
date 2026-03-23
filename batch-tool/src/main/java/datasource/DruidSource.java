@@ -42,7 +42,7 @@ public class DruidSource {
                         throw new DataSourceException("Config uninitialized");
                     }
                     instance = new DruidDataSource();
-                    instance.setAsyncCloseConnectionEnable(true);
+//                    instance.setAsyncCloseConnectionEnable(true);
                     instance.setUrl(dataSourceConfig.getUrl());
                     instance.setUsername(dataSourceConfig.getUsername());
                     instance.setPassword(dataSourceConfig.getPassword());
