@@ -164,7 +164,10 @@ public class ImportUtil {
             }
             stringBuilder.append(",");
         }
-        if (fieldMetaInfoList.get(fieldLen - 1).needQuote()) {
+        FieldMetaInfo lastFieldMetaInfo = fieldMetaInfoList.get(fieldLen - 1);
+        if (lastFieldMetaInfo.getType() == FieldMetaInfo.Type.BINARY) {
+            ImportUtil.appendInsertBinaryValue(stringBuilder, values.get(fieldLen - 1), sqlEscapeEnabled);
+        } else if (lastFieldMetaInfo.needQuote()) {
             ImportUtil.appendInsertStrValue(stringBuilder, values.get(fieldLen - 1), sqlEscapeEnabled);
         } else {
             ImportUtil.appendInsertNonStrValue(stringBuilder, values.get(fieldLen - 1));
