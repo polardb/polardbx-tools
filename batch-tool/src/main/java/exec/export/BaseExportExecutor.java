@@ -74,12 +74,22 @@ public abstract class BaseExportExecutor extends BaseExecutor {
             exportData();
             break;
         case WITH_DDL:
-            ddlThread = exportDDL();
+            ddlThread = exportDDL(false);
+            exportData();
+            break;
+        case WITH_DDL_PER_TABLE:
+            ddlThread = exportDDL(true);
             exportData();
             break;
         case DDL_ONLY:
-            ddlThread = exportDDL();
+            ddlThread = exportDDL(false);
             break;
+        case DDL_ONLY_PER_TABLE:
+            ddlThread = exportDDL(true);
+            break;
+        default:
+            throw new UnsupportedOperationException("DDL mode is not supported: " +
+                config.getDdlMode());
         }
         if (ddlThread != null) {
             try {
@@ -95,12 +105,13 @@ public abstract class BaseExportExecutor extends BaseExecutor {
         logger.info("当前导出行数：{}", CountStat.getDbRowCount());
     }
 
-    private Thread exportDDL() {
+    private Thread exportDDL(boolean filePerTable) {
         DdlExportWorker ddlExportWorker;
         if (command.isDbOperation()) {
-            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), config);
+            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), config, filePerTable);
         } else {
-            ddlExportWorker = new DdlExportWorker(dataSource, command.getDbName(), command.getTableNames(), config);
+            ddlExportWorker =
+                new DdlExportWorker(dataSource, command.getDbName(), command.getTableNames(), config, filePerTable);
         }
         Thread ddlThread = new Thread(ddlExportWorker);
         ddlThread.start();

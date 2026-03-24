@@ -19,12 +19,22 @@ package model.config;
 public enum DdlMode {
     /**
      * 导出数据与DDL建表语句
+     * 多个建表语句保存在同一个文件中
      */
     WITH_DDL,
+    /**
+     * 导出数据与DDL建表语句
+     * 每张表对应一个文件
+     */
+    WITH_DDL_PER_TABLE,
     /**
      * 仅导出DDL建表语句
      */
     DDL_ONLY,
+    /**
+     * 仅导出DDL建表语句，每张表一个文件
+     */
+    DDL_ONLY_PER_TABLE,
     /**
      * 默认 不导出DDL建表语句
      */
@@ -38,8 +48,14 @@ public enum DdlMode {
             return NO_DDL;
         case "ONLY":
             return DDL_ONLY;
+        case "ONLY_PER_TABLE":
+        case "ONLY-PER-TABLE":
+            return DDL_ONLY_PER_TABLE;
         case "WITH":
             return WITH_DDL;
+        case "WITH_PER_TABLE":
+        case "WITH-PER-TABLE":
+            return WITH_DDL_PER_TABLE;
         default:
             throw new IllegalArgumentException("Illegal ddl mode: " + ddlMode);
         }

@@ -536,7 +536,7 @@ public class DbUtil {
 
     public static String getShowCreateTable(Connection conn, String tableName) throws DatabaseException {
         try (Statement stmt = conn.createStatement()) {
-            // FIXME show create database does not contain GSI
+            // FIXME show create table does not contain GSI
             ResultSet rs = stmt.executeQuery("show create table " + surroundWithBacktick(tableName));
 
             if (!rs.next()) {

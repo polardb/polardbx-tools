@@ -25,4 +25,8 @@ public class DatasourceConstant {
      * 5000 ms
      */
     public static final int MAX_WAIT_TIME = 5000;
+    /**
+     * 30 min
+     */
+    public static final long PHYSICAL_TIMEOUT_MILLIS = 1800 * 1000L;
 }

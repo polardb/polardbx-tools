@@ -61,6 +61,7 @@ public class CsvReader extends FileBufferedBatchReader {
         try {
             this.reader = new CSVReaderBuilder(new InputStreamReader(
                 new FileInputStream(getLocalFile().getAbsolutePath()), context.getCharset()))
+                .withKeepCarriageReturn(true)
                 .withCSVParser(parser).withMultilineLimit(GlobalVar.MAX_CSV_MULTI_LINE).build();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e.getMessage());
